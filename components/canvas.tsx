@@ -17,14 +17,17 @@ interface CanvasProps {
   onCopyBlock: (sourceBlockId: string) => void
   onArchiveBlock: (id: string) => void
   isDarkMode: boolean
+  previewBlock?: Partial<WorkBlock> | null // Add preview block prop
 }
 
-const COMPLETION_ZONE_WIDTH = 400
-const COMPLETION_ZONE_HEIGHT = 600
+const VISUAL_ZONE_WIDTH = 400
+const VISUAL_ZONE_HEIGHT = 600
+const DETECTION_ZONE_WIDTH = 600 // Increased from 400
+const DETECTION_ZONE_HEIGHT = 800 // Increased from 600
 const COMPLETED_BLOCK_WIDTH = 340
 const COMPLETED_BLOCK_HEIGHT = 56
 const COMPLETED_BLOCK_SPACING = 8
-const COMPLETION_PADDING = 30
+const COMPLETION_PADDING = 60 // Increased from 30 to 60 to avoid covering the "완료된 업무" text
 
 export function Canvas({
   blocks,
@@ -37,6 +40,7 @@ export function Canvas({
   onCopyBlock,
   onArchiveBlock,
   isDarkMode,
+  previewBlock, // Receive preview block
 }: CanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -45,12 +49,12 @@ export function Canvas({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey || e.metaKey) {
+      if (e.altKey && !e.metaKey && !e.ctrlKey) {
         setIsCopyMode(true)
       }
     }
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (!e.altKey && !e.metaKey) {
+      if (!e.altKey || e.metaKey || e.ctrlKey) {
         setIsCopyMode(false)
       }
     }
@@ -64,16 +68,13 @@ export function Canvas({
   }, [])
 
   const handleMouseDown = (e: React.MouseEvent, blockId: string) => {
-    if (isCopyMode) {
-      const block = blocks.find((b) => b.id === blockId)
-      if (!block || block.isGuide) return
+    const block = blocks.find((b) => b.id === blockId)
+    if (!block) return
 
+    if (isCopyMode) {
       onCopyBlock(blockId)
       return
     }
-
-    const block = blocks.find((b) => b.id === blockId)
-    if (!block) return
 
     setDraggingId(blockId)
     setOffset({
@@ -102,58 +103,127 @@ export function Canvas({
     const handleMouseUp = () => {
       if (draggingId && canvasRef.current) {
         const block = blocks.find((b) => b.id === draggingId)
-        if (!block || block.isGuide) return
+        if (!block) {
+          setDraggingId(null)
+          return
+        }
 
-        const TOLERANCE = 20 // pixels of tolerance for connection detection
+        const canvasRect = canvasRef.current.getBoundingClientRect()
 
-        const overlappingBlocks = blocks.filter((b) => {
-          if (b.id === draggingId || b.isCompleted || b.isGuide) return false
+        const completionZoneLeft = canvasRect.width - DETECTION_ZONE_WIDTH
+        const completionZoneTop = canvasRect.height - DETECTION_ZONE_HEIGHT
 
-          const block1 = {
-            left: block.x - TOLERANCE,
-            right: block.x + block.width + TOLERANCE,
-            top: block.y - TOLERANCE,
-            bottom: block.y + block.height + TOLERANCE,
+        const blockCenterX = block.x + block.width / 2
+        const blockCenterY = block.y + block.height / 2
+
+        const inCompletionZone =
+          blockCenterX >= completionZoneLeft - block.width / 3 &&
+          blockCenterX <= canvasRect.width &&
+          blockCenterY >= completionZoneTop - block.height / 3 &&
+          blockCenterY <= canvasRect.height
+
+        if (inCompletionZone && !block.isCompleted && !block.isGuide) {
+          const completedBlocks = blocks.filter((b) => b.isCompleted)
+          const stackY =
+            canvasRect.height -
+            VISUAL_ZONE_HEIGHT +
+            COMPLETION_PADDING +
+            completedBlocks.length * (COMPLETED_BLOCK_HEIGHT + COMPLETED_BLOCK_SPACING)
+
+          onUpdateBlock(draggingId, {
+            isCompleted: true,
+            originalState: {
+              width: block.width,
+              height: block.height,
+              urgency: block.urgency || "stable",
+            },
+            x: canvasRect.width - VISUAL_ZONE_WIDTH + COMPLETION_PADDING,
+            y: stackY,
+            width: COMPLETED_BLOCK_WIDTH,
+            height: COMPLETED_BLOCK_HEIGHT,
+            relatedTo: [],
+          })
+          setDraggingId(null)
+          return
+        }
+
+        if (block.isCompleted && !inCompletionZone) {
+          const original = block.originalState || { width: 360, height: 160, urgency: "stable" }
+
+          onUpdateBlock(draggingId, {
+            isCompleted: false,
+            originalState: undefined,
+            width: original.width,
+            height: original.height,
+            urgency: original.urgency as any,
+          })
+
+          setDraggingId(null)
+          return
+        }
+
+        if (!block.isCompleted && !block.isGuide) {
+          const TOLERANCE = 30
+
+          const overlappingBlocks = blocks.filter((b) => {
+            if (b.id === draggingId || b.isCompleted || b.isGuide) return false
+
+            const block1 = {
+              left: block.x - TOLERANCE,
+              right: block.x + block.width + TOLERANCE,
+              top: block.y - TOLERANCE,
+              bottom: block.y + block.height + TOLERANCE,
+            }
+            const block2 = {
+              left: b.x,
+              right: b.x + b.width,
+              top: b.y,
+              bottom: b.y + b.height,
+            }
+
+            const horizontalOverlap = block1.right > block2.left && block1.left < block2.right
+            const verticalOverlap = block1.bottom > block2.top && block1.top < block2.bottom
+
+            return horizontalOverlap && verticalOverlap
+          })
+
+          if (overlappingBlocks.length > 0) {
+            const updates: Array<{ id: string; updates: Partial<WorkBlock> }> = []
+
+            const currentRelations = new Set(block.relatedTo || [])
+            const overlappingIds = overlappingBlocks.map((b) => b.id)
+
+            const newConnections = overlappingIds.filter((id) => !currentRelations.has(id))
+
+            if (newConnections.length > 0) {
+              const updatedRelations = [...currentRelations, ...newConnections]
+
+              updates.push({
+                id: draggingId,
+                updates: { relatedTo: updatedRelations },
+              })
+
+              overlappingBlocks.forEach((nearby) => {
+                const nearbyRelations = new Set(nearby.relatedTo || [])
+                if (!nearbyRelations.has(block.id)) {
+                  nearbyRelations.add(block.id)
+                  updates.push({
+                    id: nearby.id,
+                    updates: { relatedTo: Array.from(nearbyRelations) },
+                  })
+                }
+              })
+
+              onBatchUpdateBlocks(updates)
+              setDraggingId(null)
+              return
+            }
           }
-          const block2 = {
-            left: b.x,
-            right: b.x + b.width,
-            top: b.y,
-            bottom: b.y + b.height,
-          }
 
-          const horizontalOverlap = block1.right > block2.left && block1.left < block2.right
-          const verticalOverlap = block1.bottom > block2.top && block1.top < block2.bottom
-
-          return horizontalOverlap && verticalOverlap
-        })
-
-        if (overlappingBlocks.length > 0) {
-          const updates: Array<{ id: string; updates: Partial<WorkBlock> }> = []
-
-          const currentRelations = new Set(block.relatedTo || [])
-          const overlappingIds = overlappingBlocks.map((b) => b.id)
-
-          const newConnections = overlappingIds.filter((id) => !currentRelations.has(id))
-
-          if (newConnections.length > 0) {
-            updates.push({
-              id: draggingId,
-              updates: { relatedTo: [...currentRelations, ...newConnections] },
-            })
-
-            overlappingBlocks.forEach((nearby) => {
-              const nearbyRelations = new Set(nearby.relatedTo || [])
-              if (!nearbyRelations.has(block.id)) {
-                updates.push({
-                  id: nearby.id,
-                  updates: { relatedTo: [...nearbyRelations, block.id] },
-                })
-              }
-            })
-
-            onBatchUpdateBlocks(updates)
-          }
+          onUpdateBlock(draggingId, {
+            x: block.x,
+            y: block.y,
+          })
         }
       }
       setDraggingId(null)
@@ -203,10 +273,12 @@ export function Canvas({
   }
 
   const renderRelationshipLines = () => {
-    if (!showRelationships || (!selectedZone && blocks.length > 10)) return null
+    if (!showRelationships) return null
 
     const linesToRender: JSX.Element[] = []
     const processedPairs = new Set<string>()
+
+    const baseOpacity = 0.3
 
     blocks.forEach((block) => {
       if (block.isCompleted) return
@@ -224,17 +296,17 @@ export function Canvas({
         const oneInSelectedZone = selectedZone && (block.zone === selectedZone || relatedBlock.zone === selectedZone)
         const crossZone = block.zone !== relatedBlock.zone
 
-        let opacity = 0.2
+        let opacity = baseOpacity
         if (selectedZone) {
           if (bothInSelectedZone) {
-            opacity = 0.4
+            opacity = 0.6
           } else if (oneInSelectedZone) {
-            opacity = 0.15
-          } else {
-            return
+            opacity = 0.35
+          } else if (crossZone) {
+            opacity = 0.2
           }
-        } else {
-          opacity = crossZone ? 0.12 : 0.25
+        } else if (crossZone) {
+          opacity = 0.25
         }
 
         const x1 = block.x + block.width / 2
@@ -260,7 +332,7 @@ export function Canvas({
             <path
               d={`M ${x1} ${y1} Q ${midX} ${midY - curve} ${x2} ${y2}`}
               stroke="transparent"
-              strokeWidth="20"
+              strokeWidth="24"
               fill="none"
               strokeLinecap="round"
             />
@@ -309,8 +381,8 @@ export function Canvas({
             isDarkMode ? "border-zinc-700/60 bg-zinc-800/20" : "border-stone-300/40 bg-stone-100/20"
           }`}
           style={{
-            width: `${COMPLETION_ZONE_WIDTH}px`,
-            height: `${COMPLETION_ZONE_HEIGHT}px`,
+            width: `${VISUAL_ZONE_WIDTH}px`,
+            height: `${VISUAL_ZONE_HEIGHT}px`,
             zIndex: 1,
           }}
         >
@@ -341,6 +413,34 @@ export function Canvas({
             isCopyMode={isCopyMode}
           />
         ))}
+
+        {previewBlock && (
+          <div
+            className="absolute animate-pulse"
+            style={{
+              left: previewBlock.x,
+              top: previewBlock.y,
+              width: previewBlock.width,
+              height: previewBlock.height,
+              zIndex: 100,
+            }}
+          >
+            <div
+              className={`w-full h-full rounded-lg border-4 border-dashed ${
+                isDarkMode ? "border-blue-400 bg-blue-950/30" : "border-blue-500 bg-blue-50/50"
+              } flex items-center justify-center`}
+            >
+              <div className="text-center p-4">
+                <p className={`font-medium mb-1 ${isDarkMode ? "text-blue-300" : "text-blue-700"}`}>
+                  {previewBlock.title}
+                </p>
+                <p className={`text-xs ${isDarkMode ? "text-blue-400/70" : "text-blue-600/70"}`}>
+                  이 위치에 생성됩니다
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {showCompletedBlocks && (

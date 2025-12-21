@@ -52,3 +52,40 @@ export interface TidySuggestionResult {
   suggestion: TidySuggestion | null
   hasMore: boolean
 }
+
+export interface TidyAnalysisStage {
+  stage: "analyzing" | "suggestions" | "applying" | "complete"
+  message: string
+  progress: number
+}
+
+export interface TidyComprehensiveAnalysis {
+  totalBlocks: number
+  zoneDistribution: Record<string, number>
+  connectionIssues: string[]
+  positionIssues: string[]
+  urgencyIssues: string[]
+  overallHealth: "good" | "needs_attention" | "critical"
+}
+
+export interface TidyDetailedSuggestion {
+  id: string
+  type: "position" | "urgency" | "zone" | "connection" | "cleanup"
+  priority: "high" | "medium" | "low"
+  blockIds: string[]
+  question: string
+  changes: Array<{
+    blockId: string
+    field: string
+    currentValue: any
+    suggestedValue: any
+    reason: string
+  }>
+}
+
+export interface MultiStageTidyResult {
+  stage: TidyAnalysisStage
+  analysis?: TidyComprehensiveAnalysis
+  suggestions?: TidyDetailedSuggestion[]
+  currentSuggestionIndex?: number
+}

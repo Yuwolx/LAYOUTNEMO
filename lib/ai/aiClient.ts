@@ -46,7 +46,6 @@ import type { CreateBlockAIInput, CreateBlockAIOutput, TidySuggestionInput, Tidy
  */
 export async function createBlockWithAI(input: CreateBlockAIInput): Promise<CreateBlockAIOutput> {
   try {
-    console.log("[v0] Calling createBlockWithAI API")
     const response = await fetch("/api/ai/create-block", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -55,17 +54,14 @@ export async function createBlockWithAI(input: CreateBlockAIInput): Promise<Crea
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error("[v0] API request failed:", errorText)
+      console.error("API request failed:", errorText)
       throw new Error("API request failed")
     }
 
     const aiOutput = (await response.json()) as CreateBlockAIOutput
-    console.log("[v0] AI block creation successful")
     return aiOutput
   } catch (error) {
-    console.error("[v0] AI API Error:", error)
-    // Fallback to mock data on error
-    console.log("[v0] Falling back to mock data")
+    console.error("AI API Error:", error)
     return getMockBlockCreationOutput(input)
   }
 }
@@ -84,17 +80,14 @@ export async function getNextTidySuggestion(input: TidySuggestionInput): Promise
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error("[v0] API request failed:", errorText)
+      console.error("API request failed:", errorText)
       throw new Error("API request failed")
     }
 
     const aiOutput = (await response.json()) as TidySuggestionResult
-    console.log("[v0] AI tidy suggestion successful")
     return aiOutput
   } catch (error) {
-    console.error("[v0] AI API Error:", error)
-    // Fallback to mock data on error
-    console.log("[v0] Falling back to mock data")
+    console.error("AI API Error:", error)
     return getMockTidySuggestion(input)
   }
 }

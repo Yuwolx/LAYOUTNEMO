@@ -15,11 +15,21 @@ interface CreateBlockDialogProps {
   onCreateBlock: (block: WorkBlock) => void
   zones: Zone[]
   isAIEnabled: boolean
+  existingBlocks: WorkBlock[]
+  onShowPreview?: (block: Partial<WorkBlock> | null) => void // 미리보기 블록 전달
 }
 
 type CreateStep = "input" | "preview" | "placement"
 
-export function CreateBlockDialog({ open, onOpenChange, onCreateBlock, zones, isAIEnabled }: CreateBlockDialogProps) {
+export function CreateBlockDialog({
+  open,
+  onOpenChange,
+  onCreateBlock,
+  zones,
+  isAIEnabled,
+  existingBlocks,
+  onShowPreview,
+}: CreateBlockDialogProps) {
   const [step, setStep] = useState<CreateStep>("input")
   const [initialInput, setInitialInput] = useState("")
   const [title, setTitle] = useState("")
@@ -75,6 +85,10 @@ export function CreateBlockDialog({ open, onOpenChange, onCreateBlock, zones, is
   }
 
   const handlePlacementConfirm = (manual: boolean) => {
+    if (onShowPreview) {
+      onShowPreview(null)
+    }
+
     const position = manual ? { x: 300 + Math.random() * 400, y: 200 + Math.random() * 300 } : suggestedPosition
 
     const newBlock: WorkBlock = {
@@ -83,8 +97,8 @@ export function CreateBlockDialog({ open, onOpenChange, onCreateBlock, zones, is
       description: summary,
       x: position.x,
       y: position.y,
-      width: 280,
-      height: 180,
+      width: 360,
+      height: 160,
       zone: selectedZone,
       urgency,
       dueDate: dueDate || undefined,
@@ -95,13 +109,33 @@ export function CreateBlockDialog({ open, onOpenChange, onCreateBlock, zones, is
   }
 
   const handleToPlacement = () => {
-    const baseX = 200 + Math.random() * 600
-    const baseY = 200 + Math.random() * 300
-    setSuggestedPosition({ x: baseX, y: baseY })
+    const smartPosition = findSmartPosition()
+    setSuggestedPosition(smartPosition)
+
+    // Canvas에 미리보기 블록 표시
+    if (onShowPreview) {
+      onShowPreview({
+        id: "preview",
+        title,
+        description: summary,
+        x: smartPosition.x,
+        y: smartPosition.y,
+        width: 360,
+        height: 160,
+        zone: selectedZone,
+        urgency,
+        dueDate: dueDate || undefined,
+      })
+    }
+
     setStep("placement")
   }
 
   const handleReset = () => {
+    if (onShowPreview) {
+      onShowPreview(null)
+    }
+
     setStep("input")
     setInitialInput("")
     setTitle("")
@@ -112,6 +146,91 @@ export function CreateBlockDialog({ open, onOpenChange, onCreateBlock, zones, is
     setAiZoneReason("")
     setIsLoading(false)
     onOpenChange(false)
+  }
+
+  const findSmartPosition = (): { x: number; y: number } => {
+    const BLOCK_WIDTH = 360
+    const BLOCK_HEIGHT = 160
+    const SPACING = 40
+    const MIN_X = 100
+    const MIN_Y = 100
+
+    // 활성 블록만 필터링 (삭제, 완료, 가이드 제외)
+    const activeBlocks = existingBlocks.filter((b) => !b.isDeleted && !b.isCompleted && !b.isGuide)
+
+    // 겹침 체크 함수
+    const isOverlapping = (x: number, y: number, checkBlocks = activeBlocks): boolean => {
+      return checkBlocks.some((block) => {
+        const horizontalOverlap = x < block.x + block.width + SPACING && x + BLOCK_WIDTH + SPACING > block.x
+        const verticalOverlap = y < block.y + block.height + SPACING && y + BLOCK_HEIGHT + SPACING > block.y
+        return horizontalOverlap && verticalOverlap
+      })
+    }
+
+    // 1. 같은 영역의 블록들 찾기
+    const sameZoneBlocks = activeBlocks.filter((b) => b.zone === selectedZone)
+
+    if (sameZoneBlocks.length > 0) {
+      // 같은 영역의 블록들 중 가장 최근 블록 (가장 오른쪽 또는 아래쪽)
+      const latestBlock = sameZoneBlocks.reduce((latest, block) => {
+        const latestScore = latest.x + latest.y
+        const blockScore = block.x + block.y
+        return blockScore > latestScore ? block : latest
+      })
+
+      // 후보 위치들 시도 (우선순위 순서)
+      const candidates = [
+        // 1. 오른쪽
+        { x: latestBlock.x + latestBlock.width + SPACING, y: latestBlock.y },
+        // 2. 아래쪽
+        { x: latestBlock.x, y: latestBlock.y + latestBlock.height + SPACING },
+        // 3. 오른쪽 아래 대각선
+        { x: latestBlock.x + latestBlock.width + SPACING, y: latestBlock.y + latestBlock.height + SPACING },
+        // 4. 왼쪽 아래
+        { x: latestBlock.x - BLOCK_WIDTH - SPACING, y: latestBlock.y + latestBlock.height + SPACING },
+      ]
+
+      for (const candidate of candidates) {
+        if (candidate.x >= MIN_X && candidate.y >= MIN_Y && !isOverlapping(candidate.x, candidate.y)) {
+          return candidate
+        }
+      }
+
+      // 모든 후보가 실패하면 같은 영역 블록들 아래쪽 찾기
+      const lowestSameZone = sameZoneBlocks.reduce((lowest, block) => {
+        const lowestBottom = lowest.y + lowest.height
+        const blockBottom = block.y + block.height
+        return blockBottom > lowestBottom ? block : lowest
+      })
+
+      return {
+        x: lowestSameZone.x,
+        y: lowestSameZone.y + lowestSameZone.height + SPACING * 2,
+      }
+    }
+
+    // 2. 같은 영역이 없으면 빈 공간 찾기 (모든 블록 아래쪽)
+    if (activeBlocks.length === 0) {
+      return { x: MIN_X + 100, y: MIN_Y + 100 }
+    }
+
+    // 가장 아래쪽 블록 찾기
+    const lowestBlock = activeBlocks.reduce((lowest, block) => {
+      const lowestBottom = lowest.y + lowest.height
+      const blockBottom = block.y + block.height
+      return blockBottom > lowestBottom ? block : lowest
+    })
+
+    // 가장 왼쪽 블록 찾기 (X 좌표 참고용)
+    const leftmostBlock = activeBlocks.reduce((leftmost, block) => {
+      return block.x < leftmost.x ? block : leftmost
+    })
+
+    // 가장 아래쪽 블록 기준으로 아래에 배치
+    const candidateX = Math.max(leftmostBlock.x, MIN_X + 100)
+    const candidateY = lowestBlock.y + lowestBlock.height + SPACING * 2
+
+    return { x: candidateX, y: candidateY }
   }
 
   return (
@@ -346,7 +465,14 @@ export function CreateBlockDialog({ open, onOpenChange, onCreateBlock, zones, is
                 </div>
               </div>
 
-              <p className="text-sm text-muted-foreground">이 위치가 자연스러워 보여요.</p>
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-900 dark:text-blue-100">
+                  {existingBlocks.some((b) => b.zone === selectedZone && !b.isDeleted && !b.isCompleted && !b.isGuide)
+                    ? `같은 "${zones.find((z) => z.id === selectedZone)?.label}" 영역 블록 근처에 배치할게요.`
+                    : "다른 블록들과 겹치지 않는 빈 공간에 배치할게요."}
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">캔버스에서 미리보기를 확인하세요.</p>
+              </div>
             </div>
 
             <div className="flex gap-3">

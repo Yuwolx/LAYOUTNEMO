@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Canvas } from "@/components/canvas"
 import { Header } from "@/components/header"
 import { CreateBlockDialog } from "@/components/create-block-dialog"
@@ -64,6 +64,8 @@ const initialBlocks: WorkBlock[] = [
 
 • Cmd/Ctrl + N: 새 블럭 만들기
 • Cmd/Ctrl + Z: 되돌리기
+• Cmd/Ctrl + Shift + Z: 재실행
+• Cmd/Ctrl + Y: 재실행 (대체)
 • Cmd/Ctrl + K: 캔버스 선택
 • Alt/Option + 클릭: 블럭 복사
 • Esc: 다이얼로그 닫기
@@ -75,9 +77,9 @@ Alt 또는 Option 키를 누른 상태에서 블럭을 클릭하면 해당 블�
     id: "example-1",
     title: "사용자 인터뷰 진행",
     description: "5명의 잠재 고객과 인터뷰를 진행하고 니즈 파악 및 피드백 수집",
-    x: 600,
+    x: 650,
     y: 120,
-    width: 320,
+    width: 360,
     height: 160,
     zone: "planning",
     urgency: "urgent",
@@ -87,9 +89,9 @@ Alt 또는 Option 키를 누른 상태에서 블럭을 클릭하면 해당 블�
     id: "example-2",
     title: "프로토타입 개발",
     description: "핵심 기능에 대한 MVP 프로토타입 제작 및 테스트 준비",
-    x: 960,
+    x: 1050,
     y: 120,
-    width: 320,
+    width: 360,
     height: 160,
     zone: "development",
     urgency: "normal",
@@ -99,9 +101,9 @@ Alt 또는 Option 키를 누른 상태에서 블럭을 클릭하면 해당 블�
     id: "example-3",
     title: "마케팅 채널 분석",
     description: "효과적인 마케팅 채널 조사 및 예산 배분 우선순위 선정",
-    x: 600,
+    x: 650,
     y: 320,
-    width: 320,
+    width: 360,
     height: 160,
     zone: "operations",
     urgency: "thinking",
@@ -111,9 +113,9 @@ Alt 또는 Option 키를 누른 상태에서 블럭을 클릭하면 해당 블�
     id: "example-4",
     title: "디자인 시스템 구축",
     description: "일관된 UI/UX를 위한 컴포넌트 라이브러리와 디자인 가이드라인 작성",
-    x: 960,
+    x: 1050,
     y: 320,
-    width: 320,
+    width: 360,
     height: 160,
     zone: "development",
     urgency: "stable",
@@ -123,9 +125,9 @@ Alt 또는 Option 키를 누른 상태에서 블럭을 클릭하면 해당 블�
     id: "example-5",
     title: "경쟁사 분석 보고서",
     description: "주요 경쟁사 3곳의 전략, 가격, 포지셔닝 비교 분석",
-    x: 1320,
+    x: 1450,
     y: 120,
-    width: 320,
+    width: 360,
     height: 160,
     zone: "planning",
     urgency: "lingering",
@@ -136,43 +138,47 @@ Alt 또는 Option 키를 누른 상태에서 블럭을 클릭하면 해당 블�
 const STORAGE_KEY = "layout_canvases"
 const CURRENT_CANVAS_KEY = "layout_current_canvas"
 
+const getDefaultCanvas = (): CanvasType => ({
+  id: "main",
+  name: "메인 캔버스",
+  blocks: initialBlocks,
+  zones: initialZones,
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+})
+
 const loadCanvases = (): CanvasType[] => {
-  if (typeof window === "undefined") return []
+  if (typeof window === "undefined") return [getDefaultCanvas()]
 
-  const storedCanvases = localStorage.getItem(STORAGE_KEY)
-  const storedCurrentCanvasId = localStorage.getItem(CURRENT_CANVAS_KEY)
-
-  if (storedCanvases && storedCurrentCanvasId) {
-    return JSON.parse(storedCanvases)
+  try {
+    const storedCanvases = localStorage.getItem(STORAGE_KEY)
+    if (storedCanvases) {
+      return JSON.parse(storedCanvases)
+    }
+  } catch (error) {
+    console.error("Failed to load canvases:", error)
   }
 
-  const defaultCanvas: CanvasType = {
-    id: "main",
-    name: "메인 캔버스",
-    blocks: initialBlocks,
-    zones: initialZones,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  }
-  return [defaultCanvas]
+  return [getDefaultCanvas()]
 }
 
 const loadCurrentCanvasId = (): string => {
-  const storedCurrentCanvasId = localStorage.getItem(CURRENT_CANVAS_KEY)
-  return storedCurrentCanvasId || "main"
+  if (typeof window === "undefined") return "main"
+
+  try {
+    const storedCurrentCanvasId = localStorage.getItem(CURRENT_CANVAS_KEY)
+    return storedCurrentCanvasId || "main"
+  } catch (error) {
+    console.error("Failed to load current canvas ID:", error)
+    return "main"
+  }
 }
 
 export default function Page() {
-  const [canvases, setCanvases] = useState<CanvasType[]>(loadCanvases())
-  const [currentCanvasId, setCurrentCanvasId] = useState<string>(loadCurrentCanvasId())
+  const [canvases, setCanvases] = useState<CanvasType[]>([getDefaultCanvas()])
+  const [currentCanvasId, setCurrentCanvasId] = useState<string>("main")
   const [lastSaved, setLastSaved] = useState<Date>(new Date())
-
-  const currentCanvas = canvases.find((c) => c.id === currentCanvasId) || canvases[0]
-  const blocks = currentCanvas?.blocks || []
-  const zones = currentCanvas?.zones || initialZones
-
-  const [history, setHistory] = useState<WorkBlock[][]>([blocks])
-  const [historyIndex, setHistoryIndex] = useState(0)
+  const [isClient, setIsClient] = useState(false)
   const [selectedZone, setSelectedZone] = useState<string | null>(null)
   const [showRelationships, setShowRelationships] = useState(true)
   const [showCompletedBlocks, setShowCompletedBlocks] = useState(true)
@@ -183,45 +189,58 @@ export default function Page() {
   const [isCanvasSelectorOpen, setIsCanvasSelectorOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [isAIEnabled, setIsAIEnabled] = useState(true)
+  const [previewBlock, setPreviewBlock] = useState<Partial<WorkBlock> | null>(null)
+
+  const [history, setHistory] = useState<CanvasType[][]>([[getDefaultCanvas()]])
+  const [historyIndex, setHistoryIndex] = useState(0)
+
+  const currentCanvas = canvases.find((c) => c.id === currentCanvasId) || canvases[0]
+  const blocks = currentCanvas?.blocks || []
+  const zones = currentCanvas?.zones || initialZones
+
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1
+      setHistoryIndex(newIndex)
+      setCanvases(history[newIndex])
+    }
+  }, [historyIndex, history])
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1
+      setHistoryIndex(newIndex)
+      setCanvases(history[newIndex])
+    }
+  }, [historyIndex, history])
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(canvases))
-    localStorage.setItem(CURRENT_CANVAS_KEY, currentCanvasId)
-    setLastSaved(new Date())
-  }, [canvases, currentCanvasId])
+    setIsClient(true)
+    const loadedCanvases = loadCanvases()
+    const loadedCanvasId = loadCurrentCanvasId()
 
-  useEffect(() => {
-    setCanvases((prev) =>
-      prev.map((canvas) => (canvas.id === currentCanvasId ? { ...canvas, blocks, updatedAt: Date.now() } : canvas)),
-    )
-  }, [blocks, currentCanvasId])
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
-        e.preventDefault()
-        setIsCreateDialogOpen(true)
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
-        e.preventDefault()
-        handleUndo()
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault()
-        setIsCanvasSelectorOpen(true)
-      }
-      if (e.key === "Escape") {
-        setIsCreateDialogOpen(false)
-        setIsReflectionDialogOpen(false)
-        setIsAreaManagementOpen(false)
-        setIsTrashDialogOpen(false)
-        setIsCanvasSelectorOpen(false)
-      }
+    if (loadedCanvases.length > 0) {
+      setCanvases(loadedCanvases)
+      setHistory([loadedCanvases])
+      setHistoryIndex(0)
     }
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [historyIndex])
+    if (loadedCanvasId && loadedCanvases.some((c) => c.id === loadedCanvasId)) {
+      setCurrentCanvasId(loadedCanvasId)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isClient) return
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(canvases))
+      localStorage.setItem(CURRENT_CANVAS_KEY, currentCanvasId)
+      setLastSaved(new Date())
+    } catch (error) {
+      console.error("Failed to save to localStorage:", error)
+    }
+  }, [canvases, currentCanvasId, isClient])
 
   const deletedBlocks = blocks
     .filter((b) => !b.isAIControl && b.isDeleted)
@@ -231,15 +250,25 @@ export default function Page() {
   const activeBlocks = blocks.filter((b) => !b.isDeleted)
 
   const saveToHistory = (newBlocks: WorkBlock[]) => {
+    const newCanvases = canvases.map((canvas) =>
+      canvas.id === currentCanvasId ? { ...canvas, blocks: newBlocks, updatedAt: Date.now() } : canvas,
+    )
+
+    // 현재 인덱스 이후의 히스토리 제거 (redo 분기 제거)
     const newHistory = history.slice(0, historyIndex + 1)
-    newHistory.push(newBlocks)
+    newHistory.push(newCanvases)
+
+    // 최대 50개 제한
     if (newHistory.length > 50) {
       newHistory.shift()
+      setHistory(newHistory)
+      setHistoryIndex(newHistory.length - 1)
     } else {
-      setHistoryIndex(historyIndex + 1)
+      setHistory(newHistory)
+      setHistoryIndex(newHistory.length - 1)
     }
-    setHistory(newHistory)
-    setBlocks(newBlocks)
+
+    setCanvases(newCanvases)
   }
 
   const setBlocks = (newBlocks: WorkBlock[]) => {
@@ -250,21 +279,90 @@ export default function Page() {
     )
   }
 
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1
-      setHistoryIndex(newIndex)
-      setBlocks([...history[newIndex]])
-    }
-  }
-
   const handleUpdateBlock = (id: string, updates: Partial<WorkBlock>, skipHistory = false) => {
     const block = blocks.find((b) => b.id === id)
+    if (!block) return
+
     if (block?.isAIControl && updates.aiEnabled !== undefined) {
       setIsAIEnabled(updates.aiEnabled)
     }
 
-    const newBlocks = blocks.map((block) => (block.id === id ? { ...block, ...updates } : block))
+    if (updates.isCompleted === true && !block.isCompleted) {
+      const completedBlocks = blocks.filter((b) => b.isCompleted)
+
+      const COMPLETION_ZONE_WIDTH = 400
+      const COMPLETION_ZONE_HEIGHT = 600
+      const COMPLETED_BLOCK_WIDTH = 340
+      const COMPLETED_BLOCK_HEIGHT = 56
+      const COMPLETED_BLOCK_SPACING = 8
+      const COMPLETION_PADDING = 60
+
+      const canvasWidth = typeof window !== "undefined" ? window.innerWidth : 1920
+      const canvasHeight = typeof window !== "undefined" ? window.innerHeight - 140 : 1080 - 140
+
+      const stackY =
+        canvasHeight -
+        COMPLETION_ZONE_HEIGHT +
+        COMPLETION_PADDING +
+        completedBlocks.length * (COMPLETED_BLOCK_HEIGHT + COMPLETED_BLOCK_SPACING)
+
+      updates = {
+        ...updates,
+        originalState: {
+          width: block.width,
+          height: block.height,
+          urgency: block.urgency || "stable",
+        },
+        x: canvasWidth - COMPLETION_ZONE_WIDTH + COMPLETION_PADDING,
+        y: stackY,
+        width: COMPLETED_BLOCK_WIDTH,
+        height: COMPLETED_BLOCK_HEIGHT,
+        relatedTo: [],
+      }
+    }
+
+    if (updates.isCompleted === false && block.isCompleted) {
+      const COMPLETION_ZONE_WIDTH = 400
+      const COMPLETION_ZONE_HEIGHT = 600
+      const COMPLETED_BLOCK_WIDTH = 340
+      const COMPLETED_BLOCK_HEIGHT = 56
+      const COMPLETED_BLOCK_SPACING = 8
+      const COMPLETION_PADDING = 60
+
+      const canvasWidth = typeof window !== "undefined" ? window.innerWidth : 1920
+      const canvasHeight = typeof window !== "undefined" ? window.innerHeight - 140 : 1080 - 140
+
+      const otherCompletedBlocks = blocks.filter((b) => b.isCompleted && b.id !== id).sort((a, b) => a.y - b.y)
+
+      const batchUpdates = otherCompletedBlocks.map((completedBlock, index) => ({
+        id: completedBlock.id,
+        updates: {
+          y:
+            canvasHeight -
+            COMPLETION_ZONE_HEIGHT +
+            COMPLETION_PADDING +
+            index * (COMPLETED_BLOCK_HEIGHT + COMPLETED_BLOCK_SPACING),
+        },
+      }))
+
+      if (batchUpdates.length > 0) {
+        const newBlocks = blocks.map((b) => {
+          if (b.id === id) {
+            return { ...b, ...updates }
+          }
+          const batchUpdate = batchUpdates.find((u) => u.id === b.id)
+          return batchUpdate ? { ...b, ...batchUpdate.updates } : b
+        })
+        if (skipHistory) {
+          setBlocks(newBlocks)
+        } else {
+          saveToHistory(newBlocks)
+        }
+        return
+      }
+    }
+
+    const newBlocks = blocks.map((b) => (b.id === id ? { ...b, ...updates } : b))
     if (skipHistory) {
       setBlocks(newBlocks)
     } else {
@@ -311,11 +409,6 @@ export default function Page() {
 
   const handleSelectCanvas = (id: string) => {
     setCurrentCanvasId(id)
-    const canvas = canvases.find((c) => c.id === id)
-    if (canvas) {
-      setHistory([canvas.blocks])
-      setHistoryIndex(0)
-    }
   }
 
   const handleRenameCanvas = (id: string, newName: string) => {
@@ -372,6 +465,70 @@ export default function Page() {
     saveToHistory(newBlocks)
   }
 
+  const handleReset = () => {
+    if (confirm("모든 데이터를 초기화하고 처음 상태로 돌아갑니다. 계속하시겠습니까?")) {
+      try {
+        localStorage.removeItem(STORAGE_KEY)
+        localStorage.removeItem(CURRENT_CANVAS_KEY)
+        window.location.reload()
+      } catch (error) {
+        console.error("Failed to reset:", error)
+      }
+    }
+  }
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const modifier = e.metaKey || e.ctrlKey
+
+      // modifier 키만 눌린 경우 무시
+      if (e.key === "Meta" || e.key === "Control" || e.key === "Alt" || e.key === "Shift") {
+        return
+      }
+
+      if (modifier && e.key === "z" && !e.shiftKey) {
+        e.preventDefault()
+        handleUndo()
+        return
+      }
+
+      if (modifier && e.key === "z" && e.shiftKey) {
+        e.preventDefault()
+        handleRedo()
+        return
+      }
+
+      if (modifier && e.key === "y") {
+        e.preventDefault()
+        handleRedo()
+        return
+      }
+
+      if (modifier && e.key === "n") {
+        e.preventDefault()
+        setIsCreateDialogOpen(true)
+        return
+      }
+
+      if (modifier && e.key === "k") {
+        e.preventDefault()
+        setIsCanvasSelectorOpen(true)
+        return
+      }
+
+      if (e.key === "Escape") {
+        setIsCreateDialogOpen(false)
+        setIsReflectionDialogOpen(false)
+        setIsAreaManagementOpen(false)
+        setIsTrashDialogOpen(false)
+        setIsCanvasSelectorOpen(false)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [handleUndo, handleRedo])
+
   return (
     <div className={`min-h-screen ${isDarkMode ? "dark bg-zinc-900 text-zinc-100" : "bg-[#fafaf9] text-foreground"}`}>
       <Header
@@ -390,12 +547,15 @@ export default function Page() {
         trashCount={deletedBlocks.length}
         onOpenTrash={() => setIsTrashDialogOpen(true)}
         onUndo={handleUndo}
+        onRedo={handleRedo}
         canUndo={historyIndex > 0}
+        canRedo={historyIndex < history.length - 1}
         isAIEnabled={isAIEnabled}
         onToggleAI={handleToggleAI}
         currentCanvasName={currentCanvas?.name || "메인 캔버스"}
         onOpenCanvasSelector={() => setIsCanvasSelectorOpen(true)}
         lastSaved={lastSaved}
+        onReset={handleReset}
       />
 
       <Canvas
@@ -409,6 +569,7 @@ export default function Page() {
         onCopyBlock={handleCopyBlock}
         onArchiveBlock={handleArchiveBlock}
         isDarkMode={isDarkMode}
+        previewBlock={previewBlock} // 미리보기 블록 전달
       />
 
       <CreateBlockDialog
@@ -417,6 +578,8 @@ export default function Page() {
         onCreateBlock={handleCreateBlock}
         zones={zones}
         isAIEnabled={isAIEnabled}
+        existingBlocks={activeBlocks}
+        onShowPreview={setPreviewBlock} // 미리보기 핸들러 전달
       />
 
       <ReflectionDialog

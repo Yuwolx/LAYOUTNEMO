@@ -74,15 +74,6 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
     onOpenChange(false)
   }
 
-  const handleRestore = () => {
-    onUpdate({
-      isCompleted: false,
-      x: 300,
-      y: 300,
-    })
-    onOpenChange(false)
-  }
-
   const isCompleted = block.isCompleted || false
   const isGuide = block.isGuide || false
 
@@ -132,12 +123,6 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
                   <p className="text-sm">{block.dueDate}</p>
                 </div>
               )}
-
-              <div className="pt-4 border-t border-border/30">
-                <Button onClick={handleRestore} variant="outline" className="w-full font-light bg-transparent">
-                  다시 사고 공간으로 가져오기
-                </Button>
-              </div>
             </>
           ) : (
             <>

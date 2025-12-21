@@ -1,13 +1,12 @@
 "use client"
 
 import type React from "react"
-
-import { MoreVertical, Trash2, Sparkles, Power } from "lucide-react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import type { WorkBlock } from "@/types"
-import { useState, useRef } from "react"
 import { BlockDetailDialog } from "@/components/block-detail-dialog"
+import { MoreVertical, Trash2, Sparkles, Power } from "lucide-react"
+import type { WorkBlock } from "@/types/work-block" // Added import for WorkBlock
 
 interface WorkBlockCardProps {
   block: WorkBlock
@@ -48,14 +47,6 @@ export function WorkBlockCard({
   const isAIControl = block.isAIControl || false
   const aiEnabled = block.aiEnabled !== undefined ? block.aiEnabled : false
 
-  const shadowClass = isCompleted ? urgencyShadows.stable : urgencyShadows[block.urgency || "stable"]
-
-  const completedOpacity = isCompleted ? "opacity-80" : "opacity-100"
-
-  const opacityClass = visibility === "dimmed" ? "opacity-25" : completedOpacity
-  const scaleClass = visibility === "emphasized" ? "scale-[1.03]" : "scale-100"
-  const contrastClass = visibility === "emphasized" ? "brightness-105" : "brightness-100"
-
   const handleMouseDown = (e: React.MouseEvent) => {
     startPosRef.current = { x: e.clientX, y: e.clientY }
     isMovingRef.current = false
@@ -86,15 +77,31 @@ export function WorkBlockCard({
     isMovingRef.current = false
   }
 
+  const handleCompleteBlock = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+
+    const dropdown = e.currentTarget.closest('[role="menu"]')
+    if (dropdown) {
+      const button = dropdown.previousElementSibling as HTMLElement
+      button?.click()
+    }
+
+    onUpdate({ isCompleted: true, relatedTo: [] })
+  }
+
   return (
     <>
       <div
+        key={`${block.id}-${isCompleted ? "completed" : "active"}`}
         className={`absolute group ${isCopyMode ? "cursor-copy" : isCompleted ? "cursor-grab" : "cursor-move"}`}
         style={{
           left: block.x,
           top: block.y,
-          width: isCompleted ? 340 : block.width, // Increased from 240 to 340 for better fit
-          height: isCompleted ? 56 : block.height,
+          width: block.width,
+          height: isCompleted ? 56 : undefined,
+          minHeight: isCompleted ? 56 : 120,
+          maxHeight: isCompleted ? 56 : 400,
           transition: isDragging ? "none" : "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
           zIndex: isDragging ? 50 : visibility === "emphasized" ? 20 : isCompleted ? 5 : 10,
         }}
@@ -106,10 +113,10 @@ export function WorkBlockCard({
           className={`
           w-full h-full bg-white border-border/60 rounded-2xl
           hover:shadow-xl hover:border-border
-          ${shadowClass}
-          ${opacityClass}
-          ${scaleClass}
-          ${contrastClass}
+          ${urgencyShadows[block.urgency || "stable"]}
+          ${isCompleted ? "opacity-80" : "opacity-100"}
+          ${visibility === "emphasized" ? "scale-[1.12] shadow-2xl" : "scale-100"}
+          ${visibility === "emphasized" ? "brightness-105" : "brightness-100"}
           ${isDragging ? "shadow-2xl scale-105 border-border cursor-grabbing" : ""}
           ${isCompleted ? "shadow-sm hover:opacity-60 p-3 rounded-lg" : "p-6"}
           ${isAIControl && aiEnabled ? "ring-2 ring-blue-400/30" : ""}
@@ -138,6 +145,22 @@ export function WorkBlockCard({
               </div>
             </div>
 
+            {isCompleted && !isGuide && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 -mt-1 -mr-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end"></DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             {!isCompleted && !isGuide && !isAIControl && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -151,6 +174,10 @@ export function WorkBlockCard({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleCompleteBlock} className="text-muted-foreground font-light">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    업무 마무리하기
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation()
@@ -168,7 +195,7 @@ export function WorkBlockCard({
 
           {!isCompleted && (
             <p
-              className={`text-sm leading-relaxed font-light ${isAIControl && !aiEnabled ? "text-muted-foreground/50" : "text-zinc-700 dark:text-zinc-300"} ${isGuide ? "line-clamp-3" : ""}`}
+              className={`text-sm leading-relaxed font-light line-clamp-3 ${isAIControl && !aiEnabled ? "text-muted-foreground/50" : "text-zinc-700 dark:text-zinc-300"}`}
             >
               {block.description}
             </p>

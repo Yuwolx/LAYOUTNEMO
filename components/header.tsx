@@ -1,6 +1,6 @@
 "use client"
 
-import { Eye, Moon, Sun, Trash2, Undo2, Sparkles } from "lucide-react"
+import { Eye, Moon, Sun, Trash2, Undo2, Sparkles, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import type { Zone } from "@/types"
@@ -22,11 +22,13 @@ interface HeaderProps {
   onOpenTrash: () => void
   onUndo: () => void
   canUndo: boolean
+  canRedo: boolean
   isAIEnabled: boolean
   onToggleAI: () => void
   currentCanvasName: string
   onOpenCanvasSelector: () => void
   lastSaved: Date
+  onReset: () => void
 }
 
 export function Header({
@@ -45,12 +47,15 @@ export function Header({
   trashCount,
   onOpenTrash,
   onUndo,
+  onRedo,
   canUndo,
+  canRedo,
   isAIEnabled,
   onToggleAI,
   currentCanvasName,
   onOpenCanvasSelector,
   lastSaved,
+  onReset,
 }: HeaderProps) {
   const formatLastSaved = () => {
     const now = new Date()
@@ -118,16 +123,39 @@ export function Header({
             <Button
               variant="outline"
               size="icon"
-              onClick={onUndo}
-              disabled={!canUndo}
-              className={`${isDarkMode ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700" : "bg-background hover:bg-accent"} ${!canUndo ? "opacity-40 cursor-not-allowed" : ""}`}
+              onClick={onReset}
+              className={`${isDarkMode ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700" : "bg-background hover:bg-accent"}`}
+              title="초기화"
             >
-              <Undo2 className="w-4 h-4" />
+              <RotateCcw className="w-4 h-4" />
             </Button>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={onUndo}
+                disabled={!canUndo}
+                className={`${isDarkMode ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700" : "bg-background hover:bg-accent"} ${!canUndo ? "opacity-40 cursor-not-allowed" : ""}`}
+                title="되돌리기 (Cmd/Ctrl+Z)"
+              >
+                <Undo2 className="w-4 h-4" />
+              </Button>
+
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={onRedo}
+                disabled={!canRedo}
+                className={`${isDarkMode ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700" : "bg-background hover:bg-accent"} ${!canRedo ? "opacity-40 cursor-not-allowed" : ""}`}
+                title="다시 실행 (Cmd/Ctrl+Shift+Z)"
+              >
+                <Undo2 className="w-4 h-4 scale-x-[-1]" />
+              </Button>
+            </div>
 
             <Button
               variant="outline"
-              size="icon"
               onClick={onOpenTrash}
               className={`relative ${isDarkMode ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700" : "bg-background hover:bg-accent"}`}
             >
@@ -144,7 +172,11 @@ export function Header({
             <Button
               variant="outline"
               onClick={onToggleDarkMode}
-              className={isDarkMode ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700" : "bg-background hover:bg-accent"}
+              className={
+                isDarkMode
+                  ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700 shadow-[0_0_20px_rgba(250,204,21,0.3)]"
+                  : "bg-background hover:bg-accent"
+              }
             >
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
