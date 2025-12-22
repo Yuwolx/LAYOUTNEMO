@@ -9,7 +9,6 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const viewport = {
   width: 'device-width',
-  initialScale: 0.8,  // 초기 줌 80%
   maximumScale: 2,
   userScalable: true,
 }
