@@ -3,7 +3,6 @@
 Next.js 16과 React 19를 기반으로 한 현대적인 UI 컴포넌트 라이브러리 프로젝트입니다. shadcn/ui와 Radix UI를 활용하여 접근성과 사용자 경험을 최우선으로 합니다.
 
 ## 🚀 주요 기능
-
 - **Next.js 16** - 최신 App Router와 서버 컴포넌트 지원
 - **React 19** - 최신 React 기능 활용
 - **Tailwind CSS v4** - 현대적인 스타일링 시스템
