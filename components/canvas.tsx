@@ -342,7 +342,7 @@ export function Canvas({
               strokeWidth="2"
               fill="none"
               className={`transition-all duration-200 group-hover:stroke-[4] ${
-                isDarkMode ? "text-zinc-600 group-hover:text-zinc-400" : "text-stone-400 group-hover:text-stone-600"
+                isDarkMode ? "text-zinc-300 group-hover:text-zinc-100" : "text-stone-400 group-hover:text-stone-600"
               }`}
               style={{ opacity }}
               strokeLinecap="round"

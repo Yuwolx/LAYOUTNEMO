@@ -17,7 +17,6 @@ export const metadata: Metadata = {
   title: "LAYOUT - An AI-assisted thinking space for work",
   description:
     "A personal thinking space for work where you externalize your internal work-thinking structure as spatial objects",
-  generator: "v0.app",
   icons: {
     icon: [
       {

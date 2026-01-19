@@ -27,6 +27,13 @@ const urgencyShadows = {
   urgent: "shadow-[0_6px_26px_rgba(251,146,60,0.55)]",
 }
 
+const urgencyShadowsDark = {
+  stable: "shadow-[0_4px_18px_rgba(0,0,0,0.5)]",
+  thinking: "shadow-[0_6px_24px_rgba(59,130,246,0.8)]",
+  lingering: "shadow-[0_6px_24px_rgba(251,191,36,0.85)]",
+  urgent: "shadow-[0_6px_26px_rgba(251,146,60,0.9)]",
+}
+
 export function WorkBlockCard({
   block,
   isDragging,
@@ -113,7 +120,7 @@ export function WorkBlockCard({
           className={`
           w-full h-full bg-white border-border/60 rounded-2xl
           hover:shadow-xl hover:border-border
-          ${urgencyShadows[block.urgency || "stable"]}
+          ${isDarkMode ? urgencyShadowsDark[block.urgency || "stable"] : urgencyShadows[block.urgency || "stable"]}
           ${isCompleted ? "opacity-80" : "opacity-100"}
           ${visibility === "emphasized" ? "scale-[1.12] shadow-2xl" : "scale-100"}
           ${visibility === "emphasized" ? "brightness-105" : "brightness-100"}
@@ -138,7 +145,7 @@ export function WorkBlockCard({
                   {block.title}
                 </h3>
                 {!isCompleted && (
-                  <p className="text-[11px] font-light tracking-wide text-zinc-700 dark:text-zinc-300">
+                  <p className="text-[11px] font-light tracking-wide text-zinc-700">
                     {block.dueDate}
                   </p>
                 )}
@@ -195,7 +202,7 @@ export function WorkBlockCard({
 
           {!isCompleted && (
             <p
-              className={`text-sm leading-relaxed font-light line-clamp-3 ${isAIControl && !aiEnabled ? "text-muted-foreground/50" : "text-zinc-700 dark:text-zinc-300"}`}
+              className={`text-sm leading-relaxed font-light line-clamp-3 ${isAIControl && !aiEnabled ? "text-muted-foreground/50" : "text-zinc-700"}`}
             >
               {block.description}
             </p>
