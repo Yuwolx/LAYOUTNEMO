@@ -1,199 +1,184 @@
-# LAYOUT UI Concept
+# LAYOUT  
 
-Next.js 16과 React 19를 기반으로 한 현대적인 UI 컴포넌트 라이브러리 프로젝트입니다. shadcn/ui와 Radix UI를 활용하여 접근성과 사용자 경험을 최우선으로 합니다.
+Visual Canvas-based Work Thinking Tool
 
-## 🚀 주요 기능
-- **Next.js 16** - 최신 App Router와 서버 컴포넌트 지원
-- **React 19** - 최신 React 기능 활용
-- **Tailwind CSS v4** - 현대적인 스타일링 시스템
-- **shadcn/ui** - 재사용 가능한 고품질 UI 컴포넌트
-- **Radix UI** - 접근성이 뛰어난 기본 컴포넌트
-- **TypeScript** - 타입 안정성 보장
-- **다크 모드** - next-themes를 통한 테마 전환 지원
-- **Supabase** - 데이터베이스 및 인증 통합
+<p align="center">
+  <a href="https://layoutnemo.com" target="_blank">
+    <img src="https://img.shields.io/badge/Live%20Demo-layoutnemo.com-000000?style=for-the-badge" />
+  </a>
+</p>
 
-## 📦 기술 스택
+LAYOUT은 기존의 리스트·보드 중심 업무 관리 도구가 담아내지 못했던  
+**사고의 흐름과 업무 간 관계를 시각적으로 표현하는 개인 업무 사고 공간**입니다.
 
-### 프레임워크 & 라이브러리
-- Next.js 16.0.10
-- React 19.2.0
-- TypeScript 5
+업무를 “관리”하기보다,  
+업무를 **어떻게 인식하고 정리하고 있는지**를 외부로 드러내는 데 초점을 둡니다.
 
-### UI 컴포넌트
-- Radix UI (다양한 접근성 우선 컴포넌트)
-- Lucide React (아이콘)
-- Recharts (차트 및 데이터 시각화)
-- Embla Carousel (캐러셀)
 
-### 스타일링
-- Tailwind CSS v4
-- tw-animate-css
-- class-variance-authority
-- tailwind-merge
 
-### 폼 & 유효성 검사
-- React Hook Form
-- Zod (스키마 검증)
-- @hookform/resolvers
+## 1. Problem Statement
 
-### 기타
-- Vercel Analytics
-- next-themes (테마 관리)
-- date-fns (날짜 처리)
-- Sonner (토스트 알림)
+대부분의 업무 관리 도구는 리스트, 보드, 타임라인과 같은 **선형 구조**를 전제로 설계되어 있습니다.  
+하지만 실제 업무 사고 과정은 다음과 같은 특징을 가집니다.
 
-## 🛠️ 시작하기
+- 하나의 업무가 여러 맥락에 동시에 속함
+- 상·하위 관계가 고정되지 않음
+- 순환하거나 되돌아가는 흐름이 빈번함
 
-### 필수 요구사항
+그럼에도 기존 도구들은 이러한 사고 구조를 담아내지 못하고,  
+결과적으로 “정리가 안 되는 문제”를 개인의 역량 문제로 귀결시키는 경우가 많습니다.
 
-- Node.js 18+ 
-- npm, yarn, 또는 pnpm
+**이 프로젝트는 해당 문제를 기능의 부족이 아니라,  
+업무를 담아내는 구조와 사고 방식의 불일치 문제로 재정의하며 시작되었습니다.**
 
-### 설치
 
-```bash
-# 의존성 설치
-npm install
-# 또는
-yarn install
-# 또는
-pnpm install
-```
 
-### 환경 변수 설정
+## 2. Core Hypothesis
 
-프로젝트는 다음 환경 변수를 사용합니다:
+> 업무 관리는 할 일을 나열하는 문제가 아니라,  
+> 업무 간 관계와 맥락을 어떻게 구조화해 외부로 표현하느냐의 문제다.
 
-```env
-# Supabase
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
-# PostgreSQL (Supabase)
-POSTGRES_URL=
-POSTGRES_PRISMA_URL=
-POSTGRES_URL_NON_POOLING=
-POSTGRES_USER=
-POSTGRES_PASSWORD=
-POSTGRES_DATABASE=
-POSTGRES_HOST=
+LAYOUT은 이 가설을 기반으로 모든 UX, 데이터 구조, AI 개입 범위를 설계했습니다.
 
-# OpenAI
-OPENAI_API_KEY=
-```
 
-### 개발 서버 실행
 
-```bash
-npm run dev
-```
+## 3. Design Principles
 
-브라우저에서 [http://localhost:3000](http://localhost:3000)을 열어 결과를 확인하세요.
+### 1. Canvas First
+- 정렬보다 **공간적 위치**가 의미를 가짐
+- 사용자는 사고 흐름에 맞게 자유롭게 배치
 
-### 빌드
+### 2. Relationship-oriented Thinking
+- 블럭은 독립적인 할 일이 아닌 **사고 단위**
+- 선은 의존성, 맥락, 흐름을 표현
 
-```bash
-npm run build
-```
+### 3. State-based Priority
+- 숫자 기반 우선순위가 아닌  
+  **머릿속에서 차지하는 인지적 무게**를 시각적으로 표현
 
-### 프로덕션 서버 실행
+### 4. User Control & Freedom
+- AI는 제안만 수행
+- **모든 변화는 사용자 승인 후 반영**
 
-```bash
-npm run start
-```
+### 5. Local-first
+- 로그인 없이 즉시 사용 가능
+- 도구 사용 자체의 진입 장벽 제거
 
-## 📂 프로젝트 구조
 
-```
-.
-├── app/                    # Next.js App Router
-│   ├── layout.tsx         # 루트 레이아웃
-│   └── globals.css        # 전역 스타일 및 테마 변수
-├── components/            
-│   └── ui/                # shadcn/ui 컴포넌트
-├── hooks/                 # 커스텀 React 훅
-│   ├── use-mobile.tsx     # 모바일 감지
-│   └── use-toast.ts       # 토스트 알림
-├── lib/                   
-│   └── utils.ts           # 유틸리티 함수 (cn 등)
-└── public/                # 정적 파일
-```
 
-## 🎨 사용 가능한 UI 컴포넌트
+## 4. Key Features
 
-프로젝트에는 다음 컴포넌트들이 포함되어 있습니다:
+### Visual Blocks & Connections
+- 자유 배치 가능한 블럭
+- 블럭 간 관계를 선으로 연결 및 해제
 
-- Accordion
-- Alert & Alert Dialog
-- Avatar
-- Button
-- Card
-- Checkbox
-- Collapsible
-- Context Menu
-- Dialog
-- Dropdown Menu
-- Hover Card
-- Input & Label
-- Menubar
-- Navigation Menu
-- Popover
-- Progress
-- Radio Group
-- Scroll Area
-- Select
-- Separator
-- Slider
-- Switch
-- Tabs
-- Toast
-- Toggle & Toggle Group
-- Tooltip
+### Zones (Context Separation)
+- 역할·관점·프로젝트 단위 영역 분리
+- 영역 삭제 시에도 블럭은 보존 → 사고 기록 보호
 
-## 🎯 개발 가이드
+### 5-level State System
+- Urgent / Normal / Thinking / Stable / Lingering
+- “해야 할 일”이 아닌 **현재 인식 상태** 표현
 
-### 새 컴포넌트 추가
+### Reflection (정리하기)
+- 자동 정리 ❌
+- 체크포인트 방식의 사고 점검
+- 위치 변경은 항상 사용자 승인 필요
 
-```tsx
-import { Button } from "@/components/ui/button"
+### Optional AI Assistance
+- 자연어 입력 보조
+- 구조 정리 제안
+- 언제든 ON/OFF 가능
 
-export function MyComponent() {
-  return <Button>클릭하세요</Button>
-}
-```
 
-### 유틸리티 함수 사용
 
-```tsx
-import { cn } from "@/lib/utils"
+## 5. AI Design Philosophy
 
-const className = cn(
-  "base-class",
-  condition && "conditional-class"
-)
-```
+AI는 판단이나 자동화를 담당하지 않습니다.  
+LAYOUT에서 AI의 역할은 다음으로 한정됩니다.
 
-### 다크 모드 토글
+- 입력 마찰 최소화
+- 사고 흐름 단절 방지
+- 구조적 제안 제공
 
-프로젝트는 자동으로 시스템 테마를 감지하며, CSS 변수를 통해 라이트/다크 모드를 지원합니다.
+이를 위해 다음과 같은 구조적 분리를 적용했습니다.
 
-## 📝 라이선스
+- AI 판단 결과는 `aiMeta`로 분리
+- 사용자 확정 데이터와 절대 혼합하지 않음
+- 위치 변경 등 사고 좌표 영역은 자동 변경 금지
 
-Private
+> AI가 고도화되더라도,  
+> 이 도구의 주도권은 항상 사용자에게 남도록 설계되어 있습니다.
 
-## 🤝 기여
 
----
 
-## 👤 저자 정보
+## 6. Data Structure as Philosophy
 
-| 항목 | 정보 |
-|------|------|
-| **개발자** | 권혁준 |
-| **연도** | 2025 |
-| **이메일** | yuwolxx@gmail.com |
+LAYOUT의 핵심 설계는 데이터 구조 자체에 반영되어 있습니다.
 
-**Made with ❤️**
+- 보이는 데이터 / 내부 판단 데이터 분리
+- AI 제안 / 사용자 결정 분리
+- 로컬 JSON 직렬화 가능 구조
+
+이 구조 덕분에:
+- 로그인 추가 시 마이그레이션 불필요
+- AI 고도화 시 UI 안정성 유지
+- 기능 확장 시 철학 훼손 방지
+
+
+
+## 7. Role & Responsibility
+
+본 프로젝트에서 수행한 역할은 다음과 같습니다.
+
+- 문제 정의 및 가설 수립
+- 서비스 철학 및 UX 원칙 설계
+- 기능 범위 및 우선순위 결정
+- 데이터 구조 설계
+- AI 개입 범위 및 규칙 정의
+- UI/UX 설계 및 직접 구현
+- 배포 및 운영 환경 구성
+
+단순한 기능 구현이 아닌,  
+**기획–판단–구현을 연결하는 프로젝트 오너 역할**을 수행했습니다.
+
+
+
+## 8. Tech Stack
+
+- **Next.js / React / TypeScript**
+- **Tailwind CSS v4 / shadcn/ui**
+- **OpenAI API (gpt-4o-mini)**
+- **IndexedDB / localStorage**
+- **Vercel + GitHub CI/CD**
+
+각 기술은 “최신성”보다  
+요구사항과 철학에 맞는 선택 여부를 기준으로 결정되었습니다.
+
+
+
+## 9. Trade-offs & Limitations
+
+- 협업 기능 미지원 (개인 사고 공간 검증 우선)
+- 모바일 최적화 미흡
+- 사고 복잡도 증가 시 새로운 구조적 부담 가능성
+
+의도적으로 범위를 제한한 MVP이며,  
+개념 검증을 최우선 목표로 설정했습니다.
+
+
+
+## 10. Current Status
+
+- 실제 도메인 배포 완료
+- 실사용 가능한 상태
+- 반복 개선을 위한 기준점 확보
+
+
+
+## 11. Future Direction
+
+- 실제 사용 경험 기반 UX 개선
+- 사고 공간 개념의 한계 검증
+- 협업, 템플릿, 반복 업무 기능 확장 (철학 유지 전제)
