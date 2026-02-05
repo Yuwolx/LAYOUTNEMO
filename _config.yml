@@ -1,0 +1,15 @@
+title: LAYOUTNEMO
+description: 개인 사고 기반 업무 모델링 및 AI 인지 보조 공간
+remote_theme: just-the-docs/just-the-docs
+plugins:
+- jekyll-remote-theme
+url: https://Yuwolx.github.io
+baseurl: /LAYOUTNEMO
+aux_links:
+  LAYOUTNEMO on GitHub: https://github.com/Yuwolx/LAYOUTNEMO
+color_scheme: eggit_custom
+mermaid:
+  version: 9.1.3
+permalink: pretty
+search_enabled: true
+heading_anchors: true
