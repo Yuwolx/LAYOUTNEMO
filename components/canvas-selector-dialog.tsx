@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Pencil, Trash2, Plus } from "lucide-react"
 import type { Canvas } from "@/types"
+import { useLanguage, useT } from "@/lib/i18n/context"
+import { translateSeedCanvasName } from "@/lib/i18n/seed"
 
 interface CanvasSelectorDialogProps {
   open: boolean
@@ -28,13 +30,17 @@ export function CanvasSelectorDialog({
   onDeleteCanvas,
   onCreateCanvas,
 }: CanvasSelectorDialogProps) {
+  const { language } = useLanguage()
+  const t = useT()
+  const newCanvasPlaceholder = language === "en" ? "New canvas name" : "새 캔버스 이름"
+  const createLabel = language === "en" ? "Create" : "생성"
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState("")
   const [newCanvasName, setNewCanvasName] = useState("")
 
   const handleStartEdit = (canvas: Canvas) => {
     setEditingId(canvas.id)
-    setEditingName(canvas.name)
+    setEditingName(translateSeedCanvasName(canvas, language))
   }
 
   const handleSaveEdit = () => {
@@ -56,7 +62,7 @@ export function CanvasSelectorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>캔버스 선택</DialogTitle>
+          <DialogTitle>{t("dialog.canvasSelector.title")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3 mt-4">
@@ -87,14 +93,14 @@ export function CanvasSelectorDialog({
                   }}
                   className="flex-1 text-left font-medium"
                 >
-                  {canvas.name}
+                  {translateSeedCanvasName(canvas, language)}
                 </button>
               )}
 
               <div className="flex items-center gap-2">
                 {editingId === canvas.id ? (
                   <Button size="sm" onClick={handleSaveEdit}>
-                    저장
+                    {t("action.save")}
                   </Button>
                 ) : (
                   <>
@@ -120,7 +126,7 @@ export function CanvasSelectorDialog({
 
         <div className="flex gap-2 mt-6 pt-4 border-t">
           <Input
-            placeholder="새 캔버스 이름"
+            placeholder={newCanvasPlaceholder}
             value={newCanvasName}
             onChange={(e) => setNewCanvasName(e.target.value)}
             onKeyDown={(e) => {
@@ -129,7 +135,7 @@ export function CanvasSelectorDialog({
           />
           <Button onClick={handleCreateCanvas}>
             <Plus className="w-4 h-4 mr-2" />
-            생성
+            {createLabel}
           </Button>
         </div>
       </DialogContent>

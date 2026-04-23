@@ -67,18 +67,17 @@ export const CREATE_BLOCK_PROMPT = `
    
    **lingering (방치):**
    - "미루고", "방치", "언젠가", "나중에"
-   
-   **normal (보통):**
-   - 위 표현이 없으면 기본값
 
-5. **영역 추천**
-   입력 내용의 키워드로 가장 관련 있는 영역 선택:
-   - "디자인", "UI", "UX" → design
-   - "개발", "코딩", "프로그래밍" → development  
-   - "기획", "계획", "일정" → planning
-   - "마케팅", "홍보" → marketing
-   - "개인", "취미", "여행", "크리스마스", "생일" → personal
-   
+   **기본값:** 위 표현이 없으면 "stable"
+
+5. **영역(결) 추천**
+   입력 내용의 키워드로 가장 관련 있는 결 선택:
+   - "디자인", "UI", "UX", "비주얼" → design
+   - "개발", "코딩", "프로그래밍", "API" → development
+   - "기획", "계획", "일정", "로드맵" → planning
+   - "마케팅", "홍보", "콘텐츠", "SNS" → marketing
+   - "개인", "취미", "여행", "생일", "크리스마스", "쇼핑" → daily
+
    명확하지 않으면 "planning" 선택
 
 ---
@@ -91,7 +90,7 @@ export const CREATE_BLOCK_PROMPT = `
   "suggestedZone": "추천 영역 ID",
   "zoneReason": "왜 이 영역을 선택했는지 간단 설명",
   "suggestedDueDate": "YYYY-MM-DD" 또는 null,
-  "suggestedUrgency": "stable" | "normal" | "thinking" | "lingering" | "urgent"
+  "suggestedUrgency": "stable" | "thinking" | "lingering" | "urgent"
 }
 
 ---
@@ -105,7 +104,7 @@ export const CREATE_BLOCK_PROMPT = `
 {
   "title": "크리스마스 일정 잡기",
   "summary": "크리스마스 관련 일정을 이브 전까지 준비하고 계획해야 합니다",
-  "suggestedZone": "personal",
+  "suggestedZone": "daily",
   "zoneReason": "개인적인 크리스마스 일정 관련 업무입니다",
   "suggestedDueDate": "2025-12-23",
   "suggestedUrgency": "urgent"

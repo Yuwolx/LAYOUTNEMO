@@ -1,3 +1,6 @@
+/** 정리하기 / 블럭 생성 제안에서 변경 가능한 필드 값의 가능한 타입들 */
+export type FieldChangeValue = string | number | string[] | boolean | null
+
 export interface CreateBlockAIInput {
   userInput: string
   existingBlocks: {
@@ -15,9 +18,10 @@ export interface CreateBlockAIInput {
 export interface CreateBlockAIOutput {
   title: string
   summary: string
-  area: string // Changed from suggestedZone
-  due_date: string | null // Changed from suggestedDueDate
-  urgency: "안정" | "보통" | "시급" // Changed from English to Korean
+  suggestedZone: string
+  zoneReason: string
+  suggestedDueDate: string | null
+  suggestedUrgency: "stable" | "thinking" | "lingering" | "urgent"
 }
 
 export interface TidySuggestionInput {
@@ -43,7 +47,7 @@ export interface TidySuggestion {
   question: string
   proposedChange: {
     field: string
-    newValue: any
+    newValue: FieldChangeValue
     reason: string
   }
 }
@@ -61,11 +65,13 @@ export interface TidyAnalysisStage {
 
 export interface TidyComprehensiveAnalysis {
   totalBlocks: number
+  completedBlocks?: number
   zoneDistribution: Record<string, number>
   connectionIssues: string[]
   positionIssues: string[]
   urgencyIssues: string[]
   overallHealth: "good" | "needs_attention" | "critical"
+  insight?: string
 }
 
 export interface TidyDetailedSuggestion {
@@ -77,8 +83,8 @@ export interface TidyDetailedSuggestion {
   changes: Array<{
     blockId: string
     field: string
-    currentValue: any
-    suggestedValue: any
+    currentValue: FieldChangeValue
+    suggestedValue: FieldChangeValue
     reason: string
   }>
 }

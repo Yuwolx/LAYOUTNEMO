@@ -5,6 +5,7 @@ import type { JSX } from "react"
 import { useRef, useState, useEffect } from "react"
 import { WorkBlockCard } from "@/components/work-block-card"
 import type { WorkBlock, Zone } from "@/types"
+import { useLanguage } from "@/lib/i18n/context"
 
 interface CanvasProps {
   blocks: WorkBlock[]
@@ -42,6 +43,7 @@ export function Canvas({
   isDarkMode,
   previewBlock, // Receive preview block
 }: CanvasProps) {
+  const { language } = useLanguage()
   const canvasRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
@@ -389,7 +391,7 @@ export function Canvas({
           <div
             className={`absolute top-4 left-4 text-sm font-light ${isDarkMode ? "text-zinc-400" : "text-stone-400"}`}
           >
-            완료된 업무
+            {language === "en" ? "Completed Tasks" : "완료된 업무"}
           </div>
         </div>
       )}

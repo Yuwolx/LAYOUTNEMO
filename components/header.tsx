@@ -4,6 +4,8 @@ import { Eye, Moon, Sun, Trash2, Undo2, Sparkles, RotateCcw } from "lucide-react
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import type { Zone } from "@/types"
+import { useLanguage } from "@/lib/i18n/context"
+import { translateSeedZoneLabel, translateSeedCanvasName } from "@/lib/i18n/seed"
 
 interface HeaderProps {
   onCreateBlock: () => void
@@ -21,6 +23,7 @@ interface HeaderProps {
   trashCount: number
   onOpenTrash: () => void
   onUndo: () => void
+  onRedo: () => void
   canUndo: boolean
   canRedo: boolean
   isAIEnabled: boolean
@@ -57,6 +60,7 @@ export function Header({
   lastSaved,
   onReset,
 }: HeaderProps) {
+  const { language, toggleLanguage, t } = useLanguage()
   const formatLastSaved = () => {
     const now = new Date()
     const diff = now.getTime() - lastSaved.getTime()
@@ -95,6 +99,23 @@ export function Header({
             >
               {currentCanvasName}
             </button>
+            <button
+              onClick={toggleLanguage}
+              aria-label={language === "ko" ? "Switch to English" : "한국어로 전환"}
+              title={t("header.switchLanguage")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex items-center gap-1.5 ${
+                isDarkMode
+                  ? "bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              <span className="font-semibold tracking-tight">
+                {language === "ko" ? "Aa" : "가"}
+              </span>
+              <span className="hidden sm:inline text-[11px] opacity-70">
+                {t("header.switchLanguage")}
+              </span>
+            </button>
             <span className={`text-xs ${isDarkMode ? "text-zinc-500" : "text-gray-400"}`}>{formatLastSaved()}</span>
           </div>
 
@@ -125,7 +146,7 @@ export function Header({
               size="icon"
               onClick={onReset}
               className={`${isDarkMode ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700" : "bg-background hover:bg-accent"}`}
-              title="초기화"
+              title={t("header.reset")}
             >
               <RotateCcw className="w-4 h-4" />
             </Button>
@@ -137,7 +158,7 @@ export function Header({
                 onClick={onUndo}
                 disabled={!canUndo}
                 className={`${isDarkMode ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700" : "bg-background hover:bg-accent"} ${!canUndo ? "opacity-40 cursor-not-allowed" : ""}`}
-                title="되돌리기 (Cmd/Ctrl+Z)"
+                title={`${t("header.undo")} (Cmd/Ctrl+Z)`}
               >
                 <Undo2 className="w-4 h-4" />
               </Button>
@@ -148,7 +169,7 @@ export function Header({
                 onClick={onRedo}
                 disabled={!canRedo}
                 className={`${isDarkMode ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700" : "bg-background hover:bg-accent"} ${!canRedo ? "opacity-40 cursor-not-allowed" : ""}`}
-                title="다시 실행 (Cmd/Ctrl+Shift+Z)"
+                title={`${t("header.redo")} (Cmd/Ctrl+Shift+Z)`}
               >
                 <Undo2 className="w-4 h-4 scale-x-[-1]" />
               </Button>
@@ -182,11 +203,11 @@ export function Header({
             </Button>
 
             <Button onClick={onCreateBlock} className="text-sm">
-              새 블럭 만들기
+              {t("header.createBlock")}
             </Button>
 
             <Button onClick={onReflect} className="text-sm bg-foreground text-background hover:bg-foreground/90">
-              정리하기
+              {t("header.reflect")}
             </Button>
           </div>
         </div>
@@ -213,7 +234,7 @@ export function Header({
                 }
               `}
             >
-              {zone.label}
+              {translateSeedZoneLabel(zone, language)}
             </button>
           ))}
 
@@ -221,7 +242,7 @@ export function Header({
             onClick={onManageAreas}
             className={`ml-1 px-2 py-1.5 text-xs rounded-full transition-colors ${isDarkMode ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800" : "text-muted-foreground/60 hover:text-foreground hover:bg-accent/40"}`}
           >
-            + 영역 추가
+            {t("header.addFacet")}
           </button>
 
           <div className="ml-auto flex items-center gap-2">
@@ -241,7 +262,7 @@ export function Header({
               `}
             >
               <Eye className="w-3.5 h-3.5" />
-              <span>연결 보기</span>
+              <span>{showRelationships ? t("header.showRelationships") : t("header.hideRelationships")}</span>
             </button>
 
             <button
@@ -260,7 +281,7 @@ export function Header({
               `}
             >
               <Eye className="w-3.5 h-3.5" />
-              <span>완료 보기</span>
+              <span>{showCompletedBlocks ? t("header.showCompleted") : t("header.hideCompleted")}</span>
             </button>
           </div>
         </div>

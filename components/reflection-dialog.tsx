@@ -212,7 +212,7 @@ export function ReflectionDialog({
                 </p>
                 <ul className="text-sm text-foreground/70 space-y-2 ml-4 list-disc">
                   <li>블럭 간 관계와 패턴 발견</li>
-                  <li>영역 분포와 배치 최적화</li>
+                  <li>결 분포와 배치 최적화</li>
                   <li>연결이 필요한 블럭 찾기</li>
                   <li>시급도와 우선순위 검토</li>
                 </ul>
@@ -274,7 +274,7 @@ export function ReflectionDialog({
                         : currentSuggestion.type === "position"
                           ? "위치"
                           : currentSuggestion.type === "zone"
-                            ? "영역"
+                            ? "결"
                             : "시급도"}
                     </span>
                   </div>
