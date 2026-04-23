@@ -46,12 +46,12 @@ nav_order: 4
 
 ### 배포 흐름
 
-```mermaid
-flowchart LR
-    Dev[로컬 개발] --> Push[git push origin master]
-    Push --> Vercel[Vercel 자동 빌드]
-    Vercel --> Deploy[Production Deployment]
-    Deploy --> Domain[https://layoutnemo.com]
+```
+로컬 개발
+  → git push origin master
+  → Vercel 자동 빌드
+  → Production Deployment
+  → https://layoutnemo.com
 ```
 
 ### 도메인
@@ -88,16 +88,16 @@ flowchart LR
 
 ### 데이터 흐름 (블럭 생성 기준)
 
-```mermaid
-flowchart TD
-    User[사용자 입력] --> Dialog[create-block-dialog]
-    Dialog --> API[/api/ai/create-block]
-    API --> OpenAI[OpenAI gpt-4o-mini]
-    OpenAI --> Extract[제목/요약/기한/시급도 추출]
-    Extract --> Page[page.tsx: handleCreateBlock]
-    Page --> Place[findOptimalPosition - 스마트 배치]
-    Place --> Storage[localStorage 저장]
-    Storage --> Render[Canvas 렌더링]
+```
+사용자 입력
+  → create-block-dialog
+  → /api/ai/create-block
+  → OpenAI (gpt-4o-mini)
+  → 제목 / 요약 / 기한 / 시급도 추출
+  → handleCreateBlock() (page.tsx)
+  → findOptimalPosition() — 스마트 배치
+  → localStorage 저장
+  → Canvas 렌더링
 ```
 
 ### 저장 구조

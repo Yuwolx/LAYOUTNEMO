@@ -8,8 +8,6 @@ baseurl: /LAYOUTNEMO
 aux_links:
   LAYOUTNEMO on GitHub: https://github.com/Yuwolx/LAYOUTNEMO
 color_scheme: eggit_custom
-mermaid:
-  version: 9.1.3
 permalink: pretty
 search_enabled: true
 heading_anchors: true
