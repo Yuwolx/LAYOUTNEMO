@@ -15,5 +15,6 @@ heading_anchors: true
 exclude:
   - WORKSPACE.md
   - DEMO_LEGACY.md
+  - ARCHITECTURE.md
   - .claude/
   - README.md
