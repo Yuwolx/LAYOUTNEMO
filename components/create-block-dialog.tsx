@@ -64,6 +64,7 @@ export function CreateBlockDialog({
         userInput: initialInput,
         existingBlocks: [],
         zones: zones.map((z) => ({ id: z.id, label: z.label })),
+        language,
       })
 
       setTitle(aiOutput.title)

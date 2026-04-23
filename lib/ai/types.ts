@@ -13,6 +13,8 @@ export interface CreateBlockAIInput {
     id: string
     label: string
   }[]
+  /** AI 응답 언어. 기본값은 한국어. */
+  language?: "ko" | "en"
 }
 
 export interface CreateBlockAIOutput {

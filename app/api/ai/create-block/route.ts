@@ -14,10 +14,16 @@ export async function POST(req: Request) {
 
     const today = new Date().toISOString().split("T")[0]
     const areaList = input.zones.map((z) => z.label).join(", ")
+    const language = input.language ?? "ko"
 
     const prompt = CREATE_BLOCK_PROMPT.replace("{USER_INPUT}", input.userInput)
       .replace("{TODAY_DATE}", today)
       .replace("{AREA_LIST}", areaList)
+
+    const languageDirective =
+      language === "en"
+        ? "Write all text fields (title, summary, zoneReason) in English. Do not use Korean in the response."
+        : "title, summary, zoneReason 필드는 모두 한국어로 작성하라."
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -31,11 +37,12 @@ export async function POST(req: Request) {
           {
             role: "system",
             content:
-              "You are a helpful assistant that analyzes user input and extracts structured task information. Only fill in information that is explicitly present in the input.",
+              "You are a helpful assistant that analyzes user input and extracts structured task information. Only fill in information that is explicitly present in the input. " +
+              languageDirective,
           },
           {
             role: "user",
-            content: prompt,
+            content: prompt + "\n\n" + languageDirective,
           },
         ],
         temperature: 0.3,
@@ -57,6 +64,6 @@ export async function POST(req: Request) {
     return NextResponse.json(aiOutput)
   } catch (error) {
     console.error("AI API Error:", error)
-    return NextResponse.json({ error: "AI 처리 중 오류가 발생했습니다." }, { status: 500 })
+    return NextResponse.json({ error: "AI processing failed / AI 처리 중 오류가 발생했습니다." }, { status: 500 })
   }
 }

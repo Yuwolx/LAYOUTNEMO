@@ -8,8 +8,9 @@ import { ReflectionDialog } from "@/components/reflection-dialog"
 import { AreaManagementDialog } from "@/components/area-management-dialog"
 import { TrashDialog } from "@/components/trash-dialog"
 import { CanvasSelectorDialog } from "@/components/canvas-selector-dialog"
+import { AboutDialog } from "@/components/about-dialog"
 import type { WorkBlock, Zone, Canvas as CanvasType } from "@/types"
-import { useLanguage } from "@/lib/i18n/context"
+import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedCanvasName } from "@/lib/i18n/seed"
 
 // 기본 결(Facet) 5종. 설계 문서 (ARCHITECTURE.md) 와 정합.
@@ -103,27 +104,6 @@ const initialBlocks: WorkBlock[] = [
 
 블럭 복사:
 Alt 또는 Option 키를 누른 상태에서 블럭을 클릭하면 해당 블럭이 복사됩니다. 복사된 블럭은 원본 옆에 생성되며, 모든 정보(긴급도, 마감일, 메모 등)가 함께 복사됩니다.`,
-  },
-  {
-    id: "developer-info",
-    title: "개발자 정보",
-    description: "LAYOUT 서비스 개발자 정보",
-    x: 120,
-    y: 600,
-    width: 380,
-    height: 160,
-    zone: "daily",
-    urgency: "stable",
-    isGuide: true,
-    detailedNotes: `개발자 정보
-
-📧 이메일: yuwolxx@gmail.com
-
-👨‍💻 개발자: 권혁준
-
-📅 개발 연도: 2025
-
-이 서비스는 개인의 작업 사고를 공간 객체로 표현하고 외부화하기 위한 AI 보조 사고 공간입니다.`,
   },
   {
     id: "example-1",
@@ -248,6 +228,7 @@ const loadCurrentCanvasId = (): string => {
 
 export default function Page() {
   const { language } = useLanguage()
+  const t = useT()
   const [canvases, setCanvases] = useState<CanvasType[]>([getDefaultCanvas()])
   const [currentCanvasId, setCurrentCanvasId] = useState<string>("main")
   const [lastSaved, setLastSaved] = useState<Date>(new Date())
@@ -260,32 +241,43 @@ export default function Page() {
   const [isAreaManagementOpen, setIsAreaManagementOpen] = useState(false)
   const [isTrashDialogOpen, setIsTrashDialogOpen] = useState(false)
   const [isCanvasSelectorOpen, setIsCanvasSelectorOpen] = useState(false)
+  const [isAboutOpen, setIsAboutOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [isAIEnabled, setIsAIEnabled] = useState(true)
   const [previewBlock, setPreviewBlock] = useState<Partial<WorkBlock> | null>(null)
 
-  const [history, setHistory] = useState<CanvasType[][]>([[getDefaultCanvas()]])
-  const [historyIndex, setHistoryIndex] = useState(0)
+  // 현재 캔버스의 blocks 스냅샷만 기록 (v1.1 최적화).
+  // 과거: CanvasType[][] 로 모든 캔버스 전체를 스냅샷 → 메모리 부담.
+  // 현재: { canvasId, blocks } 만 저장하고 undo 시 해당 캔버스 blocks 만 교체.
+  type HistorySnapshot = { canvasId: string; blocks: WorkBlock[] }
+  const [history, setHistory] = useState<HistorySnapshot[]>([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
 
   const currentCanvas = canvases.find((c) => c.id === currentCanvasId) || canvases[0]
   const blocks = currentCanvas?.blocks || []
   const zones = currentCanvas?.zones || initialZones
 
+  const applySnapshot = useCallback((snap: HistorySnapshot) => {
+    setCanvases((prev) =>
+      prev.map((c) => (c.id === snap.canvasId ? { ...c, blocks: snap.blocks, updatedAt: Date.now() } : c)),
+    )
+  }, [])
+
   const handleUndo = useCallback(() => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1
       setHistoryIndex(newIndex)
-      setCanvases(history[newIndex])
+      applySnapshot(history[newIndex])
     }
-  }, [historyIndex, history])
+  }, [historyIndex, history, applySnapshot])
 
   const handleRedo = useCallback(() => {
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1
       setHistoryIndex(newIndex)
-      setCanvases(history[newIndex])
+      applySnapshot(history[newIndex])
     }
-  }, [historyIndex, history])
+  }, [historyIndex, history, applySnapshot])
 
   useEffect(() => {
     setIsClient(true)
@@ -294,7 +286,9 @@ export default function Page() {
 
     if (loadedCanvases.length > 0) {
       setCanvases(loadedCanvases)
-      setHistory([loadedCanvases])
+      const activeId = loadedCanvasId && loadedCanvases.some((c) => c.id === loadedCanvasId) ? loadedCanvasId : loadedCanvases[0].id
+      const activeCanvas = loadedCanvases.find((c) => c.id === activeId) ?? loadedCanvases[0]
+      setHistory([{ canvasId: activeCanvas.id, blocks: activeCanvas.blocks }])
       setHistoryIndex(0)
     }
 
@@ -302,6 +296,17 @@ export default function Page() {
       setCurrentCanvasId(loadedCanvasId)
     }
   }, [])
+
+  // 캔버스 전환 시 해당 캔버스의 현재 blocks 로 히스토리를 리셋한다.
+  // (과거엔 전체 캔버스 스냅샷을 공유했으나, 현재는 캔버스 단위로 독립 유지)
+  useEffect(() => {
+    if (!isClient) return
+    const active = canvases.find((c) => c.id === currentCanvasId)
+    if (!active) return
+    setHistory([{ canvasId: active.id, blocks: active.blocks }])
+    setHistoryIndex(0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentCanvasId, isClient])
 
   useEffect(() => {
     if (!isClient) return
@@ -323,25 +328,19 @@ export default function Page() {
   const activeBlocks = blocks.filter((b) => !b.isDeleted)
 
   const saveToHistory = (newBlocks: WorkBlock[]) => {
-    const newCanvases = canvases.map((canvas) =>
-      canvas.id === currentCanvasId ? { ...canvas, blocks: newBlocks, updatedAt: Date.now() } : canvas,
+    // 캔버스는 즉시 업데이트
+    setCanvases((prev) =>
+      prev.map((canvas) =>
+        canvas.id === currentCanvasId ? { ...canvas, blocks: newBlocks, updatedAt: Date.now() } : canvas,
+      ),
     )
 
-    // 현재 인덱스 이후의 히스토리 제거 (redo 분기 제거)
-    const newHistory = history.slice(0, historyIndex + 1)
-    newHistory.push(newCanvases)
-
-    // 최대 50개 제한
-    if (newHistory.length > 50) {
-      newHistory.shift()
-      setHistory(newHistory)
-      setHistoryIndex(newHistory.length - 1)
-    } else {
-      setHistory(newHistory)
-      setHistoryIndex(newHistory.length - 1)
-    }
-
-    setCanvases(newCanvases)
+    // redo 분기 제거 + 새 스냅샷 추가 + 50개 제한
+    const truncated = history.slice(0, historyIndex + 1)
+    truncated.push({ canvasId: currentCanvasId, blocks: newBlocks })
+    const limited = truncated.length > 50 ? truncated.slice(truncated.length - 50) : truncated
+    setHistory(limited)
+    setHistoryIndex(limited.length - 1)
   }
 
   const setBlocks = (newBlocks: WorkBlock[]) => {
@@ -539,7 +538,9 @@ export default function Page() {
   }
 
   const handleReset = () => {
-    if (confirm("모든 데이터를 초기화하고 처음 상태로 돌아갑니다. 계속하시겠습니까?")) {
+    // reset 은 의도적으로 가이드/예시까지 포함한 "완전 초기화" 의미.
+    // 평상시 가이드 블럭을 삭제하고 싶으면 헤더의 휴지통에서 영구삭제하면 된다.
+    if (confirm(t("confirm.reset"))) {
       try {
         localStorage.removeItem(STORAGE_KEY)
         localStorage.removeItem(CURRENT_CANVAS_KEY)
@@ -629,6 +630,7 @@ export default function Page() {
         onOpenCanvasSelector={() => setIsCanvasSelectorOpen(true)}
         lastSaved={lastSaved}
         onReset={handleReset}
+        onOpenAbout={() => setIsAboutOpen(true)}
       />
 
       <Canvas
@@ -691,6 +693,8 @@ export default function Page() {
         onDeleteCanvas={handleDeleteCanvas}
         onCreateCanvas={handleCreateCanvas}
       />
+
+      <AboutDialog open={isAboutOpen} onOpenChange={setIsAboutOpen} />
     </div>
   )
 }

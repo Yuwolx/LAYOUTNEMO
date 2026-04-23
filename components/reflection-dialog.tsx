@@ -6,6 +6,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import type { WorkBlock } from "@/types"
 import type { MultiStageTidyResult } from "@/lib/ai/types"
+import { useLanguage, useT } from "@/lib/i18n/context"
 
 interface ReflectionDialogProps {
   open: boolean
@@ -24,6 +25,8 @@ export function ReflectionDialog({
   isAIEnabled,
   zones,
 }: ReflectionDialogProps) {
+  const { language } = useLanguage()
+  const t = useT()
   const [showIntro, setShowIntro] = useState(true)
   const [loading, setLoading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
@@ -50,7 +53,7 @@ export function ReflectionDialog({
 
     try {
       setResult({
-        stage: { stage: "analyzing", message: "블럭 배치 패턴 분석 중...", progress: 20 },
+        stage: { stage: "analyzing", message: t("reflect.stage.analyzing"), progress: 20 },
       })
 
       await new Promise((resolve) => setTimeout(resolve, 800))
@@ -81,6 +84,7 @@ export function ReflectionDialog({
             isCompleted: b.isCompleted || false,
           })),
           zones,
+          language,
         }),
       })
 
@@ -93,7 +97,7 @@ export function ReflectionDialog({
     } catch (error) {
       console.error("Analysis error:", error)
       setResult({
-        stage: { stage: "complete", message: "분석 중 오류가 발생했습니다", progress: 100 },
+        stage: { stage: "complete", message: t("reflect.message.error"), progress: 100 },
       })
     } finally {
       setLoading(false)
@@ -143,7 +147,7 @@ export function ReflectionDialog({
       setCurrentIndex(currentIndex + 1)
     } else {
       setResult({
-        stage: { stage: "complete", message: "모든 제안을 검토했습니다", progress: 100 },
+        stage: { stage: "complete", message: t("reflect.message.allReviewed"), progress: 100 },
       })
     }
   }
@@ -157,7 +161,7 @@ export function ReflectionDialog({
       setCurrentIndex(currentIndex + 1)
     } else {
       setResult({
-        stage: { stage: "complete", message: "모든 제안을 검토했습니다", progress: 100 },
+        stage: { stage: "complete", message: t("reflect.message.allReviewed"), progress: 100 },
       })
     }
   }
@@ -208,25 +212,25 @@ export function ReflectionDialog({
               <div className="mb-6">
                 <Sparkles className="w-7 h-7 mb-4 text-foreground/70" />
                 <p className="text-base text-foreground/90 leading-relaxed font-light mb-4">
-                  정리하기는 AI가 작업 공간을 깊이 분석합니다:
+                  {t("reflect.intro.heading")}
                 </p>
                 <ul className="text-sm text-foreground/70 space-y-2 ml-4 list-disc">
-                  <li>블럭 간 관계와 패턴 발견</li>
-                  <li>결 분포와 배치 최적화</li>
-                  <li>연결이 필요한 블럭 찾기</li>
-                  <li>시급도와 우선순위 검토</li>
+                  <li>{t("reflect.intro.item1")}</li>
+                  <li>{t("reflect.intro.item2")}</li>
+                  <li>{t("reflect.intro.item3")}</li>
+                  <li>{t("reflect.intro.item4")}</li>
                 </ul>
-                <p className="text-sm text-foreground/60 mt-4">더 정교한 분석을 위해 시간이 조금 걸립니다.</p>
+                <p className="text-sm text-foreground/60 mt-4">{t("reflect.intro.subnote")}</p>
               </div>
 
               <Button onClick={startComprehensiveAnalysis} className="w-full" disabled={loading}>
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    분석 중...
+                    {t("reflect.action.analyzing")}
                   </>
                 ) : (
-                  "시작하기"
+                  t("reflect.action.start")
                 )}
               </Button>
             </div>
@@ -241,7 +245,7 @@ export function ReflectionDialog({
                 />
               </div>
               <p className="text-xs text-foreground/50 mt-3">
-                {result?.stage.progress && result.stage.progress > 60 ? "곧 완료됩니다..." : "조금만 기다려주세요"}
+                {result?.stage.progress && result.stage.progress > 60 ? t("reflect.progress.almost") : t("reflect.progress.wait")}
               </p>
             </div>
           ) : currentSuggestion ? (
@@ -263,25 +267,25 @@ export function ReflectionDialog({
                       }`}
                     >
                       {currentSuggestion.priority === "high"
-                        ? "높은 우선순위"
+                        ? t("reflect.priority.high")
                         : currentSuggestion.priority === "medium"
-                          ? "보통 우선순위"
-                          : "낮은 우선순위"}
+                          ? t("reflect.priority.medium")
+                          : t("reflect.priority.low")}
                     </span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-foreground/5 text-foreground/60">
                       {currentSuggestion.type === "connection"
-                        ? "연결"
+                        ? t("reflect.type.connection")
                         : currentSuggestion.type === "position"
-                          ? "위치"
+                          ? t("reflect.type.position")
                           : currentSuggestion.type === "zone"
-                            ? "결"
-                            : "시급도"}
+                            ? t("reflect.type.zone")
+                            : t("reflect.type.urgency")}
                     </span>
                   </div>
                   <p className="text-base text-foreground/90 leading-relaxed mb-4">{currentSuggestion.question}</p>
 
                   <div className="bg-muted/30 rounded-lg p-3 text-sm">
-                    <p className="text-foreground/60 mb-2">변경될 내용:</p>
+                    <p className="text-foreground/60 mb-2">{t("reflect.changes.heading")}</p>
                     <ul className="space-y-1 text-foreground/80">
                       {currentSuggestion.changes.map((change, idx) => (
                         <li key={idx} className="text-xs">
@@ -296,16 +300,16 @@ export function ReflectionDialog({
               <div className="flex gap-3 mt-6">
                 <Button onClick={handleReject} variant="outline" className="flex-1 bg-transparent">
                   <XCircle className="w-4 h-4 mr-2" />
-                  건너뛰기
+                  {t("reflect.action.skip")}
                 </Button>
                 <Button onClick={handleAccept} className="flex-1">
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  적용하기
+                  {t("reflect.action.apply")}
                 </Button>
               </div>
 
               <Button onClick={() => onOpenChange(false)} variant="ghost" className="w-full mt-3 text-xs">
-                나중에 다시 볼게요
+                {t("reflect.action.later")}
               </Button>
             </div>
           ) : result?.stage.stage === "complete" ? (
@@ -314,24 +318,24 @@ export function ReflectionDialog({
               <p className="text-base text-foreground/90 mb-2">{result.stage.message}</p>
               {(appliedCount > 0 || skippedCount > 0) && (
                 <div className="mt-3 text-sm text-foreground/60">
-                  적용: {appliedCount}개 · 건너뜀: {skippedCount}개
+                  {t("reflect.summary.applied")}: {appliedCount}{t("reflect.summary.suffix")} · {t("reflect.summary.skipped")}: {skippedCount}{t("reflect.summary.suffix")}
                 </div>
               )}
               {result.analysis && (
                 <div className="mt-4 text-left bg-muted/30 rounded-lg p-4 text-sm space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-foreground/70">
-                      전체 상태:{" "}
+                      {t("reflect.health.label")}{" "}
                       {result.analysis.overallHealth === "good"
-                        ? "✓ 좋음"
+                        ? t("reflect.health.good")
                         : result.analysis.overallHealth === "needs_attention"
-                          ? "⚠ 주의 필요"
-                          : "⚠ 개선 필요"}
+                          ? t("reflect.health.needs_attention")
+                          : t("reflect.health.critical")}
                     </span>
                   </div>
                   <p className="text-foreground/60 text-xs">
-                    총 블럭: {result.analysis.totalBlocks}개
-                    {result.analysis.completedBlocks !== undefined && ` (완료: ${result.analysis.completedBlocks}개)`}
+                    {t("reflect.blocks.total")}: {result.analysis.totalBlocks}{t("reflect.summary.suffix")}
+                    {result.analysis.completedBlocks !== undefined && ` (${t("reflect.blocks.completed")}: ${result.analysis.completedBlocks}${t("reflect.summary.suffix")})`}
                   </p>
                   {result.analysis.insight && (
                     <p className="text-foreground/70 text-xs mt-2 pt-2 border-t border-foreground/10">
@@ -341,13 +345,13 @@ export function ReflectionDialog({
                 </div>
               )}
               <Button onClick={() => onOpenChange(false)} variant="default" className="w-full mt-4">
-                닫기
+                {t("action.close")}
               </Button>
             </div>
           ) : (
             <div className="text-center py-8">
               <Sparkles className="w-8 h-8 mx-auto mb-4 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">제안할 내용이 없습니다</p>
+              <p className="text-sm text-muted-foreground">{t("reflect.message.allReviewed")}</p>
               <Button onClick={() => onOpenChange(false)} variant="ghost" className="w-full mt-4">
                 닫기
               </Button>

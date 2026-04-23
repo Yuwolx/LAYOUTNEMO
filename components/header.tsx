@@ -1,6 +1,6 @@
 "use client"
 
-import { Eye, Moon, Sun, Trash2, Undo2, Sparkles, RotateCcw } from "lucide-react"
+import { Eye, Moon, Sun, Trash2, Undo2, Sparkles, RotateCcw, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import type { Zone } from "@/types"
@@ -32,6 +32,7 @@ interface HeaderProps {
   onOpenCanvasSelector: () => void
   lastSaved: Date
   onReset: () => void
+  onOpenAbout: () => void
 }
 
 export function Header({
@@ -59,6 +60,7 @@ export function Header({
   onOpenCanvasSelector,
   lastSaved,
   onReset,
+  onOpenAbout,
 }: HeaderProps) {
   const { language, toggleLanguage, t } = useLanguage()
   const formatLastSaved = () => {
@@ -115,6 +117,18 @@ export function Header({
               <span className="hidden sm:inline text-[11px] opacity-70">
                 {t("header.switchLanguage")}
               </span>
+            </button>
+            <button
+              onClick={onOpenAbout}
+              aria-label="About LAYOUTNEMO"
+              title="About LAYOUTNEMO"
+              className={`p-1.5 rounded-lg transition-colors ${
+                isDarkMode
+                  ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+                  : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+              }`}
+            >
+              <Info className="w-4 h-4" />
             </button>
             <span className={`text-xs ${isDarkMode ? "text-zinc-500" : "text-gray-400"}`}>{formatLastSaved()}</span>
           </div>
