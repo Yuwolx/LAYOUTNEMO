@@ -1,10 +1,30 @@
-/* Eggit Custom Theme for Just-the-Docs */
+/* Eggit Custom Theme for Just-the-Docs — Sleek Dark Mode */
 
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
-$sidebar-color: #febb7c;
-$body-background-color: #ffffff;
-$link-color: #7253ed;
-$btn-primary-color: #7253ed;
-$search-background-color: #ffffff;
 
+/* === Core palette === */
+$body-background-color:      #0d1117;   /* 딥 차콜 (본문 배경) */
+$sidebar-color:              #161b22;   /* 사이드바 (살짝 밝은 차콜) */
+$body-text-color:            #c9d1d9;   /* 본문 텍스트 (부드러운 그레이) */
+$body-heading-color:         #f0f6fc;   /* 제목 (화이트에 가까운 톤) */
+$nav-child-link-color:       #8b949e;   /* 하위 메뉴 텍스트 */
+$border-color:               #30363d;   /* 구분선 */
+
+/* === Accent === */
+$link-color:                 #7c9cff;   /* 링크: 소프트 블루 퍼플 */
+$btn-primary-color:          #a371f7;   /* 버튼: 세련된 바이올렛 */
+$feedback-color:             #1f6feb;
+
+/* === Search === */
+$search-background-color:    #161b22;
+$search-result-preview-color:#8b949e;
+
+/* === Code === */
+$code-background-color:      #161b22;
+$code-linenumber-color:      #6e7681;
+
+/* === Tables === */
+$table-background-color:     #161b22;
+
+/* === Font === */
 $font-family-base: 'Noto Sans KR', sans-serif, -apple-system, blinkmacsystemfont, 'Segoe UI', roboto, helvetica, arial, sans-serif;
