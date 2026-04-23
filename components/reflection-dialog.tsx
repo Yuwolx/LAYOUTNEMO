@@ -52,20 +52,10 @@ export function ReflectionDialog({
     setLoading(true)
 
     try {
+      // 실제로 시간이 걸리는 건 OpenAI 호출 뿐.
+      // 가짜 setTimeout 단계 연출은 제거하고 "분석 중" 하나로 통일.
       setResult({
-        stage: { stage: "analyzing", message: t("reflect.stage.analyzing"), progress: 20 },
-      })
-
-      await new Promise((resolve) => setTimeout(resolve, 800))
-
-      setResult({
-        stage: { stage: "analyzing", message: "블럭 간 관계 파악 중...", progress: 40 },
-      })
-
-      await new Promise((resolve) => setTimeout(resolve, 600))
-
-      setResult({
-        stage: { stage: "analyzing", message: "개선 방안 생성 중...", progress: 70 },
+        stage: { stage: "analyzing", message: t("reflect.stage.analyzing"), progress: 50 },
       })
 
       const response = await fetch("/api/ai/tidy-comprehensive", {
@@ -238,15 +228,14 @@ export function ReflectionDialog({
             <div className="py-8 text-center">
               <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-foreground/70" />
               <p className="text-base text-foreground/90 mb-2">{result?.stage.message}</p>
-              <div className="w-full bg-muted rounded-full h-2 mt-4">
+              {/* 실제 소요 시간 예측 불가(OpenAI 호출) → 불확정 스타일로 흘러가는 애니메이션 */}
+              <div className="w-full bg-muted rounded-full h-2 mt-4 overflow-hidden relative">
                 <div
-                  className="bg-foreground/20 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${result?.stage.progress || 0}%` }}
+                  className="absolute inset-y-0 w-1/3 bg-foreground/20 rounded-full animate-[indeterminate_1.4s_ease-in-out_infinite]"
+                  style={{ animationName: "indeterminate" }}
                 />
               </div>
-              <p className="text-xs text-foreground/50 mt-3">
-                {result?.stage.progress && result.stage.progress > 60 ? t("reflect.progress.almost") : t("reflect.progress.wait")}
-              </p>
+              <p className="text-xs text-foreground/50 mt-3">{t("reflect.progress.wait")}</p>
             </div>
           ) : currentSuggestion ? (
             <div className="py-6">

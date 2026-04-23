@@ -22,8 +22,8 @@ export const DICT = {
     "header.lightMode": "라이트 모드 전환",
     "header.showRelationships": "연결 보기",
     "header.hideRelationships": "연결 숨기기",
-    "header.showCompleted": "완료 보기",
-    "header.hideCompleted": "완료 숨기기",
+    "header.showCompleted": "갈무리 보기",
+    "header.hideCompleted": "갈무리 숨기기",
     "header.trash": "휴지통",
     "header.reset": "초기화",
     "header.undo": "되돌리기",
@@ -66,7 +66,9 @@ export const DICT = {
     "action.cancel": "취소",
     "action.delete": "삭제",
     "action.restore": "복원",
-    "action.complete": "완료",
+    "action.complete": "갈무리",
+    "action.archive": "갈무리",
+    "action.unarchive": "꺼내기",
     "action.edit": "편집",
     "action.add": "추가",
     "action.apply": "적용",
@@ -110,6 +112,14 @@ export const DICT = {
 
     // Confirmations
     "confirm.reset": "모든 데이터를 초기화하고 처음 상태로 돌아갑니다. 가이드 블럭과 예시 블럭도 다시 나타납니다. 계속하시겠습니까?",
+
+    // Archive dock & dialog
+    "archive.dock.label": "갈무리함",
+    "archive.dock.hint": "여기로 드래그해 갈무리",
+    "archive.dialog.title": "갈무리함",
+    "archive.dialog.description": "갈무리한 블럭들입니다. 타일을 클릭하면 다시 꺼낼 수 있어요.",
+    "archive.dialog.empty": "아직 갈무리된 블럭이 없어요.",
+    "archive.dialog.count": "개 보관됨",
   },
   en: {
     // Header
@@ -121,8 +131,8 @@ export const DICT = {
     "header.lightMode": "Switch to light mode",
     "header.showRelationships": "Show connections",
     "header.hideRelationships": "Hide connections",
-    "header.showCompleted": "Show completed",
-    "header.hideCompleted": "Hide completed",
+    "header.showCompleted": "Show archive",
+    "header.hideCompleted": "Hide archive",
     "header.trash": "Trash",
     "header.reset": "Reset",
     "header.undo": "Undo",
@@ -165,7 +175,9 @@ export const DICT = {
     "action.cancel": "Cancel",
     "action.delete": "Delete",
     "action.restore": "Restore",
-    "action.complete": "Complete",
+    "action.complete": "Archive",
+    "action.archive": "Archive",
+    "action.unarchive": "Restore",
     "action.edit": "Edit",
     "action.add": "Add",
     "action.apply": "Apply",
@@ -209,5 +221,13 @@ export const DICT = {
 
     // Confirmations
     "confirm.reset": "This resets everything to the initial state. Guide and example blocks will reappear. Continue?",
+
+    // Archive dock & dialog
+    "archive.dock.label": "Archive",
+    "archive.dock.hint": "Drop here to archive",
+    "archive.dialog.title": "Archive",
+    "archive.dialog.description": "Archived blocks. Click a tile to bring it back.",
+    "archive.dialog.empty": "No archived blocks yet.",
+    "archive.dialog.count": "archived",
   },
 } as const

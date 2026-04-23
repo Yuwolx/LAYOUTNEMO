@@ -8,7 +8,7 @@ import { BlockDetailDialog } from "@/components/block-detail-dialog"
 import { MoreVertical, Trash2, Sparkles, Power } from "lucide-react"
 import type { WorkBlock } from "@/types"
 import { URGENCY_META } from "@/lib/constants/urgency"
-import { useLanguage } from "@/lib/i18n/context"
+import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedBlockField } from "@/lib/i18n/seed"
 
 interface WorkBlockCardProps {
@@ -49,6 +49,7 @@ export function WorkBlockCard({
   isCopyMode = false,
 }: WorkBlockCardProps) {
   const { language } = useLanguage()
+  const t = useT()
   const displayTitle = translateSeedBlockField(block, "title", language) ?? block.title
   const displayDescription = translateSeedBlockField(block, "description", language) ?? block.description
   const [showDetail, setShowDetail] = useState(false)
@@ -189,7 +190,7 @@ export function WorkBlockCard({
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleCompleteBlock} className="text-muted-foreground font-light">
                     <Sparkles className="w-4 h-4 mr-2" />
-                    업무 마무리하기
+                    {t("action.archive")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={(e) => {
@@ -199,7 +200,7 @@ export function WorkBlockCard({
                     className="text-muted-foreground font-light"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
-                    삭제
+                    {t("action.delete")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

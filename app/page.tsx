@@ -9,6 +9,8 @@ import { AreaManagementDialog } from "@/components/area-management-dialog"
 import { TrashDialog } from "@/components/trash-dialog"
 import { CanvasSelectorDialog } from "@/components/canvas-selector-dialog"
 import { AboutDialog } from "@/components/about-dialog"
+import { ArchiveDock } from "@/components/archive-dock"
+import { ArchiveDialog } from "@/components/archive-dialog"
 import type { WorkBlock, Zone, Canvas as CanvasType } from "@/types"
 import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedCanvasName } from "@/lib/i18n/seed"
@@ -66,8 +68,8 @@ const initialBlocks: WorkBlock[] = [
 • 머물러 있음 (노란색): 미루고 있지만 언젠가 해야 할 일
 • 시급 (주황색): 즉시 처리가 필요한 일
 
-8) 완료 표시
-블럭 상세 정보에서 '완료' 체크박스를 클릭하면 블럭을 완료 상태로 표시할 수 있습니다. 또한 블럭을 우측으로 드래그해 화면 오른쪽 하단의 '완료된 업무' 영역으로 이동시키면 자동으로 완료 처리됩니다. 완료된 블럭은 흐리게 표시됩니다.
+8) 갈무리
+지금 당장 보고 싶지 않은 블럭을 치워두는 기능입니다. 블럭을 우측 하단의 갈무리함 박스 아이콘으로 드래그하면 캔버스에서 사라지고 갈무리함에 보관됩니다. 블럭 상세에서 '갈무리' 버튼을 눌러도 같은 결과입니다. 갈무리함 아이콘을 클릭하면 보관된 블럭들을 확인하고 다시 캔버스로 꺼낼 수 있어요.
 
 9) 휴지통
 삭제한 블럭은 최대 10개까지 휴지통에 보관됩니다. 헤더의 휴지통 아이콘을 클릭해 삭제된 블럭을 확인하고 복구할 수 있습니다.
@@ -192,10 +194,21 @@ const migrateCanvas = (canvas: CanvasType): CanvasType => ({
     ...z,
     id: LEGACY_ZONE_ID_MAP[z.id] ?? z.id,
   })),
-  blocks: canvas.blocks.map((b) => ({
-    ...b,
-    zone: LEGACY_ZONE_ID_MAP[b.zone] ?? b.zone,
-  })),
+  blocks: canvas.blocks.map((b) => {
+    const migrated: WorkBlock = { ...b, zone: LEGACY_ZONE_ID_MAP[b.zone] ?? b.zone }
+    // 구버전에서 갈무리 처리된 블럭은 x/y 가 우하단 스택 좌표로, 크기는 340x56 으로
+    // 변경되어 있다. originalState 에서 원래 크기/시급도를 복원하고,
+    // x/y 는 과거 값 그대로 두되 width/height 만 원본으로 되돌린다.
+    if (migrated.isCompleted && migrated.originalState) {
+      migrated.width = migrated.originalState.width
+      migrated.height = migrated.originalState.height
+      if (migrated.originalState.urgency) {
+        migrated.urgency = migrated.originalState.urgency as WorkBlock["urgency"]
+      }
+      migrated.originalState = undefined
+    }
+    return migrated
+  }),
 })
 
 const loadCanvases = (): CanvasType[] => {
@@ -242,6 +255,7 @@ export default function Page() {
   const [isTrashDialogOpen, setIsTrashDialogOpen] = useState(false)
   const [isCanvasSelectorOpen, setIsCanvasSelectorOpen] = useState(false)
   const [isAboutOpen, setIsAboutOpen] = useState(false)
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [isAIEnabled, setIsAIEnabled] = useState(true)
   const [previewBlock, setPreviewBlock] = useState<Partial<WorkBlock> | null>(null)
@@ -325,7 +339,10 @@ export default function Page() {
     .sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0))
     .slice(0, 10)
 
+  // 갈무리(archive)된 블럭은 캔버스에 렌더링하지 않고 독/모달에서만 노출.
+  const archivedBlocks = blocks.filter((b) => !b.isDeleted && b.isCompleted && !b.isGuide)
   const activeBlocks = blocks.filter((b) => !b.isDeleted)
+  const canvasBlocks = activeBlocks.filter((b) => !b.isCompleted)
 
   const saveToHistory = (newBlocks: WorkBlock[]) => {
     // 캔버스는 즉시 업데이트
@@ -359,81 +376,10 @@ export default function Page() {
       setIsAIEnabled(updates.aiEnabled)
     }
 
-    if (updates.isCompleted === true && !block.isCompleted) {
-      const completedBlocks = blocks.filter((b) => b.isCompleted)
-
-      const COMPLETION_ZONE_WIDTH = 400
-      const COMPLETION_ZONE_HEIGHT = 600
-      const COMPLETED_BLOCK_WIDTH = 340
-      const COMPLETED_BLOCK_HEIGHT = 56
-      const COMPLETED_BLOCK_SPACING = 8
-      const COMPLETION_PADDING = 60
-
-      const canvasWidth = typeof window !== "undefined" ? window.innerWidth : 1920
-      const canvasHeight = typeof window !== "undefined" ? window.innerHeight - 140 : 1080 - 140
-
-      const stackY =
-        canvasHeight -
-        COMPLETION_ZONE_HEIGHT +
-        COMPLETION_PADDING +
-        completedBlocks.length * (COMPLETED_BLOCK_HEIGHT + COMPLETED_BLOCK_SPACING)
-
-      updates = {
-        ...updates,
-        originalState: {
-          width: block.width,
-          height: block.height,
-          urgency: block.urgency || "stable",
-        },
-        x: canvasWidth - COMPLETION_ZONE_WIDTH + COMPLETION_PADDING,
-        y: stackY,
-        width: COMPLETED_BLOCK_WIDTH,
-        height: COMPLETED_BLOCK_HEIGHT,
-        relatedTo: [],
-      }
-    }
-
-    if (updates.isCompleted === false && block.isCompleted) {
-      const COMPLETION_ZONE_WIDTH = 400
-      const COMPLETION_ZONE_HEIGHT = 600
-      const COMPLETED_BLOCK_WIDTH = 340
-      const COMPLETED_BLOCK_HEIGHT = 56
-      const COMPLETED_BLOCK_SPACING = 8
-      const COMPLETION_PADDING = 60
-
-      const canvasWidth = typeof window !== "undefined" ? window.innerWidth : 1920
-      const canvasHeight = typeof window !== "undefined" ? window.innerHeight - 140 : 1080 - 140
-
-      const otherCompletedBlocks = blocks.filter((b) => b.isCompleted && b.id !== id).sort((a, b) => a.y - b.y)
-
-      const batchUpdates = otherCompletedBlocks.map((completedBlock, index) => ({
-        id: completedBlock.id,
-        updates: {
-          y:
-            canvasHeight -
-            COMPLETION_ZONE_HEIGHT +
-            COMPLETION_PADDING +
-            index * (COMPLETED_BLOCK_HEIGHT + COMPLETED_BLOCK_SPACING),
-        },
-      }))
-
-      if (batchUpdates.length > 0) {
-        const newBlocks = blocks.map((b) => {
-          if (b.id === id) {
-            return { ...b, ...updates }
-          }
-          const batchUpdate = batchUpdates.find((u) => u.id === b.id)
-          return batchUpdate ? { ...b, ...batchUpdate.updates } : b
-        })
-        if (skipHistory) {
-          setBlocks(newBlocks)
-        } else {
-          saveToHistory(newBlocks)
-        }
-        return
-      }
-    }
-
+    // 갈무리 UX 전환:
+    // 이전에는 isCompleted=true 시 블럭을 우하단 스택 좌표로 이동 + 크기 축소 + 관계선 초기화했음.
+    // 지금은 갈무리 블럭이 캔버스에서 제외되고 ArchiveDialog 에서만 노출되므로,
+    // 위치/크기/관계선을 그대로 유지해서 꺼냈을 때 원래 자리로 즉시 복귀되도록 한다.
     const newBlocks = blocks.map((b) => (b.id === id ? { ...b, ...updates } : b))
     if (skipHistory) {
       setBlocks(newBlocks)
@@ -472,6 +418,12 @@ export default function Page() {
 
   const handlePermanentDelete = (id: string) => {
     const newBlocks = blocks.filter((block) => block.id !== id)
+    saveToHistory(newBlocks)
+  }
+
+  // 갈무리함에서 캔버스로 꺼내기 (isCompleted=false).
+  const handleUnarchiveBlock = (id: string) => {
+    const newBlocks = blocks.map((b) => (b.id === id ? { ...b, isCompleted: false } : b))
     saveToHistory(newBlocks)
   }
 
@@ -604,7 +556,7 @@ export default function Page() {
   }, [handleUndo, handleRedo])
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? "dark bg-zinc-900 text-zinc-100" : "bg-[#fafaf9] text-foreground"}`}>
+    <div className={`min-h-screen ${isDarkMode ? "dark bg-[#151823] text-zinc-100" : "bg-[#fafaf9] text-foreground"}`}>
       <Header
         onCreateBlock={() => setIsCreateDialogOpen(true)}
         onReflect={() => setIsReflectionDialogOpen(true)}
@@ -634,7 +586,7 @@ export default function Page() {
       />
 
       <Canvas
-        blocks={activeBlocks}
+        blocks={canvasBlocks}
         zones={zones}
         selectedZone={selectedZone}
         showRelationships={showRelationships}
@@ -695,6 +647,22 @@ export default function Page() {
       />
 
       <AboutDialog open={isAboutOpen} onOpenChange={setIsAboutOpen} />
+
+      <ArchiveDock
+        archivedCount={archivedBlocks.length}
+        isDragOver={false}
+        isDarkMode={isDarkMode}
+        onClick={() => setIsArchiveOpen(true)}
+      />
+
+      <ArchiveDialog
+        open={isArchiveOpen}
+        onOpenChange={setIsArchiveOpen}
+        archivedBlocks={archivedBlocks}
+        zones={zones}
+        onRestore={handleUnarchiveBlock}
+        onDelete={handleArchiveBlock}
+      />
     </div>
   )
 }

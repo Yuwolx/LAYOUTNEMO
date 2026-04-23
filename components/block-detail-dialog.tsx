@@ -69,22 +69,8 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
   }
 
   const handleComplete = () => {
-    // Calculate stacked position in completion area
-    const completedCount = Math.floor(Math.random() * 3) // Simple stacking simulation
-    const stackOffset = completedCount * 12
-
-    const canvasWidth = window.innerWidth
-    const canvasHeight = window.innerHeight - 140 // Account for header
-
-    const newX = canvasWidth * 0.75 + 40 + stackOffset
-    const newY = canvasHeight * 0.7 + 60 + stackOffset
-
-    onUpdate({
-      isCompleted: true,
-      x: newX,
-      y: newY,
-      urgency: "stable",
-    })
+    // 갈무리 — 위치/크기/시급도 전부 원본 유지. 꺼냈을 때 원래 자리로 복귀되도록.
+    onUpdate({ isCompleted: true })
     onOpenChange(false)
   }
 
@@ -235,7 +221,7 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
 
               <div className="flex gap-3 pt-4 border-t border-border/30">
                 <Button onClick={handleComplete} variant="outline" className="flex-1 font-light bg-transparent">
-                  {t("action.complete")}
+                  {t("action.archive")}
                 </Button>
                 <Button onClick={handleSave} className="flex-1">
                   {t("action.save")}

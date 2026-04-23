@@ -27,28 +27,28 @@ export const URGENCY_META: Record<Urgency, {
     description: "천천히 진행해도 되는 일",
     colorName: "회색",
     shadowLight: "shadow-[0_4px_18px_rgba(0,0,0,0.12)]",
-    shadowDark: "shadow-[0_4px_18px_rgba(0,0,0,0.5)]",
+    shadowDark: "shadow-[0_4px_18px_rgba(0,0,0,0.45)]",
   },
   thinking: {
     label: "생각 중",
     description: "아직 구체화되지 않은 아이디어",
     colorName: "파란색",
     shadowLight: "shadow-[0_6px_24px_rgba(59,130,246,0.45)]",
-    shadowDark: "shadow-[0_6px_24px_rgba(59,130,246,0.8)]",
+    shadowDark: "shadow-[0_6px_22px_rgba(59,130,246,0.55)]",
   },
   lingering: {
     label: "머물러 있음",
     description: "미루고 있지만 언젠가 해야 할 일",
     colorName: "노란색",
     shadowLight: "shadow-[0_6px_24px_rgba(251,191,36,0.5)]",
-    shadowDark: "shadow-[0_6px_24px_rgba(251,191,36,0.85)]",
+    shadowDark: "shadow-[0_6px_22px_rgba(251,191,36,0.55)]",
   },
   urgent: {
     label: "시급",
     description: "즉시 처리가 필요한 일",
     colorName: "주황색",
     shadowLight: "shadow-[0_6px_26px_rgba(251,146,60,0.55)]",
-    shadowDark: "shadow-[0_6px_26px_rgba(251,146,60,0.9)]",
+    shadowDark: "shadow-[0_6px_24px_rgba(251,146,60,0.6)]",
   },
 }
 
