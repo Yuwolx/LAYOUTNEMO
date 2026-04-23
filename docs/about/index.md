@@ -7,13 +7,13 @@ has_children: true
 
 # About LAYOUTNEMO
 
-LAYOUTNEMO 서비스에 대한 모든 것.
+LAYOUTNEMO는 **네모난 블럭을 캔버스에 펼쳐놓는** 사고 공간입니다. 이름부터 그렇습니다 — **LAYOUT (펼쳐놓다) + NEMO (네모)**. 이름 안에 이미 이 서비스의 본질이 담겨 있어요.
 
-이 섹션에서는 프로젝트의 배경, 철학, 핵심 기능, 기술적 선택 등을 다룹니다.
+이 섹션에서는 LAYOUTNEMO가 왜 만들어졌는지, 무엇으로 구성되어 있는지, 어떤 기능을 제공하는지, 그리고 어떤 기술로 만들었는지를 다룹니다.
 
-## 📑 목차
+## 📑 문서 목차
 
-- [왜 만들었나]({{ site.baseurl }}/docs/about/why/) — 문제의식과 기존 도구의 한계
-- [핵심 컨셉]({{ site.baseurl }}/docs/about/concept/) — 블럭 / 영역 / 관계선
-- [주요 기능]({{ site.baseurl }}/docs/about/features/) — 실제로 무엇을 할 수 있나
+- [왜 만들었나]({{ site.baseurl }}/docs/about/why/) — 기존 도구의 한계와 문제의식
+- [핵심 컨셉]({{ site.baseurl }}/docs/about/concept/) — 블럭 / 결 / 관계선 / 시급도
+- [주요 기능]({{ site.baseurl }}/docs/about/features/) — 무엇을 할 수 있나
 - [기술 스택 & 아키텍처]({{ site.baseurl }}/docs/about/tech-stack/) — 어떻게 만들었나

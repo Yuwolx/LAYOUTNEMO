@@ -13,3 +13,9 @@ mermaid:
 permalink: pretty
 search_enabled: true
 heading_anchors: true
+
+exclude:
+  - WORKSPACE.md
+  - DEMO_LEGACY.md
+  - .claude/
+  - README.md
