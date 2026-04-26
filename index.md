@@ -21,9 +21,6 @@ nav_order: 1
 
 로컬 우선으로 가볍게 쓰다가, 필요하면 구글 로그인 한 번으로 여러 기기에서 이어가세요. AI 는 도와주되, 원하지 않으면 언제든 끌 수 있습니다.
 
-[서비스 써보기](https://layoutnemo.com){: .btn .btn-primary .fs-5 .mr-2 .mb-2 }
-[GitHub 소스 보기](https://github.com/Yuwolx/LAYOUTNEMO){: .btn .btn-outline .fs-5 .mb-2 }
-
 ---
 
 ## 이 사이트에서 찾을 수 있는 것
