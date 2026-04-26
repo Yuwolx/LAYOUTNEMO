@@ -39,133 +39,149 @@ export const SEED_BLOCK_STRINGS: Record<
 > = {
   guide: {
     title: {
-      ko: "사용 설명서 (먼저 읽어주세요)",
-      en: "User Guide (Read me first)",
+      ko: "사용 설명서",
+      en: "User Guide",
     },
     description: {
-      ko: "이 블럭을 클릭해서 자세히 보세요.\n\n블럭을 만들고, 결로 맥락을 나누고, 공간으로 연결을 표현합니다.",
-      en: "Click this block to read the full guide.\n\nCreate blocks, separate contexts with facets, and express connections through space.",
+      ko: "블럭을 만들고, 결로 맥락을 나누고, 가까이 두면 자동으로 이어집니다. 클릭하면 전체 사용법을 볼 수 있어요.",
+      en: "Create blocks, separate contexts with facets, place them close to auto-connect. Click for the full guide.",
     },
     detailedNotes: {
-      ko: `1) 블럭 만들기
-오른쪽 위 '새 블럭 만들기'에서 업무를 추가합니다. AI가 켜져 있으면 입력한 내용을 분석해서 제목과 요약을 정리하고, 적합한 결을 추천합니다. AI가 꺼져 있으면 직접 입력해야 합니다.
+      ko: `LAYOUTNEMO 는 할 일을 리스트나 보드에 넣지 않고, 캔버스 위에 펼쳐놓는 도구입니다.
 
-블럭 생성 시 긴급도(urgent, thinking, lingering, stable)와 마감일 정보를 작성하면, AI가 이를 분석하여 자동으로 블럭의 옵션을 선택합니다. 예: "내일까지 완료해야 할 긴급한 업무"라고 작성하면 긴급도를 'urgent'로, 마감일을 내일로 설정합니다.
+1) 블럭 만들기
+오른쪽 위 '새 블럭 만들기' 또는 Cmd/Ctrl + N. AI 보조가 켜져 있으면 한 줄만 적어도 제목·요약·결·시급도를 자동으로 정리해줍니다. 꺼져 있으면 직접 입력하세요. 내용은 비워둬도 됩니다.
 
-2) 결
-결은 블럭이 가진 속성 태그입니다. "기획의 결", "개발의 결" 처럼 업무의 맥락을 나누는 기준이에요.
+2) 결(Facet)
+블럭이 가진 맥락 태그입니다. "기획", "개발" 같은 식으로 업무의 결을 나눠요. 상단의 결 버튼을 누르면 그 결의 블럭만 또렷해지고 나머지는 흐려집니다. 칸막이가 아니라 시선의 필터에 가깝습니다.
 
-상단바 아래 결 버튼을 누르면 그 결에 속한 블럭만 또렷하게 강조됩니다. 나머지 블럭은 사라지지 않고 흐리게만 표시되어, 전체 맥락은 그대로 둔 채 지금 집중하고 싶은 결만 도드라지게 볼 수 있어요. 칸에 넣어 분류하는 게 아니라, 같은 블럭들을 다른 시선으로 다시 보는 개념입니다.
+3) 연결
+블럭을 서로 가까이 두면 자동으로 곡선이 이어집니다. 연결을 끊으려면 선을 클릭하세요.
 
-3) 연결(연관 관계)
-블럭을 서로 가까이 두거나 살짝 겹치면 자동으로 연결됩니다. 연결선은 부드러운 곡선으로 나타나며, 연결을 끊으려면 선을 클릭하세요.
+4) 시급도
+블럭의 그림자 색으로 머릿속 무게를 표현합니다. 크기는 바뀌지 않습니다.
+• 안정 (회색): 천천히 진행
+• 생각 중 (파랑): 아직 구체화되지 않음
+• 머물러 있음 (노랑): 미루고 있는 일
+• 시급 (주황): 즉시 처리 필요
 
-4) AI 보조
-헤더의 'AI 보조' 버튼을 클릭해서 AI를 켜거나 끌 수 있습니다. AI가 꺼져 있으면 '정리하기' 기능은 사용할 수 없습니다.
+5) 캔버스 이동
+스페이스바를 누른 채 마우스로 드래그하면 캔버스 전체가 따라옵니다 (피그마 방식).
 
-5) 정리하기(체크포인트)
-정리하기는 자동 정리가 아니라 상태 점검용 체크포인트입니다. AI는 한 번에 하나씩 제안을 보여주고, 수락한 변경만 적용됩니다.
+6) 갈무리
+지금 안 보고 싶은 블럭은 우하단 박스 아이콘으로 드래그해 치워두세요. 다시 꺼내면 원래 자리로 돌아옵니다.
 
-6) 캔버스 전환
-로고 옆의 캔버스 이름 버튼을 클릭하면 여러 작업 공간을 만들고 전환할 수 있습니다. 각 캔버스는 독립적인 블럭과 결을 가집니다. (단축키: Cmd/Ctrl + K)
+7) AI 보조 / 정리하기
+헤더의 'AI 보조' 토글로 켜고 끕니다. AI 가 켜져 있을 때 '정리하기' 버튼으로 캔버스 상태에 대한 제안을 받을 수 있습니다. 한 번에 하나씩 보여주고, 수락한 변경만 적용됩니다.
 
-7) 시급도 표시
-블럭의 그림자 색상으로 머릿속에서 차지하는 무게를 표현합니다. (블럭 크기는 모두 동일)
-• 안정 (회색): 천천히 진행해도 되는 일
-• 생각 중 (파란색): 아직 구체화되지 않은 아이디어
-• 머물러 있음 (노란색): 미루고 있지만 언젠가 해야 할 일
-• 시급 (주황색): 즉시 처리가 필요한 일
+8) 캔버스 전환
+로고 옆 캔버스 이름을 누르거나 Cmd/Ctrl + K 로 여러 작업 공간을 오갈 수 있습니다. 각 캔버스는 독립적인 블럭과 결을 가집니다.
 
-8) 완료 표시
-블럭 상세 정보에서 '완료' 체크박스를 클릭하면 블럭을 완료 상태로 표시할 수 있습니다. 또한 블럭을 우측으로 드래그해 화면 오른쪽 하단의 '완료된 업무' 영역으로 이동시키면 자동으로 완료 처리됩니다. 완료된 블럭은 흐리게 표시됩니다.
+9) 결 커스터마이징
+'결 관리' 버튼에서 결을 추가/수정/삭제할 수 있습니다. 각 결은 고유의 색을 가져요.
 
-9) 휴지통
-삭제한 블럭은 최대 10개까지 휴지통에 보관됩니다. 헤더의 휴지통 아이콘을 클릭해 삭제된 블럭을 확인하고 복구할 수 있습니다.
+10) 휴지통
+삭제한 블럭은 최대 10개까지 휴지통에 보관됩니다. 헤더의 휴지통 아이콘에서 복구할 수 있어요.
 
-10) 마감일 설정
-블럭 상세 정보에서 마감일을 추가할 수 있습니다. 마감일이 설정된 블럭은 우측 상단에 날짜가 표시됩니다.
+11) 마감일
+블럭 상세에서 마감일을 추가하면 카드 우측 상단에 표시됩니다.`,
+      en: `LAYOUTNEMO is a tool for spreading tasks across a canvas instead of stuffing them into lists or boards.
 
-11) 결 커스터마이징
-'결 관리' 버튼을 클릭해 새로운 결을 추가하거나 기존 결을 수정, 삭제할 수 있습니다. 각 결은 고유의 색상을 가집니다.`,
-      en: `1) Creating Blocks
-Use "Create Block" at the top right to add tasks. When AI Assist is on, it analyzes your input, drafts a title and summary, and suggests a fitting facet. When AI is off, you fill in everything manually.
-
-When creating a block, writing urgency (urgent, thinking, lingering, stable) or a due date in natural language lets AI auto-pick the block's options. Example: "an urgent task due tomorrow" → urgency = urgent, due date = tomorrow.
+1) Creating Blocks
+"Create Block" at the top right, or Cmd/Ctrl + N. With AI Assist on, a single line is enough — title, summary, facet, and urgency are filled in automatically. With AI off, fill them in yourself. The description is optional.
 
 2) Facets
-A facet is a tag a block carries. Like "the Planning facet" or "the Development facet", it is a way of separating the context of your work.
-
-Click a facet button below the top bar and only blocks of that facet are brought into sharp focus. The others do not disappear — they stay in the background, dimmed. The whole context stays, while the facet you want to concentrate on pops forward. It is not a folder; it is a different way of looking at the same blocks.
+A facet is a context tag a block carries. Things like "Planning" or "Development" — a way of separating the grain of your work. Click a facet button at the top and only blocks of that facet come into focus; the rest dim into the background. Not a partition, more like a lens.
 
 3) Connections
-Place two blocks close together (or slightly overlapping) and they connect automatically. The line is drawn as a smooth curve. To break a connection, click the line.
+Place two blocks close together and a curve is drawn automatically. To break a connection, click the line.
 
-4) AI Assist
-Click the "AI Assist" button in the header to toggle AI on or off. With AI off, the "Reflect" feature is disabled.
+4) Urgency
+A block's shadow color shows how much it weighs on your mind. The size doesn't change.
+• Stable (gray): take your time
+• Thinking (blue): still taking shape
+• Lingering (yellow): keep pushing it back
+• Urgent (orange): needs immediate action
 
-5) Reflect (Checkpoint)
-Reflect is a checkpoint for self-examination, not automatic reorganization. AI shows one suggestion at a time, and only changes you accept are applied.
+5) Canvas Pan
+Hold Spacebar and drag to pan the entire canvas (Figma-style).
 
-6) Switching Canvases
-Click the canvas name next to the logo to create or switch between multiple workspaces. Each canvas has its own independent blocks and facets. (Shortcut: Cmd/Ctrl + K)
+6) Archive
+Drag a block you don't want to see right now into the bottom-right box icon. When you bring it back, it returns to its original spot.
 
-7) Urgency Display
-A block's shadow color shows how much it weighs on your mind. (All blocks share the same size.)
-• Stable (gray): Something you can take your time with.
-• Thinking (blue): An idea still being shaped.
-• Lingering (yellow): Something you keep pushing back but eventually need to do.
-• Urgent (orange): Needs immediate action.
+7) AI Assist / Reflect
+Toggle "AI Assist" in the header to turn AI on or off. With AI on, "Reflect" gives you suggestions about the current canvas — one at a time, and only the changes you accept are applied.
 
-8) Completing Blocks
-In the block details, tick "Complete" to mark a block as done. You can also drag a block to the "Completed Tasks" zone at the bottom-right of the canvas to auto-complete it. Completed blocks are dimmed.
+8) Switching Canvases
+Click the canvas name next to the logo, or use Cmd/Ctrl + K, to move between workspaces. Each canvas has its own blocks and facets.
 
-9) Trash
-Deleted blocks are kept in the trash (up to 10). Click the trash icon in the header to review and restore them.
+9) Customizing Facets
+Use "Manage Facets" to add, rename, or remove facets. Each one has its own color.
 
-10) Due Dates
-You can add a due date in the block details. Blocks with a due date show the date in the top right.
+10) Trash
+Deleted blocks are kept (up to 10) in the trash. Restore from the trash icon in the header.
 
-11) Customizing Facets
-Click "Manage Facets" to add, rename, or remove facets. Each facet has its own color.`,
+11) Due Dates
+Add a due date from the block details — it shows up in the card's top right.`,
     },
   },
   "shortcuts-guide": {
-    title: { ko: "단축키 안내", en: "Keyboard Shortcuts" },
+    title: { ko: "단축키", en: "Shortcuts" },
     description: {
-      ko: "자주 사용하는 단축키를 확인하세요",
-      en: "Frequently used keyboard shortcuts",
+      ko: "캔버스 이동은 스페이스바 + 드래그, 새 블럭은 Cmd/Ctrl + N. 클릭하면 전체 단축키 목록을 볼 수 있어요.",
+      en: "Pan with Spacebar + drag, new block with Cmd/Ctrl + N. Click for the full list.",
     },
     detailedNotes: {
-      ko: `단축키 목록:
+      ko: `[캔버스 조작]
+• 스페이스바 + 드래그: 캔버스 이동 (피그마 방식)
+• Alt/Option + 블럭 클릭: 블럭 복사
+• Shift + 블럭 드롭: 연결만 만들고 원위치로 (연결 토스)
 
+[작업]
 • Cmd/Ctrl + N: 새 블럭 만들기
 • Cmd/Ctrl + Z: 되돌리기
-• Cmd/Ctrl + Shift + Z: 재실행
-• Cmd/Ctrl + Y: 재실행 (대체)
+• Cmd/Ctrl + Shift + Z: 다시 실행
+• Cmd/Ctrl + Y: 다시 실행 (대체)
 • Cmd/Ctrl + K: 캔버스 선택
-• Alt/Option + 클릭: 블럭 복사
-• Esc: 다이얼로그 닫기
 
-되돌리기 & 재실행:
-헤더의 화살표 아이콘(↶↷)으로도 조작할 수 있습니다. 좌측 화살표는 되돌리기, 우측 화살표는 재실행입니다.
+[다이얼로그]
+• Esc: 열려 있는 다이얼로그 닫기
+• Enter: 다음 단계 / 확정
 
-블럭 복사:
-Alt 또는 Option 키를 누른 상태에서 블럭을 클릭하면 해당 블럭이 복사됩니다. 복사된 블럭은 원본 옆에 생성되며, 모든 정보(긴급도, 마감일, 메모 등)가 함께 복사됩니다.`,
-      en: `Shortcut list:
+[마우스]
+• 블럭 드래그: 위치 이동
+• 블럭 → 우하단 박스: 갈무리
+• 두 블럭을 가까이: 자동 연결
+• 연결선 클릭: 연결 끊기
 
-• Cmd/Ctrl + N: Create a new block
-• Cmd/Ctrl + Z: Undo
-• Cmd/Ctrl + Shift + Z: Redo
-• Cmd/Ctrl + Y: Redo (alternative)
-• Cmd/Ctrl + K: Select canvas
-• Alt/Option + Click: Duplicate a block
-• Esc: Close a dialog
+[참고]
+헤더의 화살표 ↶↷ 로도 되돌리기/다시 실행이 가능합니다.
+텍스트 입력 중에는 Cmd/Ctrl + Z 가 캔버스 되돌리기 대신 일반 텍스트 되돌리기로 동작합니다.`,
+      en: `[Canvas]
+• Spacebar + drag: pan the canvas (Figma-style)
+• Alt/Option + click on a block: duplicate
+• Shift + drop a block onto another: connect only and bounce back ("connection toss")
 
-Undo & Redo:
-You can also use the arrow icons (↶↷) in the header. The left arrow is Undo, the right is Redo.
+[Actions]
+• Cmd/Ctrl + N: new block
+• Cmd/Ctrl + Z: undo
+• Cmd/Ctrl + Shift + Z: redo
+• Cmd/Ctrl + Y: redo (alt)
+• Cmd/Ctrl + K: canvas selector
 
-Duplicating Blocks:
-Hold Alt (or Option on Mac) and click a block to duplicate it. The copy appears next to the original with all its info (urgency, due date, notes, etc.).`,
+[Dialogs]
+• Esc: close any open dialog
+• Enter: next step / confirm
+
+[Mouse]
+• Drag a block: move it
+• Drag a block to the bottom-right box: archive
+• Place two blocks close: auto-connect
+• Click a connection line: disconnect
+
+[Notes]
+The arrow icons ↶↷ in the header also undo/redo.
+While typing in a text field, Cmd/Ctrl + Z falls back to regular text undo instead of canvas undo.`,
     },
   },
   "developer-info": {

@@ -90,7 +90,7 @@ export function Header({
       className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-sm transition-colors duration-700 ${isDarkMode ? "bg-[#151823]/95" : "bg-[#fafaf9]/95"}`}
     >
       <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-800" : "border-border/20"}`}>
-        <div className="max-w-[2000px] mx-auto px-8 py-5 flex items-center justify-between">
+        <div className="max-w-[2000px] mx-auto px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {/* 고정 너비 래퍼. 라이트/다크 로고의 원본 aspect ratio 가 달라 헤더 레이아웃이 튀지 않도록 고정. */}
             <div className="h-10 w-[160px] flex items-center shrink-0">
@@ -246,7 +246,7 @@ export function Header({
       <div
         className={`border-t border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-600 border-b border-b-zinc-900" : "border-zinc-300 border-b border-b-stone-50"}`}
       >
-        <div className="max-w-[2000px] mx-auto px-8 py-3 flex items-center gap-2">
+        <div className="max-w-[2000px] mx-auto px-8 py-2 flex items-center gap-2">
           {zones.map((zone) => (
             <button
               key={zone.id}
