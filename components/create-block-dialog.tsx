@@ -103,8 +103,8 @@ export function CreateBlockDialog({
       description: summary,
       x: position.x,
       y: position.y,
-      width: 360,
-      height: 160,
+      width: 200,
+      height: 96,
       zone: selectedZone,
       urgency,
       dueDate: dueDate || undefined,
@@ -126,8 +126,8 @@ export function CreateBlockDialog({
         description: summary,
         x: smartPosition.x,
         y: smartPosition.y,
-        width: 360,
-        height: 160,
+        width: 200,
+        height: 96,
         zone: selectedZone,
         urgency,
         dueDate: dueDate || undefined,
@@ -155,8 +155,8 @@ export function CreateBlockDialog({
   }
 
   const findSmartPosition = (): { x: number; y: number } => {
-    const BLOCK_WIDTH = 360
-    const BLOCK_HEIGHT = 160
+    const BLOCK_WIDTH = 200
+    const BLOCK_HEIGHT = 96
     const SPACING = 40
     const MIN_X = 100
     const MIN_Y = 100
@@ -292,7 +292,7 @@ export function CreateBlockDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="manual-summary">내용</Label>
+                    <Label htmlFor="manual-summary">내용 (선택)</Label>
                     <Input
                       id="manual-summary"
                       value={initialInput}
@@ -358,7 +358,7 @@ export function CreateBlockDialog({
                     setSummary(initialInput)
                     handlePlacementConfirm(true)
                   }}
-                  disabled={!title.trim() || !initialInput.trim() || !selectedZone}
+                  disabled={!title.trim() || !selectedZone}
                   className="w-full"
                 >
                   블럭 만들기

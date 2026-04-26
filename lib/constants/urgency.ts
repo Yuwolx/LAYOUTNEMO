@@ -27,7 +27,9 @@ export const URGENCY_META: Record<Urgency, {
     description: "천천히 진행해도 되는 일",
     colorName: "회색",
     shadowLight: "shadow-[0_4px_18px_rgba(0,0,0,0.12)]",
-    shadowDark: "shadow-[0_4px_18px_rgba(0,0,0,0.45)]",
+    // 다크 모드 배경(#151823)이 거의 검정이라 검정 그림자는 묻힘.
+    // 흰색 계열의 부드러운 광으로 대비 확보.
+    shadowDark: "shadow-[0_4px_20px_rgba(255,255,255,0.10)]",
   },
   thinking: {
     label: "생각 중",
