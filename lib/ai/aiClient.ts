@@ -1,49 +1,7 @@
 import type { CreateBlockAIInput, CreateBlockAIOutput, TidySuggestionInput, TidySuggestionResult } from "./types"
 
-// ============================================
-// AI Integration Guide
-// ============================================
-//
-// GPT API는 반드시 서버 사이드에서 호출해야 합니다.
-// API 키를 클라이언트에 노출하면 안됩니다!
-//
-// 권장 방법:
-// 1. /app/api/ai/create-block/route.ts 생성
-// 2. /app/api/ai/tidy-suggestion/route.ts 생성
-// 3. 서버에서 OpenAI API 호출
-// 4. 이 파일의 함수들이 위 API 라우트를 fetch()로 호출
-//
-// 예시:
-// export async function createBlockWithAI(input: CreateBlockAIInput) {
-//   const response = await fetch('/api/ai/create-block', {
-//     method: 'POST',
-//     headers: { 'Content-Type': 'application/json' },
-//     body: JSON.stringify(input)
-//   })
-//   return response.json()
-// }
-//
-// 서버 사이드 API 라우트 예시 (/app/api/ai/create-block/route.ts):
-// import OpenAI from 'openai'
-// import { CREATE_BLOCK_PROMPT } from '@/lib/ai/prompts'
-//
-// const openai = new OpenAI({
-//   apiKey: process.env.OPENAI_API_KEY // NEXT_PUBLIC_ 접두사 없이!
-// })
-//
-// export async function POST(req: Request) {
-//   const input = await req.json()
-//   // OpenAI API 호출 로직
-//   // ...
-//   return Response.json(result)
-// }
-//
-// ============================================
+// 브라우저에서 호출하는 AI 클라이언트 래퍼. 실제 OpenAI 호출은 /app/api/ai/* 라우트에서 수행.
 
-/**
- * 새 블럭 생성을 위한 AI 제안
- * 서버 사이드 API 라우트를 통해 OpenAI 호출
- */
 export async function createBlockWithAI(input: CreateBlockAIInput): Promise<CreateBlockAIOutput> {
   try {
     const response = await fetch("/api/ai/create-block", {
@@ -66,10 +24,6 @@ export async function createBlockWithAI(input: CreateBlockAIInput): Promise<Crea
   }
 }
 
-/**
- * 정리하기 체크포인트 제안
- * 서버 사이드 API 라우트를 통해 OpenAI 호출
- */
 export async function getNextTidySuggestion(input: TidySuggestionInput): Promise<TidySuggestionResult> {
   try {
     const response = await fetch("/api/ai/tidy-suggestion", {
@@ -92,9 +46,7 @@ export async function getNextTidySuggestion(input: TidySuggestionInput): Promise
   }
 }
 
-// ============================================
-// Mock Data Functions (fallback으로 유지)
-// ============================================
+// API 호출 실패 시 UI 가 빈 상태로 멈추지 않도록 쓰는 fallback.
 
 function getMockBlockCreationOutput(input: CreateBlockAIInput): CreateBlockAIOutput {
   const words = input.userInput.trim().split(" ")
@@ -114,6 +66,7 @@ function getMockBlockCreationOutput(input: CreateBlockAIInput): CreateBlockAIOut
     summary,
     suggestedZone,
     zoneReason: reasons[Math.floor(Math.random() * reasons.length)],
+    suggestedDueDate: null,
     suggestedUrgency: "stable",
   }
 }
@@ -154,7 +107,7 @@ function getMockTidySuggestion(input: TidySuggestionInput): TidySuggestionResult
       question: randomQuestion.question,
       proposedChange: {
         field: randomQuestion.field,
-        newValue: randomQuestion.type === "urgency" ? "thinking" : {},
+        newValue: randomQuestion.type === "urgency" ? "thinking" : null,
         reason: "현재 상태를 점검해보면 좋을 것 같아요.",
       },
     },

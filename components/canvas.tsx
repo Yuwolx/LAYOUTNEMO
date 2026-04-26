@@ -20,14 +20,8 @@ interface CanvasProps {
   previewBlock?: Partial<WorkBlock> | null // Add preview block prop
 }
 
-const VISUAL_ZONE_WIDTH = 400
-const VISUAL_ZONE_HEIGHT = 600
-const DETECTION_ZONE_WIDTH = 600 // Increased from 400
-const DETECTION_ZONE_HEIGHT = 800 // Increased from 600
-const COMPLETED_BLOCK_WIDTH = 340
-const COMPLETED_BLOCK_HEIGHT = 56
-const COMPLETED_BLOCK_SPACING = 8
-const COMPLETION_PADDING = 60 // Increased from 30 to 60 to avoid covering the "완료된 업무" text
+// 독 아이콘 drop 감지 여유 (픽셀). 아이콘 bounds 주변 이 값만큼 확장해서 hit test.
+const ARCHIVE_DROP_PADDING = 40
 
 export function Canvas({
   blocks,
@@ -45,6 +39,8 @@ export function Canvas({
   const canvasRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
+  // 드래그 시작 시점의 블럭 좌표. 독으로 드롭해서 갈무리될 때 이 좌표로 복원해 꺼낼 때 원래 자리로 돌려놓는다.
+  const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null)
   const [isCopyMode, setIsCopyMode] = useState(false)
 
   useEffect(() => {
@@ -81,6 +77,7 @@ export function Canvas({
       x: e.clientX - block.x,
       y: e.clientY - block.y,
     })
+    setDragStartPos({ x: block.x, y: block.y })
   }
 
   useEffect(() => {
@@ -105,60 +102,41 @@ export function Canvas({
         const block = blocks.find((b) => b.id === draggingId)
         if (!block) {
           setDraggingId(null)
+      setDragStartPos(null)
           return
         }
 
         const canvasRect = canvasRef.current.getBoundingClientRect()
 
-        const completionZoneLeft = canvasRect.width - DETECTION_ZONE_WIDTH
-        const completionZoneTop = canvasRect.height - DETECTION_ZONE_HEIGHT
+        // 독 아이콘 bounds 와 블럭 bounds 의 겹침 여부로 판별. 블럭의 어느 부분이든 닿으면 OK.
+        const dockEl = typeof document !== "undefined" ? document.querySelector("[data-archive-dock]") : null
+        const dockRect = dockEl?.getBoundingClientRect()
 
-        const blockCenterX = block.x + block.width / 2
-        const blockCenterY = block.y + block.height / 2
-
-        const inCompletionZone =
-          blockCenterX >= completionZoneLeft - block.width / 3 &&
-          blockCenterX <= canvasRect.width &&
-          blockCenterY >= completionZoneTop - block.height / 3 &&
-          blockCenterY <= canvasRect.height
-
-        if (inCompletionZone && !block.isCompleted && !block.isGuide) {
-          const completedBlocks = blocks.filter((b) => b.isCompleted)
-          const stackY =
-            canvasRect.height -
-            VISUAL_ZONE_HEIGHT +
-            COMPLETION_PADDING +
-            completedBlocks.length * (COMPLETED_BLOCK_HEIGHT + COMPLETED_BLOCK_SPACING)
-
-          onUpdateBlock(draggingId, {
-            isCompleted: true,
-            originalState: {
-              width: block.width,
-              height: block.height,
-              urgency: block.urgency || "stable",
-            },
-            x: canvasRect.width - VISUAL_ZONE_WIDTH + COMPLETION_PADDING,
-            y: stackY,
-            width: COMPLETED_BLOCK_WIDTH,
-            height: COMPLETED_BLOCK_HEIGHT,
-            relatedTo: [],
-          })
-          setDraggingId(null)
-          return
+        const blockClient = {
+          left: canvasRect.left + block.x,
+          right: canvasRect.left + block.x + block.width,
+          top: canvasRect.top + block.y,
+          bottom: canvasRect.top + block.y + block.height,
         }
 
-        if (block.isCompleted && !inCompletionZone) {
-          const original = block.originalState || { width: 360, height: 160, urgency: "stable" }
+        const droppedOnDock = Boolean(
+          dockRect &&
+            !(
+              blockClient.right < dockRect.left - ARCHIVE_DROP_PADDING ||
+              blockClient.left > dockRect.right + ARCHIVE_DROP_PADDING ||
+              blockClient.bottom < dockRect.top - ARCHIVE_DROP_PADDING ||
+              blockClient.top > dockRect.bottom + ARCHIVE_DROP_PADDING
+            ),
+        )
 
-          onUpdateBlock(draggingId, {
-            isCompleted: false,
-            originalState: undefined,
-            width: original.width,
-            height: original.height,
-            urgency: original.urgency as any,
-          })
-
+        if (droppedOnDock && !block.isCompleted && !block.isGuide) {
+          // 갈무리 — 드래그 시작 위치로 x/y 복원해 꺼낼 때 원래 자리에서 나타나도록.
+          const restoreX = dragStartPos?.x ?? block.x
+          const restoreY = dragStartPos?.y ?? block.y
+          onUpdateBlock(draggingId, { isCompleted: true, x: restoreX, y: restoreY })
           setDraggingId(null)
+      setDragStartPos(null)
+          setDragStartPos(null)
           return
         }
 
@@ -216,6 +194,7 @@ export function Canvas({
 
               onBatchUpdateBlocks(updates)
               setDraggingId(null)
+      setDragStartPos(null)
               return
             }
           }
@@ -227,6 +206,7 @@ export function Canvas({
         }
       }
       setDraggingId(null)
+      setDragStartPos(null)
     }
 
     if (draggingId) {
@@ -375,25 +355,6 @@ export function Canvas({
         cursor: isCopyMode ? "copy" : "default",
       }}
     >
-      {showCompletedBlocks && (
-        <div
-          className={`absolute bottom-0 right-0 border-2 border-dashed rounded-tl-xl pointer-events-none ${
-            isDarkMode ? "border-zinc-700/60 bg-zinc-800/20" : "border-stone-300/40 bg-stone-100/20"
-          }`}
-          style={{
-            width: `${VISUAL_ZONE_WIDTH}px`,
-            height: `${VISUAL_ZONE_HEIGHT}px`,
-            zIndex: 1,
-          }}
-        >
-          <div
-            className={`absolute top-4 left-4 text-sm font-light ${isDarkMode ? "text-zinc-400" : "text-stone-400"}`}
-          >
-            완료된 업무
-          </div>
-        </div>
-      )}
-
       <svg className="absolute inset-0" style={{ zIndex: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
         <g style={{ pointerEvents: "auto" }}>{renderRelationshipLines()}</g>
       </svg>

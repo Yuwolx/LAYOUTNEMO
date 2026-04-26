@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { BlockDetailDialog } from "@/components/block-detail-dialog"
 import { MoreVertical, Trash2, Sparkles, Power } from "lucide-react"
-import type { WorkBlock } from "@/types/work-block" // Added import for WorkBlock
+import type { WorkBlock } from "@/types"
+import { URGENCY_META } from "@/lib/constants/urgency"
+import { useLanguage, useT } from "@/lib/i18n/context"
+import { translateSeedBlockField } from "@/lib/i18n/seed"
 
 interface WorkBlockCardProps {
   block: WorkBlock
@@ -17,21 +20,21 @@ interface WorkBlockCardProps {
   onArchive: () => void
   zones: Array<{ id: string; label: string }>
   isDarkMode: boolean
-  isCopyMode?: boolean // Added isCopyMode prop
+  isCopyMode?: boolean
 }
 
 const urgencyShadows = {
-  stable: "shadow-[0_4px_18px_rgba(0,0,0,0.12)]",
-  thinking: "shadow-[0_6px_24px_rgba(59,130,246,0.45)]",
-  lingering: "shadow-[0_6px_24px_rgba(251,191,36,0.5)]",
-  urgent: "shadow-[0_6px_26px_rgba(251,146,60,0.55)]",
+  stable: URGENCY_META.stable.shadowLight,
+  thinking: URGENCY_META.thinking.shadowLight,
+  lingering: URGENCY_META.lingering.shadowLight,
+  urgent: URGENCY_META.urgent.shadowLight,
 }
 
 const urgencyShadowsDark = {
-  stable: "shadow-[0_4px_18px_rgba(0,0,0,0.5)]",
-  thinking: "shadow-[0_6px_24px_rgba(59,130,246,0.8)]",
-  lingering: "shadow-[0_6px_24px_rgba(251,191,36,0.85)]",
-  urgent: "shadow-[0_6px_26px_rgba(251,146,60,0.9)]",
+  stable: URGENCY_META.stable.shadowDark,
+  thinking: URGENCY_META.thinking.shadowDark,
+  lingering: URGENCY_META.lingering.shadowDark,
+  urgent: URGENCY_META.urgent.shadowDark,
 }
 
 export function WorkBlockCard({
@@ -43,8 +46,12 @@ export function WorkBlockCard({
   onArchive,
   zones,
   isDarkMode,
-  isCopyMode = false, // Added isCopyMode with default value
+  isCopyMode = false,
 }: WorkBlockCardProps) {
+  const { language } = useLanguage()
+  const t = useT()
+  const displayTitle = translateSeedBlockField(block, "title", language) ?? block.title
+  const displayDescription = translateSeedBlockField(block, "description", language) ?? block.description
   const [showDetail, setShowDetail] = useState(false)
   const startPosRef = useRef({ x: 0, y: 0 })
   const isMovingRef = useRef(false)
@@ -118,7 +125,7 @@ export function WorkBlockCard({
       >
         <div
           className={`
-          w-full h-full bg-white border-border/60 rounded-2xl
+          w-full h-full bg-card text-card-foreground border-border/60 rounded-2xl
           hover:shadow-xl hover:border-border
           ${isDarkMode ? urgencyShadowsDark[block.urgency || "stable"] : urgencyShadows[block.urgency || "stable"]}
           ${isCompleted ? "opacity-80" : "opacity-100"}
@@ -140,12 +147,12 @@ export function WorkBlockCard({
               )}
               <div className="flex-1">
                 <h3
-                  className={`font-normal leading-snug text-black ${isCompleted ? "text-sm truncate mb-0" : "text-base mb-1.5"}`}
+                  className={`font-normal leading-snug text-card-foreground ${isCompleted ? "text-sm truncate mb-0" : "text-base mb-1.5"}`}
                 >
-                  {block.title}
+                  {displayTitle}
                 </h3>
                 {!isCompleted && (
-                  <p className="text-[11px] font-light tracking-wide text-zinc-700">
+                  <p className="text-[11px] font-light tracking-wide text-card-foreground/70">
                     {block.dueDate}
                   </p>
                 )}
@@ -183,7 +190,7 @@ export function WorkBlockCard({
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleCompleteBlock} className="text-muted-foreground font-light">
                     <Sparkles className="w-4 h-4 mr-2" />
-                    업무 마무리하기
+                    {t("action.archive")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={(e) => {
@@ -193,7 +200,7 @@ export function WorkBlockCard({
                     className="text-muted-foreground font-light"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
-                    삭제
+                    {t("action.delete")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -202,9 +209,9 @@ export function WorkBlockCard({
 
           {!isCompleted && (
             <p
-              className={`text-sm leading-relaxed font-light line-clamp-3 ${isAIControl && !aiEnabled ? "text-muted-foreground/50" : "text-zinc-700"}`}
+              className={`text-sm leading-relaxed font-light line-clamp-3 ${isAIControl && !aiEnabled ? "text-muted-foreground/50" : "text-card-foreground/80"}`}
             >
-              {block.description}
+              {displayDescription}
             </p>
           )}
         </div>

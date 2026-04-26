@@ -6,8 +6,11 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { WorkBlock, Zone } from "@/types"
+import type { WorkBlock, Zone, Urgency } from "@/types"
 import { createBlockWithAI } from "@/lib/ai/aiClient"
+import { URGENCY_KEYS } from "@/lib/constants/urgency"
+import { useLanguage, useT } from "@/lib/i18n/context"
+import { translateSeedZoneLabel } from "@/lib/i18n/seed"
 
 interface CreateBlockDialogProps {
   open: boolean
@@ -30,13 +33,15 @@ export function CreateBlockDialog({
   existingBlocks,
   onShowPreview,
 }: CreateBlockDialogProps) {
+  const { language } = useLanguage()
+  const t = useT()
   const [step, setStep] = useState<CreateStep>("input")
   const [initialInput, setInitialInput] = useState("")
   const [title, setTitle] = useState("")
   const [summary, setSummary] = useState("")
   const [selectedZone, setSelectedZone] = useState<string>("")
   const [dueDate, setDueDate] = useState<string>("")
-  const [urgency, setUrgency] = useState<"stable" | "thinking" | "lingering" | "urgent">("stable")
+  const [urgency, setUrgency] = useState<Urgency>("stable")
   const [aiZoneReason, setAiZoneReason] = useState("")
   const [suggestedPosition, setSuggestedPosition] = useState({ x: 0, y: 0 })
   const [isLoading, setIsLoading] = useState(false)
@@ -59,6 +64,7 @@ export function CreateBlockDialog({
         userInput: initialInput,
         existingBlocks: [],
         zones: zones.map((z) => ({ id: z.id, label: z.label })),
+        language,
       })
 
       setTitle(aiOutput.title)
@@ -76,7 +82,7 @@ export function CreateBlockDialog({
       setTitle(words.slice(0, 5).join(" "))
       setSummary(initialInput)
       setSelectedZone(zones[0].id)
-      setAiZoneReason("기본 영역으로 설정되었어요.")
+      setAiZoneReason("기본 결로 설정되었어요.")
       setUrgency("stable")
       setStep("preview")
     } finally {
@@ -297,7 +303,7 @@ export function CreateBlockDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">영역 (필수)</Label>
+                    <Label className="text-sm font-medium">{t("label.facetRequired")}</Label>
                     <div className="flex gap-2 flex-wrap">
                       {zones.map((zone) => (
                         <Button
@@ -307,7 +313,7 @@ export function CreateBlockDialog({
                           onClick={() => setSelectedZone(zone.id)}
                           className="text-sm"
                         >
-                          {zone.label}
+                          {translateSeedZoneLabel(zone, language)}
                         </Button>
                       ))}
                     </div>
@@ -330,9 +336,9 @@ export function CreateBlockDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-sm font-normal">시급성 (선택)</Label>
+                    <Label className="text-sm font-normal">{t("label.urgency")} ({t("label.optional")})</Label>
                     <div className="flex gap-2">
-                      {(["stable", "thinking", "lingering", "urgent"] as const).map((level) => (
+                      {URGENCY_KEYS.map((level) => (
                         <Button
                           key={level}
                           variant={urgency === level ? "default" : "outline"}
@@ -340,10 +346,7 @@ export function CreateBlockDialog({
                           onClick={() => setUrgency(level)}
                           className="flex-1 text-sm"
                         >
-                          {level === "stable" && "안정"}
-                          {level === "thinking" && "보통"}
-                          {level === "lingering" && "주의"}
-                          {level === "urgent" && "시급"}
+                          {t(`urgency.${level}`)}
                         </Button>
                       ))}
                     </div>
@@ -383,7 +386,7 @@ export function CreateBlockDialog({
 
             <div className="border-t pt-6 space-y-5">
               <div className="space-y-3">
-                <Label className="text-sm font-medium">영역 (필수)</Label>
+                <Label className="text-sm font-medium">{t("label.facetRequired")}</Label>
                 <div className="flex gap-2 flex-wrap">
                   {zones.map((zone) => (
                     <Button
@@ -393,7 +396,7 @@ export function CreateBlockDialog({
                       onClick={() => setSelectedZone(zone.id)}
                       className="text-sm"
                     >
-                      {zone.label}
+                      {translateSeedZoneLabel(zone, language)}
                     </Button>
                   ))}
                 </div>
@@ -422,9 +425,9 @@ export function CreateBlockDialog({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-normal">시급성 (선택)</Label>
+                <Label className="text-sm font-normal">{t("label.urgency")} ({t("label.optional")})</Label>
                 <div className="flex gap-2">
-                  {(["stable", "thinking", "lingering", "urgent"] as const).map((level) => (
+                  {URGENCY_KEYS.map((level) => (
                     <Button
                       key={level}
                       variant={urgency === level ? "default" : "outline"}
@@ -432,10 +435,7 @@ export function CreateBlockDialog({
                       onClick={() => setUrgency(level)}
                       className="flex-1 text-sm"
                     >
-                      {level === "stable" && "안정"}
-                      {level === "thinking" && "보통"}
-                      {level === "lingering" && "주의"}
-                      {level === "urgent" && "시급"}
+                      {t(`urgency.${level}`)}
                     </Button>
                   ))}
                 </div>
@@ -460,16 +460,28 @@ export function CreateBlockDialog({
                 <h3 className="font-medium mb-2">{title}</h3>
                 <p className="text-sm text-muted-foreground">{summary}</p>
                 <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
-                  <span>{zones.find((z) => z.id === selectedZone)?.label}</span>
+                  <span>{(() => { const z = zones.find((z) => z.id === selectedZone); return z ? translateSeedZoneLabel(z, language) : "" })()}</span>
                   {dueDate && <span>• {dueDate}</span>}
                 </div>
               </div>
 
               <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-900 dark:text-blue-100">
-                  {existingBlocks.some((b) => b.zone === selectedZone && !b.isDeleted && !b.isCompleted && !b.isGuide)
-                    ? `같은 "${zones.find((z) => z.id === selectedZone)?.label}" 영역 블록 근처에 배치할게요.`
-                    : "다른 블록들과 겹치지 않는 빈 공간에 배치할게요."}
+                  {(() => {
+                    const z = zones.find((z) => z.id === selectedZone)
+                    const zoneLabel = z ? translateSeedZoneLabel(z, language) : ""
+                    const hasNearby = existingBlocks.some(
+                      (b) => b.zone === selectedZone && !b.isDeleted && !b.isCompleted && !b.isGuide,
+                    )
+                    if (language === "en") {
+                      return hasNearby
+                        ? `Placing next to existing blocks in "${zoneLabel}".`
+                        : "Placing in an open area that doesn't overlap other blocks."
+                    }
+                    return hasNearby
+                      ? `같은 "${zoneLabel}" 결의 블럭 근처에 배치할게요.`
+                      : "다른 블럭들과 겹치지 않는 빈 공간에 배치할게요."
+                  })()}
                 </p>
                 <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">캔버스에서 미리보기를 확인하세요.</p>
               </div>

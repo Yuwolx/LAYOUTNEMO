@@ -62,7 +62,12 @@ function calculateBlockSimilarity(block1: any, block2: any): number {
 export async function POST(req: Request) {
   try {
     const input = await req.json()
-    const { blocks, zones } = input
+    const { blocks, zones, language } = input as {
+      blocks: any[]
+      zones: any[]
+      language?: "ko" | "en"
+    }
+    const lang = language ?? "ko"
 
     const regularBlocks = blocks.filter((b: any) => !b.isGuide)
 
@@ -293,6 +298,11 @@ ${zones.map((z: any) => `- ${z.id}: ${z.label}`).join("\n")}
 위치 제안이 가장 많아야 한다.
 `.trim()
 
+    const languageDirective =
+      lang === "en"
+        ? "All user-facing text (question, reason, insight) must be written in English."
+        : "question, reason, insight 등 유저에게 노출되는 모든 텍스트는 한국어로 작성하라."
+
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -305,11 +315,12 @@ ${zones.map((z: any) => `- ${z.id}: ${z.label}`).join("\n")}
           {
             role: "system",
             content:
-              "You are an expert workspace analyst specializing in spatial organization and cognitive ergonomics. You excel at optimizing block positions to create intuitive, efficient layouts that minimize cognitive load and maximize workflow clarity.",
+              "You are an expert workspace analyst specializing in spatial organization and cognitive ergonomics. You excel at optimizing block positions to create intuitive, efficient layouts that minimize cognitive load and maximize workflow clarity. " +
+              languageDirective,
           },
           {
             role: "user",
-            content: prompt,
+            content: prompt + "\n\n" + languageDirective,
           },
         ],
         temperature: 0.6,

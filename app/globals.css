@@ -40,38 +40,45 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  /*
+   * LAYOUTNEMO 다크 모드 토큰 — 남색 기조의 차분한 톤.
+   * 포인트:
+   *  - oklch 의 hue(3번째 값)에 살짝 남색(~265) 을 섞어 중성 회색 대신 깊은 블루 블랙
+   *  - --background 와 --card 의 밝기 차이를 확보해 블럭이 배경에 녹아들지 않게 함
+   *  - --foreground 를 덜 형광에 가깝게 살짝 낮춰 눈부심 완화
+   */
+  --background: oklch(0.17 0.012 265);
+  --foreground: oklch(0.955 0.002 265);
+  --card: oklch(0.215 0.012 265);                   /* 배경보다 한 단계 밝게 — 카드 부각 */
+  --card-foreground: oklch(0.955 0.002 265);
+  --popover: oklch(0.215 0.012 265);
+  --popover-foreground: oklch(0.955 0.002 265);
+  --primary: oklch(0.955 0.002 265);
+  --primary-foreground: oklch(0.23 0.012 265);
+  --secondary: oklch(0.285 0.012 265);
+  --secondary-foreground: oklch(0.955 0.002 265);
+  --muted: oklch(0.285 0.012 265);
+  --muted-foreground: oklch(0.72 0.008 265);
+  --accent: oklch(0.285 0.012 265);
+  --accent-foreground: oklch(0.955 0.002 265);
+  --destructive: oklch(0.48 0.16 25);
+  --destructive-foreground: oklch(0.97 0.02 25);
+  --border: oklch(0.31 0.012 265);
+  --input: oklch(0.31 0.012 265);
+  --ring: oklch(0.56 0.04 265);
+  --chart-1: oklch(0.62 0.18 264);
+  --chart-2: oklch(0.7 0.15 162);
+  --chart-3: oklch(0.76 0.19 70);
+  --chart-4: oklch(0.62 0.22 304);
+  --chart-5: oklch(0.64 0.22 16);
+  --sidebar: oklch(0.22 0.012 265);
+  --sidebar-foreground: oklch(0.955 0.002 265);
+  --sidebar-primary: oklch(0.62 0.18 264);
+  --sidebar-primary-foreground: oklch(0.955 0.002 265);
+  --sidebar-accent: oklch(0.285 0.012 265);
+  --sidebar-accent-foreground: oklch(0.955 0.002 265);
+  --sidebar-border: oklch(0.31 0.012 265);
+  --sidebar-ring: oklch(0.56 0.04 265);
 }
 
 @theme inline {
@@ -121,4 +128,10 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* 정리하기 로딩 — 소요시간 예측 불가 구간의 불확정 progress bar */
+@keyframes indeterminate {
+  0%   { left: -35%; }
+  100% { left: 100%; }
 }

@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useLanguage, useT } from "@/lib/i18n/context"
+import { translateSeedZoneLabel } from "@/lib/i18n/seed"
 import { Plus, Pencil, Trash2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -15,13 +17,15 @@ interface AreaManagementDialogProps {
 }
 
 export function AreaManagementDialog({ open, onOpenChange, zones, onUpdateZones }: AreaManagementDialogProps) {
+  const { language } = useLanguage()
+  const t = useT()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingLabel, setEditingLabel] = useState("")
   const [newZoneLabel, setNewZoneLabel] = useState("")
 
   const handleEdit = (zone: Zone) => {
     setEditingId(zone.id)
-    setEditingLabel(zone.label)
+    setEditingLabel(translateSeedZoneLabel(zone, language))
   }
 
   const handleSaveEdit = () => {
@@ -52,9 +56,9 @@ export function AreaManagementDialog({ open, onOpenChange, zones, onUpdateZones 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-light">영역 관리</DialogTitle>
+          <DialogTitle className="text-xl font-light">{t("dialog.manageFacets.title")}</DialogTitle>
           <DialogDescription className="text-sm leading-relaxed pt-2 font-light">
-            작업 공간의 영역을 추가하거나 수정할 수 있어요.
+            {t("dialog.manageFacets.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -73,15 +77,15 @@ export function AreaManagementDialog({ open, onOpenChange, zones, onUpdateZones 
                     autoFocus
                   />
                   <Button size="sm" onClick={handleSaveEdit}>
-                    저장
+                    {t("action.save")}
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
-                    취소
+                    {t("action.cancel")}
                   </Button>
                 </>
               ) : (
                 <>
-                  <span className="flex-1 text-sm font-normal">{zone.label}</span>
+                  <span className="flex-1 text-sm font-normal">{translateSeedZoneLabel(zone, language)}</span>
                   <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEdit(zone)}>
                     <Pencil className="w-3.5 h-3.5" />
                   </Button>
@@ -103,17 +107,17 @@ export function AreaManagementDialog({ open, onOpenChange, zones, onUpdateZones 
           <Input
             value={newZoneLabel}
             onChange={(e) => setNewZoneLabel(e.target.value)}
-            placeholder="새 영역 이름"
+            placeholder={t("dialog.manageFacets.placeholder")}
             className="flex-1"
           />
           <Button onClick={handleAddZone} disabled={!newZoneLabel.trim()}>
             <Plus className="w-4 h-4 mr-1" />
-            추가
+            {t("action.add")}
           </Button>
         </div>
 
         <Button onClick={() => onOpenChange(false)} variant="outline" className="w-full mt-2">
-          닫기
+          {t("action.close")}
         </Button>
       </DialogContent>
     </Dialog>
