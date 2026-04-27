@@ -11,7 +11,7 @@
 
   <!-- 가로 블럭 -->
   <rect x="140" y="720"
-        width="780"
+        width="420"
         height="160"
         rx="40"
         fill="none"
