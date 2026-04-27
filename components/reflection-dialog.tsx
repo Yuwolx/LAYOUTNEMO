@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import type { WorkBlock } from "@/types"
 import type { MultiStageTidyResult } from "@/lib/ai/types"
 import { useLanguage, useT } from "@/lib/i18n/context"
+import { toast } from "sonner"
+import type { AIErrorCode } from "@/lib/ai/schemas"
 
 interface ReflectionDialogProps {
   open: boolean
@@ -78,7 +80,38 @@ export function ReflectionDialog({
         }),
       })
 
-      if (!response.ok) throw new Error("Analysis failed")
+      if (!response.ok) {
+        let code: AIErrorCode = "upstream_error"
+        try {
+          const body = await response.json()
+          if (body?.error?.code) code = body.error.code as AIErrorCode
+        } catch {
+          // ignore
+        }
+        const messages: Record<AIErrorCode, string> = {
+          missing_api_key:
+            language === "en"
+              ? "Reflect needs an API key on the server."
+              : "정리하기는 서버에 API 키가 필요해요.",
+          upstream_error:
+            language === "en"
+              ? "AI failed to respond. Try again in a moment."
+              : "AI 응답에 실패했어요. 잠시 후 다시 시도해주세요.",
+          invalid_response:
+            language === "en"
+              ? "AI returned an unexpected shape."
+              : "AI 응답이 예상과 달라요.",
+          network_error:
+            language === "en"
+              ? "Network error."
+              : "네트워크 오류가 났어요.",
+        }
+        toast.error(messages[code])
+        setResult({
+          stage: { stage: "complete", message: t("reflect.message.error"), progress: 100 },
+        })
+        return
+      }
 
       const data: MultiStageTidyResult = await response.json()
 
@@ -86,6 +119,11 @@ export function ReflectionDialog({
       setCurrentIndex(0)
     } catch (error) {
       console.error("Analysis error:", error)
+      toast.error(
+        language === "en"
+          ? "Network error while reaching the server."
+          : "서버 연결에 문제가 있어요.",
+      )
       setResult({
         stage: { stage: "complete", message: t("reflect.message.error"), progress: 100 },
       })

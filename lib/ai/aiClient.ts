@@ -1,116 +1,128 @@
-import type { CreateBlockAIInput, CreateBlockAIOutput, TidySuggestionInput, TidySuggestionResult } from "./types"
+import type { CreateBlockAIInput, CreateBlockAIOutput } from "./types"
+import type { AIErrorCode, AIErrorPayload } from "./schemas"
 
-// 브라우저에서 호출하는 AI 클라이언트 래퍼. 실제 OpenAI 호출은 /app/api/ai/* 라우트에서 수행.
+/**
+ * 브라우저에서 호출하는 AI 클라이언트 래퍼. 실제 OpenAI 호출은 /app/api/ai/* 라우트에서 수행.
+ *
+ * 정책: 실패는 throw 한다. 호출 측에서 toast + fallback 결정.
+ * fallback 도우미(`mockCreateBlockOutput`) 는 따로 export — 키워드 기반 추론으로 그럴듯한 값 생성.
+ */
+
+export class AIError extends Error {
+  code: AIErrorCode
+  constructor(payload: AIErrorPayload) {
+    super(payload.message)
+    this.name = "AIError"
+    this.code = payload.code
+  }
+}
+
+async function readError(response: Response): Promise<AIErrorPayload> {
+  try {
+    const body = await response.json()
+    if (body?.error?.code && body?.error?.message) return body.error
+  } catch {
+    // ignore
+  }
+  return {
+    code: "upstream_error",
+    message: `Request failed with status ${response.status}.`,
+  }
+}
 
 export async function createBlockWithAI(input: CreateBlockAIInput): Promise<CreateBlockAIOutput> {
+  let response: Response
   try {
-    const response = await fetch("/api/ai/create-block", {
+    response = await fetch("/api/ai/create-block", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("API request failed:", errorText)
-      throw new Error("API request failed")
-    }
-
-    const aiOutput = (await response.json()) as CreateBlockAIOutput
-    return aiOutput
-  } catch (error) {
-    console.error("AI API Error:", error)
-    return getMockBlockCreationOutput(input)
+  } catch {
+    throw new AIError({ code: "network_error", message: "네트워크 연결을 확인해주세요." })
   }
+  if (!response.ok) throw new AIError(await readError(response))
+  return (await response.json()) as CreateBlockAIOutput
 }
 
-export async function getNextTidySuggestion(input: TidySuggestionInput): Promise<TidySuggestionResult> {
-  try {
-    const response = await fetch("/api/ai/tidy-suggestion", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    })
+// ---------- Fallback 헬퍼 ----------
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("API request failed:", errorText)
-      throw new Error("API request failed")
-    }
+/**
+ * 키워드 기반의 그럴듯한 블럭 생성 추론. AI 가 실패했을 때 사용자가 빈 상태로 멈추지 않도록.
+ * 무작위 zone 을 고르던 기존 mock 보다 의도를 반영한다.
+ */
+export function mockCreateBlockOutput(input: CreateBlockAIInput): CreateBlockAIOutput {
+  const text = input.userInput.trim()
+  const lower = text.toLowerCase()
 
-    const aiOutput = (await response.json()) as TidySuggestionResult
-    return aiOutput
-  } catch (error) {
-    console.error("AI API Error:", error)
-    return getMockTidySuggestion(input)
-  }
-}
+  // 제목: 첫 문장 또는 첫 6단어, 최대 30자
+  const firstSentence = text.split(/[.!?\n]/)[0]
+  const titleSource = firstSentence.length > 0 ? firstSentence : text
+  const titleWords = titleSource.split(/\s+/).slice(0, 6).join(" ")
+  const title = titleWords.length > 30 ? titleWords.slice(0, 28) + "…" : titleWords || "새 블럭"
 
-// API 호출 실패 시 UI 가 빈 상태로 멈추지 않도록 쓰는 fallback.
+  // 요약: 입력 그대로(짧으면) 또는 자른 버전
+  const summary = text.length > 80 ? text.slice(0, 77) + "…" : text
 
-function getMockBlockCreationOutput(input: CreateBlockAIInput): CreateBlockAIOutput {
-  const words = input.userInput.trim().split(" ")
-  const title = words.slice(0, 5).join(" ")
-  const summary = input.userInput.length > 50 ? input.userInput.substring(0, 47) + "..." : input.userInput
+  // 시급도 추정: 키워드 매칭
+  const urgentKeywords = ["급해", "시급", "asap", "urgent", "빨리", "당장", "오늘", "내일까지"]
+  const thinkingKeywords = ["고민", "아이디어", "생각", "검토", "탐색", "idea", "think"]
+  const lingeringKeywords = ["미루", "언젠가", "나중에", "later", "someday"]
 
-  const reasons = [
-    "최근 이 영역에서 유사한 업무가 있었어요.",
-    "이 영역의 다른 업무와 연관성이 있어 보여요.",
-    "현재 진행 중인 업무와 같은 맥락으로 보여요.",
+  let suggestedUrgency: CreateBlockAIOutput["suggestedUrgency"] = "stable"
+  if (urgentKeywords.some((k) => lower.includes(k))) suggestedUrgency = "urgent"
+  else if (thinkingKeywords.some((k) => lower.includes(k))) suggestedUrgency = "thinking"
+  else if (lingeringKeywords.some((k) => lower.includes(k))) suggestedUrgency = "lingering"
+
+  // zone 추정: zone label 부분 일치 → 일치 없으면 첫 zone
+  const matched = input.zones.find((z) => {
+    const label = z.label.toLowerCase()
+    return lower.includes(label) || lower.includes(z.id.toLowerCase())
+  })
+  const zoneKeywordMap: Array<[string[], string]> = [
+    [["디자인", "design", "ui", "ux"], "design"],
+    [["개발", "코드", "버그", "develop", "code", "bug"], "development"],
+    [["기획", "spec", "plan"], "planning"],
+    [["마케팅", "광고", "marketing"], "marketing"],
   ]
+  let suggestedZoneId = matched?.id
+  if (!suggestedZoneId) {
+    for (const [keys, zoneId] of zoneKeywordMap) {
+      if (keys.some((k) => lower.includes(k)) && input.zones.some((z) => z.id === zoneId)) {
+        suggestedZoneId = zoneId
+        break
+      }
+    }
+  }
+  suggestedZoneId = suggestedZoneId ?? input.zones[0]?.id ?? "daily"
 
-  const suggestedZone = input.zones[Math.floor(Math.random() * input.zones.length)].id
+  // 기한 추정: "내일", "모레", "X일 후", "YYYY-MM-DD"
+  let suggestedDueDate: string | null = null
+  const isoMatch = text.match(/(\d{4})-(\d{2})-(\d{2})/)
+  if (isoMatch) {
+    suggestedDueDate = `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`
+  } else {
+    const today = new Date()
+    const offsetDay = (n: number) => {
+      const d = new Date(today)
+      d.setDate(today.getDate() + n)
+      return d.toISOString().slice(0, 10)
+    }
+    if (lower.includes("오늘") || lower.includes("today")) suggestedDueDate = offsetDay(0)
+    else if (lower.includes("내일") || lower.includes("tomorrow")) suggestedDueDate = offsetDay(1)
+    else if (lower.includes("모레")) suggestedDueDate = offsetDay(2)
+    else {
+      const inDays = lower.match(/(\d+)\s*일\s*(후|뒤)/)
+      if (inDays) suggestedDueDate = offsetDay(parseInt(inDays[1], 10))
+    }
+  }
 
   return {
     title,
     summary,
-    suggestedZone,
-    zoneReason: reasons[Math.floor(Math.random() * reasons.length)],
-    suggestedDueDate: null,
-    suggestedUrgency: "stable",
-  }
-}
-
-function getMockTidySuggestion(input: TidySuggestionInput): TidySuggestionResult {
-  if (input.blocks.length === 0) {
-    return {
-      suggestion: null,
-      hasMore: false,
-    }
-  }
-
-  const mockQuestions = [
-    {
-      type: "position" as const,
-      question: "이 블럭의 위치가 지금 사고 흐름과 조금 어긋나 보일 수 있어요. 옮겨볼까요?",
-      field: "position",
-    },
-    {
-      type: "urgency" as const,
-      question: "오래 움직이지 않은 블럭이 있어요. 멈춘 생각일지도 몰라요.",
-      field: "urgency",
-    },
-    {
-      type: "size" as const,
-      question: "자주 정리되는 블럭이 있어요. 더 중요하게 다뤄볼까요?",
-      field: "size",
-    },
-  ]
-
-  const randomQuestion = mockQuestions[Math.floor(Math.random() * mockQuestions.length)]
-  const randomBlock = input.blocks[Math.floor(Math.random() * input.blocks.length)]
-
-  return {
-    suggestion: {
-      type: randomQuestion.type,
-      blockId: randomBlock.id,
-      question: randomQuestion.question,
-      proposedChange: {
-        field: randomQuestion.field,
-        newValue: randomQuestion.type === "urgency" ? "thinking" : null,
-        reason: "현재 상태를 점검해보면 좋을 것 같아요.",
-      },
-    },
-    hasMore: true,
+    suggestedZone: suggestedZoneId,
+    zoneReason: "키워드를 보고 임시로 골랐어요. 필요하면 직접 바꿔주세요.",
+    suggestedDueDate,
+    suggestedUrgency,
   }
 }
