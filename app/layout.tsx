@@ -51,9 +51,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description: twitterDesc,
     },
-    icons: {
-      icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    },
+    // icons 는 app/icon.svg + app/apple-icon.svg 가 Next.js 에서 자동 등록됨.
   }
 }
 
