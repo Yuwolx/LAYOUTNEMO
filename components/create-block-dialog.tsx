@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { WorkBlock, Zone, Urgency } from "@/types"
-import { createBlockWithAI } from "@/lib/ai/aiClient"
+import { createBlockWithAI, mockCreateBlockOutput, AIError } from "@/lib/ai/aiClient"
+import { toast } from "sonner"
 import { URGENCY_KEYS } from "@/lib/constants/urgency"
 import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedZoneLabel } from "@/lib/i18n/seed"
@@ -59,13 +60,14 @@ export function CreateBlockDialog({
     }
 
     setIsLoading(true)
+    const aiInput = {
+      userInput: initialInput,
+      existingBlocks: [],
+      zones: zones.map((z) => ({ id: z.id, label: z.label })),
+      language,
+    }
     try {
-      const aiOutput = await createBlockWithAI({
-        userInput: initialInput,
-        existingBlocks: [],
-        zones: zones.map((z) => ({ id: z.id, label: z.label })),
-        language,
-      })
+      const aiOutput = await createBlockWithAI(aiInput)
 
       setTitle(aiOutput.title)
       setSummary(aiOutput.summary)
@@ -77,13 +79,36 @@ export function CreateBlockDialog({
       }
       setStep("preview")
     } catch (error) {
-      console.error("AI generation failed:", error)
-      const words = initialInput.trim().split(" ")
-      setTitle(words.slice(0, 5).join(" "))
-      setSummary(initialInput)
-      setSelectedZone(zones[0].id)
-      setAiZoneReason("기본 결로 설정되었어요.")
-      setUrgency("stable")
+      // 사용자에게 원인을 명확히 노출 + 키워드 기반 fallback 으로 흐름은 끊기지 않게.
+      const isAI = error instanceof AIError
+      const code = isAI ? error.code : "network_error"
+      const messages: Record<string, string> = {
+        missing_api_key:
+          language === "en"
+            ? "AI is unavailable: server has no API key. Filled in with keyword guesses."
+            : "AI 키가 서버에 없어 키워드로 대신 추론했어요.",
+        upstream_error:
+          language === "en"
+            ? "AI failed to respond. Filled in with keyword guesses."
+            : "AI 응답 실패 — 키워드로 대신 추론했어요.",
+        invalid_response:
+          language === "en"
+            ? "AI returned an unexpected shape. Filled in with keyword guesses."
+            : "AI 응답이 예상과 달라 키워드로 대신 추론했어요.",
+        network_error:
+          language === "en"
+            ? "Network error. Filled in with keyword guesses."
+            : "네트워크 오류 — 키워드로 대신 추론했어요.",
+      }
+      toast.warning(messages[code] ?? messages.network_error)
+
+      const fallback = mockCreateBlockOutput(aiInput)
+      setTitle(fallback.title)
+      setSummary(fallback.summary)
+      setSelectedZone(fallback.suggestedZone)
+      setAiZoneReason(fallback.zoneReason)
+      setUrgency(fallback.suggestedUrgency)
+      if (fallback.suggestedDueDate) setDueDate(fallback.suggestedDueDate)
       setStep("preview")
     } finally {
       setIsLoading(false)

@@ -263,7 +263,24 @@ export default function Page() {
   const [isAboutOpen, setIsAboutOpen] = useState(false)
   const [isArchiveOpen, setIsArchiveOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
-  const [isAIEnabled, setIsAIEnabled] = useState(true)
+  // AI 보조 토글. localStorage 영속화 — 새로고침해도 유지.
+  const [isAIEnabled, setIsAIEnabledRaw] = useState(true)
+  const setIsAIEnabled = (next: boolean) => {
+    setIsAIEnabledRaw(next)
+    try {
+      localStorage.setItem("layout_ai_enabled", String(next))
+    } catch {
+      // ignore
+    }
+  }
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("layout_ai_enabled")
+      if (stored !== null) setIsAIEnabledRaw(stored === "true")
+    } catch {
+      // ignore
+    }
+  }, [])
   const [previewBlock, setPreviewBlock] = useState<Partial<WorkBlock> | null>(null)
 
   // 현재 캔버스의 blocks 스냅샷만 기록 (v1.1 최적화).
