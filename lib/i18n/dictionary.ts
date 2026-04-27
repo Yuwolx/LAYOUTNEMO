@@ -16,6 +16,8 @@ export const DICT = {
     // Header
     "header.createBlock": "새 블럭 만들기",
     "header.reflect": "정리하기",
+    "auth.signIn": "구글로 로그인",
+    "auth.signOut": "로그아웃",
     "header.addFacet": "+ 결 추가",
     "header.aiAssist": "AI 보조",
     "header.darkMode": "다크 모드 전환",
@@ -125,6 +127,8 @@ export const DICT = {
     // Header
     "header.createBlock": "Create Block",
     "header.reflect": "Reflect",
+    "auth.signIn": "Sign in with Google",
+    "auth.signOut": "Sign out",
     "header.addFacet": "+ Add Facet",
     "header.aiAssist": "AI Assist",
     "header.darkMode": "Switch to dark mode",

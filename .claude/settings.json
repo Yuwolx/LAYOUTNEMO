@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git ls-tree *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(gh --version)",
+      "Bash(gh auth *)",
+      "Bash(git grep *)",
+      "Bash(git rev-list *)",
+      "Bash(grep -iE \"readme|.md$\")",
+      "Bash(npm run *)",
+      "Bash(grep -vE \"^.+://.+|^[^:]+:\\\\s*//|route\\\\.ts\")",
+      "Bash(grep -nE \"--card|--foreground\" app/globals.css)",
+      "Bash(git mv *)",
+      "Bash(git switch *)",
+      "Bash(gh pr create --base master --head feature/local-improvements --title '로컬 개선 한 사이클 — 타입 안전망 복구, i18n\\(ko/en\\), 갈무리 UX 개편, 다크모드 톤' --body ' *)",
+      "PowerShell(gh --version)",
+      "PowerShell(winget install --id GitHub.cli --accept-source-agreements --accept-package-agreements)",
+      "PowerShell($ghPath = \"$env:ProgramFiles\\\\GitHub CLI\\\\gh.exe\"; if \\(Test-Path $ghPath\\) { & $ghPath --version } else { Get-ChildItem -Path \"$env:ProgramFiles\",\"$env:LOCALAPPDATA\" -Filter gh.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 3 FullName })",
+      "PowerShell(& \"$env:ProgramFiles\\\\GitHub CLI\\\\gh.exe\" auth status)",
+      "Bash('/c/Program Files/GitHub CLI/gh.exe' pr create --base master --head feature/local-improvements --title '로컬 개선 한 사이클 — 타입 안전망 복구, i18n\\(ko/en\\), 갈무리 UX 개편, 다크모드 톤' --body ' *)",
+      "Bash(npx tsc *)",
+      "Read(//c/Users/SSAFY/AppData/Local/Temp/claude/c--Users-SSAFY-Desktop-LAYOUTNEMO/131cf11b-3e9f-47f1-81f6-e16a6e99bee8/tasks/**)",
+      "Bash('/c/Program Files/GitHub CLI/gh.exe' pr create --base master --head feature/canvas-navigation --title '캔버스 팬 + 사이즈 다이어트 + 연결 토스 + 라인 발광' --body ' *)",
+      "Bash(git pull *)",
+      "Bash('/c/Program Files/GitHub CLI/gh.exe' pr create --base master --head feature/ai-improvements --title 'AI 응답 안정성 + 키워드 fallback + 토글 영속화 + 메타데이터 손질' --body ' *)",
+      "Bash(npm install *)"
+    ]
+  }
+}

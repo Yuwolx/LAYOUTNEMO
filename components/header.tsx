@@ -6,6 +6,7 @@ import Image from "next/image"
 import type { Zone } from "@/types"
 import { useLanguage } from "@/lib/i18n/context"
 import { translateSeedZoneLabel, translateSeedCanvasName } from "@/lib/i18n/seed"
+import { AuthButton } from "@/components/auth-button"
 
 interface HeaderProps {
   onCreateBlock: () => void
@@ -239,6 +240,8 @@ export function Header({
             <Button onClick={onReflect} className="text-sm min-w-[96px] bg-foreground text-background hover:bg-foreground/90">
               {t("header.reflect")}
             </Button>
+
+            <AuthButton isDarkMode={isDarkMode} />
           </div>
         </div>
       </div>
