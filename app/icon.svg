@@ -1,21 +1,25 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    /* OS / 브라우저 테마 따라 자동 전환. 라이트면 검정, 다크면 흰색. */
+    .mark { stroke: #18181B; }
+    @media (prefers-color-scheme: dark) {
+      .mark { stroke: #FAFAFA; }
+    }
+  </style>
 
   <!-- 세로 블럭 -->
-  <rect x="140" y="100"
+  <rect class="mark" x="140" y="100"
         width="160"
         height="780"
         rx="40"
         fill="none"
-        stroke="#FBBF24"
         stroke-width="80"/>
 
   <!-- 가로 블럭 -->
-  <rect x="140" y="720"
+  <rect class="mark" x="140" y="720"
         width="420"
         height="160"
         rx="40"
         fill="none"
-        stroke="#FBBF24"
         stroke-width="80"/>
-
 </svg>

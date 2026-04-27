@@ -1,4 +1,6 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- iOS 홈 화면 / 링크 미리보기는 prefers-color-scheme 안 먹음 → 흰 배경 + 검정 마크 고정. -->
+  <rect width="1024" height="1024" fill="white"/>
 
   <!-- 세로 블럭 -->
   <rect x="140" y="100"
@@ -6,7 +8,7 @@
         height="780"
         rx="40"
         fill="none"
-        stroke="#FBBF24"
+        stroke="#18181B"
         stroke-width="80"/>
 
   <!-- 가로 블럭 -->
@@ -15,7 +17,6 @@
         height="160"
         rx="40"
         fill="none"
-        stroke="#FBBF24"
+        stroke="#18181B"
         stroke-width="80"/>
-
 </svg>
