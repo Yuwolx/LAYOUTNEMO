@@ -1,24 +1,21 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
 
-  <!-- 배경 -->
-  <rect width="1024" height="1024" fill="white"/>
-
   <!-- 세로 블럭 -->
-  <rect x="360" y="180"
+  <rect x="140" y="100"
         width="160"
-        height="560"
+        height="780"
         rx="40"
         fill="none"
-        stroke="black"
+        stroke="#FBBF24"
         stroke-width="80"/>
 
   <!-- 가로 블럭 -->
-  <rect x="360" y="580"
-        width="420"
+  <rect x="140" y="720"
+        width="780"
         height="160"
         rx="40"
         fill="none"
-        stroke="black"
+        stroke="#FBBF24"
         stroke-width="80"/>
 
 </svg>
