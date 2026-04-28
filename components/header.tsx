@@ -84,27 +84,31 @@ export function Header({
   // 3) 각 항목에 (prev - new) 만큼 즉시 translate → 다음 프레임에 0 으로 전환
   const zoneNodeRefs = useRef<Map<string, HTMLDivElement | null>>(new Map())
   const prevZoneRects = useRef<Map<string, DOMRect>>(new Map())
+  // 사용자 드롭 시에만 true → 다음 useLayoutEffect 가 FLIP 애니메이션 실행.
+  // localStorage hydration 같은 외부 갱신은 조용히 위치만 갱신.
+  const animateNextLayoutRef = useRef(false)
 
   useLayoutEffect(() => {
     const next = new Map<string, DOMRect>()
     zoneNodeRefs.current.forEach((el, id) => {
       if (el) next.set(id, el.getBoundingClientRect())
     })
-    prevZoneRects.current.forEach((prev, id) => {
-      const cur = next.get(id)
-      const el = zoneNodeRefs.current.get(id)
-      if (!cur || !el) return
-      const dx = prev.left - cur.left
-      if (Math.abs(dx) < 1) return
-      // 시작 프레임: 옛 위치로 즉시 점프 (transition 없음)
-      el.style.transition = "none"
-      el.style.transform = `translateX(${dx}px)`
-      // 다음 프레임: 0 으로 부드럽게
-      requestAnimationFrame(() => {
-        el.style.transition = "transform 280ms cubic-bezier(0.22, 1, 0.36, 1)"
-        el.style.transform = "translateX(0)"
+    if (animateNextLayoutRef.current) {
+      prevZoneRects.current.forEach((prev, id) => {
+        const cur = next.get(id)
+        const el = zoneNodeRefs.current.get(id)
+        if (!cur || !el) return
+        const dx = prev.left - cur.left
+        if (Math.abs(dx) < 1) return
+        el.style.transition = "none"
+        el.style.transform = `translateX(${dx}px)`
+        requestAnimationFrame(() => {
+          el.style.transition = "transform 280ms cubic-bezier(0.22, 1, 0.36, 1)"
+          el.style.transform = "translateX(0)"
+        })
       })
-    })
+      animateNextLayoutRef.current = false
+    }
     prevZoneRects.current = next
   }, [zones])
 
@@ -128,6 +132,8 @@ export function Header({
     const reordered = [...ids]
     reordered.splice(fromIdx, 1)
     reordered.splice(insertIdx, 0, dragZoneId)
+    // 사용자 드롭일 때만 다음 useLayoutEffect 가 FLIP 애니메이션 실행하도록 표시.
+    animateNextLayoutRef.current = true
     onReorderZones(reordered)
     resetZoneDrag()
   }

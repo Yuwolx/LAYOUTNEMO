@@ -600,6 +600,18 @@ export default function Page() {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [handleUndo, handleRedo])
 
+  // 새로고침 직후 SSR/초기 렌더는 default state 로 그려진 뒤, useEffect 가 localStorage 의 저장 상태로
+  // 갈아치우면서 잠깐 "옛 위치 → 새 위치" 점프(또는 애니메이션) 가 보였다. isClient 전엔 빈 배경만 그려서
+  // 사용자가 항상 저장된 상태부터 보도록 한다.
+  if (!isClient) {
+    return (
+      <div
+        className={`min-h-screen ${isDarkMode ? "dark bg-[#151823]" : "bg-[#fafaf9]"}`}
+        aria-hidden
+      />
+    )
+  }
+
   return (
     <div className={`min-h-screen ${isDarkMode ? "dark bg-[#151823] text-zinc-100" : "bg-[#fafaf9] text-foreground"}`}>
       <Header
