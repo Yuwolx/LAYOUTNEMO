@@ -286,51 +286,54 @@ export function Header({
         className={`border-t border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-600 border-b border-b-zinc-900" : "border-zinc-300 border-b border-b-stone-50"}`}
       >
         <div className="max-w-[2000px] mx-auto px-8 py-2 flex items-center gap-2">
-          {/* 결 탭 + 갭 인디케이터. 갭(인디케이터)이 시각 포인트 — 다른 결을 강조하지 않는다. */}
+          {/* 결 탭 + 갭 인디케이터. 시각 포인트는 결들 사이 갭. */}
           {zones.map((zone, idx) => {
             const isSelected = selectedZone === zone.id
             const isDragging = dragZoneId === zone.id
             const showIndicatorBefore = dragZoneId && dropTargetIdx === idx
             return (
-              <div key={zone.id} className="flex items-center">
-                {/* 갭 인디케이터: 이 zone 앞에 삽입될 자리 */}
+              <div
+                key={zone.id}
+                // 드롭 hit 영역을 wrapper div 가 잡아 인디케이터 위에 마우스가 올라가도 안정적.
+                onDragOver={(e) => {
+                  if (!dragZoneId) return
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = "move"
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const insertBefore = e.clientX < rect.left + rect.width / 2
+                  const next = insertBefore ? idx : idx + 1
+                  if (dropTargetIdx !== next) setDropTargetIdx(next)
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  commitZoneDrop()
+                }}
+                className="flex items-center"
+              >
+                {/* 인디케이터: 1px 얇은 막대. 평소엔 0px. 활성 시에도 좁아서 갭만 살짝 벌어진다. */}
                 <span
                   aria-hidden
                   className={`inline-block transition-all duration-150 ${
                     showIndicatorBefore
-                      ? `w-1 h-7 rounded-full ${isDarkMode ? "bg-zinc-100" : "bg-foreground"}`
-                      : "w-0 h-7"
+                      ? `w-px h-6 mx-1 ${isDarkMode ? "bg-zinc-100" : "bg-foreground"}`
+                      : "w-0 h-6"
                   }`}
                 />
                 <button
                   draggable
                   onDragStart={(e) => {
                     setDragZoneId(zone.id)
-                    setDropTargetIdx(idx) // 시작 위치 — 같은 자리는 commit 에서 no-op 처리
+                    setDropTargetIdx(idx)
                     e.dataTransfer.setData("text/plain", zone.id)
                     e.dataTransfer.effectAllowed = "move"
                   }}
-                  onDragOver={(e) => {
-                    if (!dragZoneId) return
-                    e.preventDefault()
-                    e.dataTransfer.dropEffect = "move"
-                    // 마우스가 이 버튼의 좌/우 어느 절반에 있는지로 삽입 위치 결정.
-                    const rect = e.currentTarget.getBoundingClientRect()
-                    const insertBefore = e.clientX < rect.left + rect.width / 2
-                    const next = insertBefore ? idx : idx + 1
-                    if (dropTargetIdx !== next) setDropTargetIdx(next)
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    commitZoneDrop()
-                  }}
                   onDragEnd={resetZoneDrag}
                   onClick={() => {
-                    if (dragZoneId) return // 드래그 직후 발생할 수 있는 클릭 무시
+                    if (dragZoneId) return
                     onZoneSelect(isSelected ? null : zone.id)
                   }}
                   className={`
-                    ml-1 px-4 py-1.5 rounded-full text-sm transition-all duration-300 font-light cursor-grab active:cursor-grabbing
+                    px-4 py-1.5 rounded-full text-sm transition-all duration-300 font-light cursor-grab active:cursor-grabbing
                     ${isDragging ? "opacity-40" : ""}
                     ${
                       isSelected
@@ -348,7 +351,7 @@ export function Header({
               </div>
             )
           })}
-          {/* 마지막 자리 — 모든 결 뒤에 삽입 */}
+          {/* 마지막 자리 — 드래그 중에만 hit zone 노출. 충분한 폭으로 안정적. */}
           {dragZoneId && (
             <div
               onDragOver={(e) => {
@@ -360,14 +363,14 @@ export function Header({
                 e.preventDefault()
                 commitZoneDrop()
               }}
-              className="flex items-center"
+              className="flex items-center min-w-[24px]"
             >
               <span
                 aria-hidden
-                className={`inline-block transition-all duration-150 ml-1 ${
+                className={`inline-block transition-all duration-150 ${
                   dropTargetIdx === zones.length
-                    ? `w-1 h-7 rounded-full ${isDarkMode ? "bg-zinc-100" : "bg-foreground"}`
-                    : "w-2 h-7"
+                    ? `w-px h-6 mx-1 ${isDarkMode ? "bg-zinc-100" : "bg-foreground"}`
+                    : "w-0 h-6"
                 }`}
               />
             </div>
