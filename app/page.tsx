@@ -496,6 +496,17 @@ export default function Page() {
     )
   }
 
+  // 헤더 결 탭 드래그 정렬: 새 순서의 zone id 배열을 받아 그 순서대로 zones 재구성.
+  const handleReorderZones = (orderedIds: string[]) => {
+    const byId = new Map(zones.map((z) => [z.id, z]))
+    const reordered = orderedIds.map((id) => byId.get(id)).filter((z): z is Zone => Boolean(z))
+    // 누락된 zone 이 있으면 뒤에 그대로 붙임 (안전망).
+    zones.forEach((z) => {
+      if (!orderedIds.includes(z.id)) reordered.push(z)
+    })
+    handleUpdateZones(reordered)
+  }
+
   const handleCopyBlock = (sourceBlockId: string) => {
     const sourceBlock = blocks.find((b) => b.id === sourceBlockId)
     if (!sourceBlock || sourceBlock.isGuide) return
@@ -589,6 +600,18 @@ export default function Page() {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [handleUndo, handleRedo])
 
+  // 새로고침 직후 SSR/초기 렌더는 default state 로 그려진 뒤, useEffect 가 localStorage 의 저장 상태로
+  // 갈아치우면서 잠깐 "옛 위치 → 새 위치" 점프(또는 애니메이션) 가 보였다. isClient 전엔 빈 배경만 그려서
+  // 사용자가 항상 저장된 상태부터 보도록 한다.
+  if (!isClient) {
+    return (
+      <div
+        className={`min-h-screen ${isDarkMode ? "dark bg-[#151823]" : "bg-[#fafaf9]"}`}
+        aria-hidden
+      />
+    )
+  }
+
   return (
     <div className={`min-h-screen ${isDarkMode ? "dark bg-[#151823] text-zinc-100" : "bg-[#fafaf9] text-foreground"}`}>
       <Header
@@ -598,6 +621,7 @@ export default function Page() {
         selectedZone={selectedZone}
         onZoneSelect={setSelectedZone}
         onManageAreas={() => setIsAreaManagementOpen(true)}
+        onReorderZones={handleReorderZones}
         showRelationships={showRelationships}
         onToggleRelationships={() => setShowRelationships(!showRelationships)}
         showCompletedBlocks={showCompletedBlocks}

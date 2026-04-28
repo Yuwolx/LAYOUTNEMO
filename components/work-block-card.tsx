@@ -134,11 +134,14 @@ export function WorkBlockCard({
       <div
         ref={cardRef}
         key={`${block.id}-${isCompleted ? "completed" : "active"}`}
-        className={`absolute group ${isCopyMode ? "cursor-copy" : isCompleted ? "cursor-grab" : "cursor-move"}`}
+        className={`absolute group select-none ${isCopyMode ? "cursor-copy" : isCompleted ? "cursor-grab" : "cursor-move"}`}
         style={{
           left: block.x,
           top: block.y,
           width: block.width,
+          // 카드 위에서 드래그 시 텍스트가 선택되지 않도록 (모든 브라우저).
+          userSelect: "none",
+          WebkitUserSelect: "none",
           // 활성 블럭은 내용에 맞춰 가변. 완료 블럭은 슬림 바 형태 유지.
           height: isCompleted ? 56 : "auto",
           minHeight: isCompleted ? 56 : 64,

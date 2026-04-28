@@ -1,5 +1,6 @@
 "use client"
 
+import { useLayoutEffect, useRef, useState } from "react"
 import { Eye, Moon, Sun, Trash2, Undo2, Sparkles, RotateCcw, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
@@ -33,6 +34,7 @@ interface HeaderProps {
   lastSaved: Date
   onReset: () => void
   onOpenAbout: () => void
+  onReorderZones?: (orderedZoneIds: string[]) => void
 }
 
 export function Header({
@@ -61,7 +63,80 @@ export function Header({
   lastSaved,
   onReset,
   onOpenAbout,
+  onReorderZones,
 }: HeaderProps) {
+  // 결 탭 드래그 정렬 상태.
+  // dragZoneId: 지금 잡고 있는 zone
+  // dropTargetIdx: "이 인덱스 자리에 들어간다" 의미. 0..zones.length 사이.
+  //   예) 3 → 인덱스 2번 zone 과 3번 zone 사이로 들어감.
+  //   다른 zone 위에 올리는 게 아니라 zone 들 사이의 갭에 표시되는 게 핵심.
+  const [dragZoneId, setDragZoneId] = useState<string | null>(null)
+  const [dropTargetIdx, setDropTargetIdx] = useState<number | null>(null)
+
+  const resetZoneDrag = () => {
+    setDragZoneId(null)
+    setDropTargetIdx(null)
+  }
+
+  // FLIP 애니메이션: zones 배열 순서 변경 시, 이전 위치에서 새 위치로 슬라이드.
+  // 1) 렌더 직전 prev 위치를 저장
+  // 2) 렌더 후 useLayoutEffect 에서 새 위치 측정
+  // 3) 각 항목에 (prev - new) 만큼 즉시 translate → 다음 프레임에 0 으로 전환
+  const zoneNodeRefs = useRef<Map<string, HTMLDivElement | null>>(new Map())
+  const prevZoneRects = useRef<Map<string, DOMRect>>(new Map())
+  // 사용자 드롭 시에만 true → 다음 useLayoutEffect 가 FLIP 애니메이션 실행.
+  // localStorage hydration 같은 외부 갱신은 조용히 위치만 갱신.
+  const animateNextLayoutRef = useRef(false)
+
+  useLayoutEffect(() => {
+    const next = new Map<string, DOMRect>()
+    zoneNodeRefs.current.forEach((el, id) => {
+      if (el) next.set(id, el.getBoundingClientRect())
+    })
+    if (animateNextLayoutRef.current) {
+      prevZoneRects.current.forEach((prev, id) => {
+        const cur = next.get(id)
+        const el = zoneNodeRefs.current.get(id)
+        if (!cur || !el) return
+        const dx = prev.left - cur.left
+        if (Math.abs(dx) < 1) return
+        el.style.transition = "none"
+        el.style.transform = `translateX(${dx}px)`
+        requestAnimationFrame(() => {
+          el.style.transition = "transform 280ms cubic-bezier(0.22, 1, 0.36, 1)"
+          el.style.transform = "translateX(0)"
+        })
+      })
+      animateNextLayoutRef.current = false
+    }
+    prevZoneRects.current = next
+  }, [zones])
+
+  const commitZoneDrop = () => {
+    if (!onReorderZones || !dragZoneId || dropTargetIdx === null) {
+      resetZoneDrag()
+      return
+    }
+    const ids = zones.map((z) => z.id)
+    const fromIdx = ids.indexOf(dragZoneId)
+    if (fromIdx < 0) {
+      resetZoneDrag()
+      return
+    }
+    // splice 순서: 먼저 제거 → 그 다음 삽입. 제거로 뒤 인덱스가 한 칸 당겨지므로 보정.
+    const insertIdx = dropTargetIdx > fromIdx ? dropTargetIdx - 1 : dropTargetIdx
+    if (insertIdx === fromIdx) {
+      resetZoneDrag()
+      return
+    }
+    const reordered = [...ids]
+    reordered.splice(fromIdx, 1)
+    reordered.splice(insertIdx, 0, dragZoneId)
+    // 사용자 드롭일 때만 다음 useLayoutEffect 가 FLIP 애니메이션 실행하도록 표시.
+    animateNextLayoutRef.current = true
+    onReorderZones(reordered)
+    resetZoneDrag()
+  }
   const { language, toggleLanguage, t } = useLanguage()
   const formatLastSaved = () => {
     const now = new Date()
@@ -247,26 +322,99 @@ export function Header({
         className={`border-t border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-600 border-b border-b-zinc-900" : "border-zinc-300 border-b border-b-stone-50"}`}
       >
         <div className="max-w-[2000px] mx-auto px-8 py-2 flex items-center gap-2">
-          {zones.map((zone) => (
-            <button
-              key={zone.id}
-              onClick={() => onZoneSelect(selectedZone === zone.id ? null : zone.id)}
-              className={`
-                px-4 py-1.5 rounded-full text-sm transition-all duration-300 font-light
-                ${
-                  selectedZone === zone.id
-                    ? isDarkMode
-                      ? "bg-zinc-100 text-zinc-900 font-normal shadow-sm"
-                      : "bg-foreground text-background font-normal shadow-sm"
-                    : isDarkMode
-                      ? "text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
-                }
-              `}
+          {/* 결 탭 + 갭 인디케이터. 시각 포인트는 결들 사이 갭. */}
+          {zones.map((zone, idx) => {
+            const isSelected = selectedZone === zone.id
+            const isDragging = dragZoneId === zone.id
+            const showIndicatorBefore = dragZoneId && dropTargetIdx === idx
+            return (
+              <div
+                key={zone.id}
+                ref={(el) => {
+                  if (el) zoneNodeRefs.current.set(zone.id, el)
+                  else zoneNodeRefs.current.delete(zone.id)
+                }}
+                // 드롭 hit 영역을 wrapper div 가 잡아 인디케이터 위에 마우스가 올라가도 안정적.
+                onDragOver={(e) => {
+                  if (!dragZoneId) return
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = "move"
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const insertBefore = e.clientX < rect.left + rect.width / 2
+                  const next = insertBefore ? idx : idx + 1
+                  if (dropTargetIdx !== next) setDropTargetIdx(next)
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  commitZoneDrop()
+                }}
+                className="flex items-center"
+              >
+                {/* 인디케이터: 1px 얇은 막대. 평소엔 0px. 활성 시에도 좁아서 갭만 살짝 벌어진다. */}
+                <span
+                  aria-hidden
+                  className={`inline-block transition-all duration-150 ${
+                    showIndicatorBefore
+                      ? `w-px h-6 mx-1 ${isDarkMode ? "bg-zinc-100" : "bg-foreground"}`
+                      : "w-0 h-6"
+                  }`}
+                />
+                <button
+                  draggable
+                  onDragStart={(e) => {
+                    setDragZoneId(zone.id)
+                    setDropTargetIdx(idx)
+                    e.dataTransfer.setData("text/plain", zone.id)
+                    e.dataTransfer.effectAllowed = "move"
+                  }}
+                  onDragEnd={resetZoneDrag}
+                  onClick={() => {
+                    if (dragZoneId) return
+                    onZoneSelect(isSelected ? null : zone.id)
+                  }}
+                  className={`
+                    px-4 py-1.5 rounded-full text-sm transition-all duration-300 font-light cursor-grab active:cursor-grabbing
+                    ${isDragging ? "opacity-40" : ""}
+                    ${
+                      isSelected
+                        ? isDarkMode
+                          ? "bg-zinc-100 text-zinc-900 font-normal shadow-sm"
+                          : "bg-foreground text-background font-normal shadow-sm"
+                        : isDarkMode
+                          ? "text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                    }
+                  `}
+                >
+                  {translateSeedZoneLabel(zone, language)}
+                </button>
+              </div>
+            )
+          })}
+          {/* 마지막 자리 — 드래그 중에만 hit zone 노출. 충분한 폭으로 안정적. */}
+          {dragZoneId && (
+            <div
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = "move"
+                if (dropTargetIdx !== zones.length) setDropTargetIdx(zones.length)
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                commitZoneDrop()
+              }}
+              className="flex items-center min-w-[24px]"
             >
-              {translateSeedZoneLabel(zone, language)}
-            </button>
-          ))}
+              <span
+                aria-hidden
+                className={`inline-block transition-all duration-150 ${
+                  dropTargetIdx === zones.length
+                    ? `w-px h-6 mx-1 ${isDarkMode ? "bg-zinc-100" : "bg-foreground"}`
+                    : "w-0 h-6"
+                }`}
+              />
+            </div>
+          )}
 
           <button
             onClick={onManageAreas}
