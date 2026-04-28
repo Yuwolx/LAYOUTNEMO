@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Sparkles, Calendar, Loader2 } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -25,6 +25,9 @@ interface CreateBlockDialogProps {
 
 type CreateStep = "input" | "preview" | "placement"
 
+/** AI 응답이 도착한 뒤 사용자 무응답 시 자동 반영까지의 시간 (ms). */
+const AUTO_CONFIRM_MS = 8000
+
 export function CreateBlockDialog({
   open,
   onOpenChange,
@@ -46,6 +49,12 @@ export function CreateBlockDialog({
   const [aiZoneReason, setAiZoneReason] = useState("")
   const [suggestedPosition, setSuggestedPosition] = useState({ x: 0, y: 0 })
   const [isLoading, setIsLoading] = useState(false)
+  // AI 응답 후 사용자 무응답 시 자동 반영. null 이면 비활성.
+  const [autoConfirmAt, setAutoConfirmAt] = useState<number | null>(null)
+  const [secondsLeft, setSecondsLeft] = useState(0)
+  const cancelAutoConfirm = () => {
+    setAutoConfirmAt((prev) => (prev !== null ? null : prev))
+  }
 
   const handleInitialSubmit = async () => {
     if (!initialInput.trim()) return
@@ -78,6 +87,7 @@ export function CreateBlockDialog({
         setDueDate(aiOutput.suggestedDueDate)
       }
       setStep("preview")
+      setAutoConfirmAt(Date.now() + AUTO_CONFIRM_MS)
     } catch (error) {
       // 사용자에게 원인을 명확히 노출 + 키워드 기반 fallback 으로 흐름은 끊기지 않게.
       const isAI = error instanceof AIError
@@ -110,10 +120,57 @@ export function CreateBlockDialog({
       setUrgency(fallback.suggestedUrgency)
       if (fallback.suggestedDueDate) setDueDate(fallback.suggestedDueDate)
       setStep("preview")
+      setAutoConfirmAt(Date.now() + AUTO_CONFIRM_MS)
     } finally {
       setIsLoading(false)
     }
   }
+
+  // AI 응답 후 자동 반영: smart position 으로 placement 단계 건너뛰고 바로 생성.
+  const autoCommitBlock = () => {
+    if (onShowPreview) onShowPreview(null)
+    const position = findSmartPosition()
+    const newBlock: WorkBlock = {
+      id: Date.now().toString(),
+      title,
+      description: summary,
+      x: position.x,
+      y: position.y,
+      width: 200,
+      height: 96,
+      zone: selectedZone,
+      urgency,
+      dueDate: dueDate || undefined,
+    }
+    onCreateBlock(newBlock)
+    handleReset()
+  }
+
+  // 자동 반영 타이머 — autoConfirmAt 이 세팅되면 그 시점에 autoCommitBlock 실행.
+  // 별도 ticker interval 로 secondsLeft 갱신.
+  useEffect(() => {
+    if (autoConfirmAt === null) {
+      setSecondsLeft(0)
+      return
+    }
+    const updateLeft = () => {
+      setSecondsLeft(Math.max(0, Math.ceil((autoConfirmAt - Date.now()) / 1000)))
+    }
+    updateLeft()
+    const remaining = autoConfirmAt - Date.now()
+    if (remaining <= 0) {
+      autoCommitBlock()
+      return
+    }
+    const commitTimer = setTimeout(() => autoCommitBlock(), remaining)
+    const tickInterval = setInterval(updateLeft, 200)
+    return () => {
+      clearTimeout(commitTimer)
+      clearInterval(tickInterval)
+    }
+    // autoCommitBlock 은 클로저 — 사용자 인터랙션 시 cancelAutoConfirm 으로 자동 정리됨.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoConfirmAt])
 
   const handlePlacementConfirm = (manual: boolean) => {
     if (onShowPreview) {
@@ -176,6 +233,7 @@ export function CreateBlockDialog({
     setUrgency("stable")
     setAiZoneReason("")
     setIsLoading(false)
+    setAutoConfirmAt(null) // 다이얼로그 닫힐 때 카운트다운 정리
     onOpenChange(false)
   }
 
@@ -394,7 +452,39 @@ export function CreateBlockDialog({
         )}
 
         {step === "preview" && (
-          <div className="space-y-6">
+          <div
+            className="space-y-6"
+            // 자동 반영 카운트다운 진행 중일 때 — 마우스/키 인터랙션이 발생하면 즉시 취소.
+            // mouseMove / scroll 은 무시 (그냥 보고 있는 것일 수 있어서).
+            onPointerDownCapture={cancelAutoConfirm}
+            onKeyDownCapture={cancelAutoConfirm}
+          >
+            {autoConfirmAt !== null && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3" />
+                    {secondsLeft}{t("create.autoConfirm.hint")}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={cancelAutoConfirm}
+                    className="hover:text-foreground transition-colors underline-offset-2 hover:underline"
+                  >
+                    {t("create.autoConfirm.cancel")}
+                  </button>
+                </div>
+                <div className="h-1 bg-muted rounded-full overflow-hidden">
+                  <div
+                    key={autoConfirmAt}
+                    className="h-full bg-foreground/70 origin-left"
+                    style={{
+                      animation: `autoConfirmShrink ${AUTO_CONFIRM_MS}ms linear forwards`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="title" className="text-sm font-normal">
