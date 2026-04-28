@@ -81,6 +81,7 @@ export function Canvas({
       // 윈도우 포커스 잃으면 키 떼는 이벤트를 못 받을 수 있으니 안전하게 리셋.
       setIsSpacePressed(false)
       setIsPanning(false)
+      setIsCopyMode(false) // alt 가 stuck 된 상태로 남아 클릭 시 복제되는 버그 방지.
       panStartRef.current = null
     }
 
@@ -137,7 +138,10 @@ export function Canvas({
     const block = blocks.find((b) => b.id === blockId)
     if (!block) return
 
-    if (isCopyMode) {
+    // event-time 의 alt 키 상태를 우선 신뢰. state(isCopyMode) 만 보면
+    // alt-keydown 이벤트가 누락되거나(blur 등) 정리되지 않은 채 stuck 된 경우
+    // 일반 클릭에도 복제가 발생할 수 있다.
+    if (e.altKey && !e.metaKey && !e.ctrlKey) {
       onCopyBlock(blockId)
       return
     }

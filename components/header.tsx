@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Eye, Moon, Sun, Trash2, Undo2, Sparkles, RotateCcw, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
@@ -33,6 +34,7 @@ interface HeaderProps {
   lastSaved: Date
   onReset: () => void
   onOpenAbout: () => void
+  onReorderZones?: (orderedZoneIds: string[]) => void
 }
 
 export function Header({
@@ -61,7 +63,33 @@ export function Header({
   lastSaved,
   onReset,
   onOpenAbout,
+  onReorderZones,
 }: HeaderProps) {
+  // 결 탭 드래그 정렬 상태. dragId = 잡고 있는 zone, overId = 호버 중인 대상 zone.
+  const [dragZoneId, setDragZoneId] = useState<string | null>(null)
+  const [overZoneId, setOverZoneId] = useState<string | null>(null)
+
+  const handleZoneDrop = (targetId: string) => {
+    if (!onReorderZones || !dragZoneId || dragZoneId === targetId) {
+      setDragZoneId(null)
+      setOverZoneId(null)
+      return
+    }
+    const ids = zones.map((z) => z.id)
+    const fromIdx = ids.indexOf(dragZoneId)
+    const toIdx = ids.indexOf(targetId)
+    if (fromIdx < 0 || toIdx < 0) {
+      setDragZoneId(null)
+      setOverZoneId(null)
+      return
+    }
+    const reordered = [...ids]
+    reordered.splice(fromIdx, 1)
+    reordered.splice(toIdx, 0, dragZoneId)
+    onReorderZones(reordered)
+    setDragZoneId(null)
+    setOverZoneId(null)
+  }
   const { language, toggleLanguage, t } = useLanguage()
   const formatLastSaved = () => {
     const now = new Date()
@@ -247,26 +275,61 @@ export function Header({
         className={`border-t border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-600 border-b border-b-zinc-900" : "border-zinc-300 border-b border-b-stone-50"}`}
       >
         <div className="max-w-[2000px] mx-auto px-8 py-2 flex items-center gap-2">
-          {zones.map((zone) => (
-            <button
-              key={zone.id}
-              onClick={() => onZoneSelect(selectedZone === zone.id ? null : zone.id)}
-              className={`
-                px-4 py-1.5 rounded-full text-sm transition-all duration-300 font-light
-                ${
-                  selectedZone === zone.id
-                    ? isDarkMode
-                      ? "bg-zinc-100 text-zinc-900 font-normal shadow-sm"
-                      : "bg-foreground text-background font-normal shadow-sm"
-                    : isDarkMode
-                      ? "text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
-                }
-              `}
-            >
-              {translateSeedZoneLabel(zone, language)}
-            </button>
-          ))}
+          {zones.map((zone) => {
+            const isSelected = selectedZone === zone.id
+            const isDragging = dragZoneId === zone.id
+            const isOver = overZoneId === zone.id && dragZoneId && dragZoneId !== zone.id
+            return (
+              <button
+                key={zone.id}
+                draggable
+                onDragStart={(e) => {
+                  setDragZoneId(zone.id)
+                  // Firefox 는 dataTransfer 가 비면 드래그 시작 안 함.
+                  e.dataTransfer.setData("text/plain", zone.id)
+                  e.dataTransfer.effectAllowed = "move"
+                }}
+                onDragOver={(e) => {
+                  if (!dragZoneId) return
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = "move"
+                  if (overZoneId !== zone.id) setOverZoneId(zone.id)
+                }}
+                onDragLeave={() => {
+                  if (overZoneId === zone.id) setOverZoneId(null)
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  handleZoneDrop(zone.id)
+                }}
+                onDragEnd={() => {
+                  setDragZoneId(null)
+                  setOverZoneId(null)
+                }}
+                onClick={() => {
+                  // 드래그 직후 발생할 수 있는 클릭은 무시 (브라우저 기본 동작).
+                  if (dragZoneId) return
+                  onZoneSelect(isSelected ? null : zone.id)
+                }}
+                className={`
+                  px-4 py-1.5 rounded-full text-sm transition-all duration-300 font-light cursor-grab active:cursor-grabbing
+                  ${isDragging ? "opacity-40" : ""}
+                  ${isOver ? (isDarkMode ? "ring-2 ring-zinc-500" : "ring-2 ring-foreground/40") : ""}
+                  ${
+                    isSelected
+                      ? isDarkMode
+                        ? "bg-zinc-100 text-zinc-900 font-normal shadow-sm"
+                        : "bg-foreground text-background font-normal shadow-sm"
+                      : isDarkMode
+                        ? "text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                  }
+                `}
+              >
+                {translateSeedZoneLabel(zone, language)}
+              </button>
+            )
+          })}
 
           <button
             onClick={onManageAreas}

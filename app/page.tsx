@@ -496,6 +496,17 @@ export default function Page() {
     )
   }
 
+  // 헤더 결 탭 드래그 정렬: 새 순서의 zone id 배열을 받아 그 순서대로 zones 재구성.
+  const handleReorderZones = (orderedIds: string[]) => {
+    const byId = new Map(zones.map((z) => [z.id, z]))
+    const reordered = orderedIds.map((id) => byId.get(id)).filter((z): z is Zone => Boolean(z))
+    // 누락된 zone 이 있으면 뒤에 그대로 붙임 (안전망).
+    zones.forEach((z) => {
+      if (!orderedIds.includes(z.id)) reordered.push(z)
+    })
+    handleUpdateZones(reordered)
+  }
+
   const handleCopyBlock = (sourceBlockId: string) => {
     const sourceBlock = blocks.find((b) => b.id === sourceBlockId)
     if (!sourceBlock || sourceBlock.isGuide) return
@@ -598,6 +609,7 @@ export default function Page() {
         selectedZone={selectedZone}
         onZoneSelect={setSelectedZone}
         onManageAreas={() => setIsAreaManagementOpen(true)}
+        onReorderZones={handleReorderZones}
         showRelationships={showRelationships}
         onToggleRelationships={() => setShowRelationships(!showRelationships)}
         showCompletedBlocks={showCompletedBlocks}
