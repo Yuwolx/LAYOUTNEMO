@@ -65,30 +65,41 @@ export function Header({
   onOpenAbout,
   onReorderZones,
 }: HeaderProps) {
-  // 결 탭 드래그 정렬 상태. dragId = 잡고 있는 zone, overId = 호버 중인 대상 zone.
+  // 결 탭 드래그 정렬 상태.
+  // dragZoneId: 지금 잡고 있는 zone
+  // dropTargetIdx: "이 인덱스 자리에 들어간다" 의미. 0..zones.length 사이.
+  //   예) 3 → 인덱스 2번 zone 과 3번 zone 사이로 들어감.
+  //   다른 zone 위에 올리는 게 아니라 zone 들 사이의 갭에 표시되는 게 핵심.
   const [dragZoneId, setDragZoneId] = useState<string | null>(null)
-  const [overZoneId, setOverZoneId] = useState<string | null>(null)
+  const [dropTargetIdx, setDropTargetIdx] = useState<number | null>(null)
 
-  const handleZoneDrop = (targetId: string) => {
-    if (!onReorderZones || !dragZoneId || dragZoneId === targetId) {
-      setDragZoneId(null)
-      setOverZoneId(null)
+  const resetZoneDrag = () => {
+    setDragZoneId(null)
+    setDropTargetIdx(null)
+  }
+
+  const commitZoneDrop = () => {
+    if (!onReorderZones || !dragZoneId || dropTargetIdx === null) {
+      resetZoneDrag()
       return
     }
     const ids = zones.map((z) => z.id)
     const fromIdx = ids.indexOf(dragZoneId)
-    const toIdx = ids.indexOf(targetId)
-    if (fromIdx < 0 || toIdx < 0) {
-      setDragZoneId(null)
-      setOverZoneId(null)
+    if (fromIdx < 0) {
+      resetZoneDrag()
+      return
+    }
+    // splice 순서: 먼저 제거 → 그 다음 삽입. 제거로 뒤 인덱스가 한 칸 당겨지므로 보정.
+    const insertIdx = dropTargetIdx > fromIdx ? dropTargetIdx - 1 : dropTargetIdx
+    if (insertIdx === fromIdx) {
+      resetZoneDrag()
       return
     }
     const reordered = [...ids]
     reordered.splice(fromIdx, 1)
-    reordered.splice(toIdx, 0, dragZoneId)
+    reordered.splice(insertIdx, 0, dragZoneId)
     onReorderZones(reordered)
-    setDragZoneId(null)
-    setOverZoneId(null)
+    resetZoneDrag()
   }
   const { language, toggleLanguage, t } = useLanguage()
   const formatLastSaved = () => {
@@ -275,61 +286,92 @@ export function Header({
         className={`border-t border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-600 border-b border-b-zinc-900" : "border-zinc-300 border-b border-b-stone-50"}`}
       >
         <div className="max-w-[2000px] mx-auto px-8 py-2 flex items-center gap-2">
-          {zones.map((zone) => {
+          {/* 결 탭 + 갭 인디케이터. 갭(인디케이터)이 시각 포인트 — 다른 결을 강조하지 않는다. */}
+          {zones.map((zone, idx) => {
             const isSelected = selectedZone === zone.id
             const isDragging = dragZoneId === zone.id
-            const isOver = overZoneId === zone.id && dragZoneId && dragZoneId !== zone.id
+            const showIndicatorBefore = dragZoneId && dropTargetIdx === idx
             return (
-              <button
-                key={zone.id}
-                draggable
-                onDragStart={(e) => {
-                  setDragZoneId(zone.id)
-                  // Firefox 는 dataTransfer 가 비면 드래그 시작 안 함.
-                  e.dataTransfer.setData("text/plain", zone.id)
-                  e.dataTransfer.effectAllowed = "move"
-                }}
-                onDragOver={(e) => {
-                  if (!dragZoneId) return
-                  e.preventDefault()
-                  e.dataTransfer.dropEffect = "move"
-                  if (overZoneId !== zone.id) setOverZoneId(zone.id)
-                }}
-                onDragLeave={() => {
-                  if (overZoneId === zone.id) setOverZoneId(null)
-                }}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  handleZoneDrop(zone.id)
-                }}
-                onDragEnd={() => {
-                  setDragZoneId(null)
-                  setOverZoneId(null)
-                }}
-                onClick={() => {
-                  // 드래그 직후 발생할 수 있는 클릭은 무시 (브라우저 기본 동작).
-                  if (dragZoneId) return
-                  onZoneSelect(isSelected ? null : zone.id)
-                }}
-                className={`
-                  px-4 py-1.5 rounded-full text-sm transition-all duration-300 font-light cursor-grab active:cursor-grabbing
-                  ${isDragging ? "opacity-40" : ""}
-                  ${isOver ? (isDarkMode ? "ring-2 ring-zinc-500" : "ring-2 ring-foreground/40") : ""}
-                  ${
-                    isSelected
-                      ? isDarkMode
-                        ? "bg-zinc-100 text-zinc-900 font-normal shadow-sm"
-                        : "bg-foreground text-background font-normal shadow-sm"
-                      : isDarkMode
-                        ? "text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
-                  }
-                `}
-              >
-                {translateSeedZoneLabel(zone, language)}
-              </button>
+              <div key={zone.id} className="flex items-center">
+                {/* 갭 인디케이터: 이 zone 앞에 삽입될 자리 */}
+                <span
+                  aria-hidden
+                  className={`inline-block transition-all duration-150 ${
+                    showIndicatorBefore
+                      ? `w-1 h-7 rounded-full ${isDarkMode ? "bg-zinc-100" : "bg-foreground"}`
+                      : "w-0 h-7"
+                  }`}
+                />
+                <button
+                  draggable
+                  onDragStart={(e) => {
+                    setDragZoneId(zone.id)
+                    setDropTargetIdx(idx) // 시작 위치 — 같은 자리는 commit 에서 no-op 처리
+                    e.dataTransfer.setData("text/plain", zone.id)
+                    e.dataTransfer.effectAllowed = "move"
+                  }}
+                  onDragOver={(e) => {
+                    if (!dragZoneId) return
+                    e.preventDefault()
+                    e.dataTransfer.dropEffect = "move"
+                    // 마우스가 이 버튼의 좌/우 어느 절반에 있는지로 삽입 위치 결정.
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    const insertBefore = e.clientX < rect.left + rect.width / 2
+                    const next = insertBefore ? idx : idx + 1
+                    if (dropTargetIdx !== next) setDropTargetIdx(next)
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    commitZoneDrop()
+                  }}
+                  onDragEnd={resetZoneDrag}
+                  onClick={() => {
+                    if (dragZoneId) return // 드래그 직후 발생할 수 있는 클릭 무시
+                    onZoneSelect(isSelected ? null : zone.id)
+                  }}
+                  className={`
+                    ml-1 px-4 py-1.5 rounded-full text-sm transition-all duration-300 font-light cursor-grab active:cursor-grabbing
+                    ${isDragging ? "opacity-40" : ""}
+                    ${
+                      isSelected
+                        ? isDarkMode
+                          ? "bg-zinc-100 text-zinc-900 font-normal shadow-sm"
+                          : "bg-foreground text-background font-normal shadow-sm"
+                        : isDarkMode
+                          ? "text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                    }
+                  `}
+                >
+                  {translateSeedZoneLabel(zone, language)}
+                </button>
+              </div>
             )
           })}
+          {/* 마지막 자리 — 모든 결 뒤에 삽입 */}
+          {dragZoneId && (
+            <div
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = "move"
+                if (dropTargetIdx !== zones.length) setDropTargetIdx(zones.length)
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                commitZoneDrop()
+              }}
+              className="flex items-center"
+            >
+              <span
+                aria-hidden
+                className={`inline-block transition-all duration-150 ml-1 ${
+                  dropTargetIdx === zones.length
+                    ? `w-1 h-7 rounded-full ${isDarkMode ? "bg-zinc-100" : "bg-foreground"}`
+                    : "w-2 h-7"
+                }`}
+              />
+            </div>
+          )}
 
           <button
             onClick={onManageAreas}
