@@ -44,22 +44,30 @@ function analyzeBlockClusters(blocks: any[], zones: any[]) {
 function calculateBlockSimilarity(block1: any, block2: any): number {
   let similarity = 0
 
-  // 제목 유사도 (간단한 키워드 기반)
-  const words1 = block1.title.toLowerCase().split(/\s+/)
-  const words2 = block2.title.toLowerCase().split(/\s+/)
-  const commonWords = words1.filter((w: string) => words2.includes(w))
-  if (commonWords.length > 0) similarity += 30
+  // 우선순위: 태그(같은 프로젝트) > 결 > 제목/설명 키워드 > 위치 근접
 
-  // 영역 동일
-  if (block1.zone === block2.zone) similarity += 20
+  // 1. 태그 동일 — 같은 프로젝트/제품으로 분류된 가장 강한 신호
+  if (block1.tag && block2.tag && block1.tag === block2.tag) {
+    similarity += 60
+  }
 
-  // 시급도 동일
-  if (block1.urgency === block2.urgency) similarity += 10
+  // 2. 영역(결) 동일
+  if (block1.zone === block2.zone) similarity += 25
 
-  // 거리 기반 (가까울수록 높은 점수)
+  // 3. 제목 + 설명 키워드 공통
+  const text1 = `${block1.title} ${block1.description || ""}`.toLowerCase()
+  const text2 = `${block2.title} ${block2.description || ""}`.toLowerCase()
+  const words1 = text1.split(/\s+/).filter((w: string) => w.length > 1)
+  const words2 = new Set(text2.split(/\s+/))
+  const commonCount = words1.filter((w: string) => words2.has(w)).length
+  if (commonCount > 0) similarity += Math.min(20, commonCount * 5)
+
+  // 4. 시급도 동일 — 보조 신호
+  if (block1.urgency === block2.urgency) similarity += 5
+
+  // 5. 위치 근접 — 가까울수록 약간 가산 (최대 15)
   const distance = Math.sqrt(Math.pow(block1.x - block2.x, 2) + Math.pow(block1.y - block2.y, 2))
-  const proximityScore = Math.max(0, 40 - distance / 20)
-  similarity += proximityScore
+  similarity += Math.max(0, 15 - distance / 40)
 
   return similarity
 }
@@ -123,6 +131,7 @@ export async function POST(req: Request) {
       description: b.description || "",
       zone: b.zone,
       urgency: b.urgency,
+      tag: b.tag || null,
       dueDate: b.dueDate || null,
       position: { x: b.x, y: b.y },
       connections: b.relatedTo || [],
@@ -137,7 +146,7 @@ export async function POST(req: Request) {
     const blockListText = blockSummary
       .map(
         (b: any, idx: number) =>
-          `${idx + 1}. [${b.id}] "${b.title}" — 영역: ${zoneMap[b.zone] || b.zone}, 시급도: ${b.urgency}, 위치: (${Math.round(
+          `${idx + 1}. [${b.id}] "${b.title}" — 태그: ${b.tag || "없음"}, 영역: ${zoneMap[b.zone] || b.zone}, 시급도: ${b.urgency}, 위치: (${Math.round(
             b.position.x,
           )}, ${Math.round(b.position.y)}), 기한: ${b.dueDate || "없음"}, 연결: ${
             b.connections.length > 0 ? b.connections.join(", ") : "없음"

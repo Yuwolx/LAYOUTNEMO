@@ -12,6 +12,9 @@ export const createBlockAIOutputSchema = z.object({
   zoneReason: z.string(),
   suggestedDueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   suggestedUrgency: z.enum(["stable", "thinking", "lingering", "urgent"]),
+  // 신규 옵셔널 필드 — 모델이 누락해도 통과.
+  suggestedUrl: z.string().nullable().optional(),
+  suggestedTag: z.string().nullable().optional(),
 })
 
 const fieldChangeValueSchema = z.union([

@@ -51,6 +51,9 @@ export const DICT = {
     "label.title": "제목",
     "label.description": "설명",
     "label.notes": "상세 메모",
+    "label.tag": "태그",
+    "label.url": "링크",
+    "placeholder.tag": "예: PROJECT-A",
     "label.optional": "선택",
 
     // Urgency
@@ -162,6 +165,9 @@ export const DICT = {
     "label.title": "Title",
     "label.description": "Description",
     "label.notes": "Notes",
+    "label.tag": "Tag",
+    "label.url": "Link",
+    "placeholder.tag": "e.g. PROJECT-A",
     "label.optional": "optional",
 
     // Urgency

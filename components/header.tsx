@@ -1,7 +1,7 @@
 "use client"
 
 import { useLayoutEffect, useRef, useState } from "react"
-import { Eye, Moon, Sun, Trash2, Undo2, Sparkles, RotateCcw, Info } from "lucide-react"
+import { Eye, Moon, Sun, Trash2, Undo2, Wand2, RotateCcw, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import type { Zone } from "@/types"
@@ -242,7 +242,7 @@ export function Header({
                 }
               `}
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Wand2 className="w-3.5 h-3.5" />
               <span>AI</span>
             </button>
 

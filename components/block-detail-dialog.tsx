@@ -40,6 +40,8 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
   const [dueDate, setDueDate] = useState(block.dueDate || "")
   const [zone, setZone] = useState(block.zone)
   const [urgency, setUrgency] = useState<"stable" | "thinking" | "lingering" | "urgent">(block.urgency || "stable")
+  const [url, setUrl] = useState(block.url || "")
+  const [tag, setTag] = useState(block.tag || "")
 
   useEffect(() => {
     if (open) {
@@ -49,6 +51,8 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
       setDueDate(block.dueDate || "")
       setZone(block.zone)
       setUrgency(block.urgency || "stable")
+      setUrl(block.url || "")
+      setTag(block.tag || "")
     }
   }, [open, block, language, displayTitle, displayDescription, displayNotes])
 
@@ -64,6 +68,8 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
       dueDate: dueDate || undefined,
       zone,
       urgency,
+      url: url.trim() || undefined,
+      tag: tag.trim() || undefined,
     })
     onOpenChange(false)
   }
@@ -215,6 +221,34 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
+                  className="font-light"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="block-tag" className="text-sm font-normal">
+                  {t("label.tag")} ({t("label.optional")})
+                </Label>
+                <Input
+                  id="block-tag"
+                  value={tag}
+                  onChange={(e) => setTag(e.target.value)}
+                  placeholder={t("placeholder.tag")}
+                  maxLength={20}
+                  className="font-light"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="block-url" className="text-sm font-normal">
+                  {t("label.url")} ({t("label.optional")})
+                </Label>
+                <Input
+                  id="block-url"
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://"
                   className="font-light"
                 />
               </div>

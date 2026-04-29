@@ -49,6 +49,8 @@ export function CreateBlockDialog({
   const [aiZoneReason, setAiZoneReason] = useState("")
   const [suggestedPosition, setSuggestedPosition] = useState({ x: 0, y: 0 })
   const [isLoading, setIsLoading] = useState(false)
+  const [tag, setTag] = useState("")
+  const [url, setUrl] = useState("")
   // AI 응답 후 사용자 무응답 시 자동 반영. null 이면 비활성.
   const [autoConfirmAt, setAutoConfirmAt] = useState<number | null>(null)
   const [secondsLeft, setSecondsLeft] = useState(0)
@@ -86,6 +88,8 @@ export function CreateBlockDialog({
       if (aiOutput.suggestedDueDate) {
         setDueDate(aiOutput.suggestedDueDate)
       }
+      if (aiOutput.suggestedUrl) setUrl(aiOutput.suggestedUrl)
+      if (aiOutput.suggestedTag) setTag(aiOutput.suggestedTag)
       setStep("preview")
       setAutoConfirmAt(Date.now() + AUTO_CONFIRM_MS)
     } catch (error) {
@@ -119,6 +123,8 @@ export function CreateBlockDialog({
       setAiZoneReason(fallback.zoneReason)
       setUrgency(fallback.suggestedUrgency)
       if (fallback.suggestedDueDate) setDueDate(fallback.suggestedDueDate)
+      if (fallback.suggestedUrl) setUrl(fallback.suggestedUrl)
+      if (fallback.suggestedTag) setTag(fallback.suggestedTag)
       setStep("preview")
       setAutoConfirmAt(Date.now() + AUTO_CONFIRM_MS)
     } finally {
@@ -136,11 +142,13 @@ export function CreateBlockDialog({
       description: summary,
       x: position.x,
       y: position.y,
-      width: 200,
+      width: 280,
       height: 96,
       zone: selectedZone,
       urgency,
       dueDate: dueDate || undefined,
+      tag: tag.trim() || undefined,
+      url: url.trim() || undefined,
     }
     onCreateBlock(newBlock)
     handleReset()
@@ -185,11 +193,13 @@ export function CreateBlockDialog({
       description: summary,
       x: position.x,
       y: position.y,
-      width: 200,
+      width: 280,
       height: 96,
       zone: selectedZone,
       urgency,
       dueDate: dueDate || undefined,
+      tag: tag.trim() || undefined,
+      url: url.trim() || undefined,
     }
 
     onCreateBlock(newBlock)
@@ -233,12 +243,14 @@ export function CreateBlockDialog({
     setUrgency("stable")
     setAiZoneReason("")
     setIsLoading(false)
+    setTag("")
+    setUrl("")
     setAutoConfirmAt(null) // 다이얼로그 닫힐 때 카운트다운 정리
     onOpenChange(false)
   }
 
   const findSmartPosition = (): { x: number; y: number } => {
-    const BLOCK_WIDTH = 200
+    const BLOCK_WIDTH = 280
     const BLOCK_HEIGHT = 96
     const SPACING = 40
     const MIN_X = 100
@@ -434,6 +446,34 @@ export function CreateBlockDialog({
                       ))}
                     </div>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="manual-tag" className="text-sm font-normal">
+                      {t("label.tag")} ({t("label.optional")})
+                    </Label>
+                    <Input
+                      id="manual-tag"
+                      value={tag}
+                      onChange={(e) => setTag(e.target.value)}
+                      placeholder={t("placeholder.tag")}
+                      maxLength={20}
+                      className="font-light"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="manual-url" className="text-sm font-normal">
+                      {t("label.url")} ({t("label.optional")})
+                    </Label>
+                    <Input
+                      id="manual-url"
+                      type="url"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                      placeholder="https://"
+                      className="font-light"
+                    />
+                  </div>
                 </div>
 
                 <Button
@@ -554,6 +594,34 @@ export function CreateBlockDialog({
                     </Button>
                   ))}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="preview-tag" className="text-sm font-normal">
+                  {t("label.tag")} ({t("label.optional")})
+                </Label>
+                <Input
+                  id="preview-tag"
+                  value={tag}
+                  onChange={(e) => setTag(e.target.value)}
+                  placeholder={t("placeholder.tag")}
+                  maxLength={20}
+                  className="font-light"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="preview-url" className="text-sm font-normal">
+                  {t("label.url")} ({t("label.optional")})
+                </Label>
+                <Input
+                  id="preview-url"
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://"
+                  className="font-light"
+                />
               </div>
             </div>
 

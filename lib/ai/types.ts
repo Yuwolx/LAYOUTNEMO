@@ -24,6 +24,10 @@ export interface CreateBlockAIOutput {
   zoneReason: string
   suggestedDueDate: string | null
   suggestedUrgency: "stable" | "thinking" | "lingering" | "urgent"
+  /** 입력에서 발견된 URL — http(s) 로 시작하는 첫 번째 링크. 없으면 null. */
+  suggestedUrl?: string | null
+  /** 입력에서 [태그] 형태나 명시된 프로젝트/제품명을 추출. 없으면 null. */
+  suggestedTag?: string | null
 }
 
 export interface TidySuggestionInput {
