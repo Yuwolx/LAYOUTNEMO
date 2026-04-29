@@ -128,10 +128,6 @@
   body {
     @apply bg-background text-foreground;
   }
-  /* 기본 화면 비례 축소 (~10%). 모든 UI 가 같은 비율로 작아져 한 화면에 더 많이 들어간다. */
-  html {
-    zoom: 0.9;
-  }
 }
 
 /* 정리하기 로딩 — 소요시간 예측 불가 구간의 불확정 progress bar */
