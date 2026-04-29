@@ -30,6 +30,8 @@ export const DICT = {
     "header.redo": "재실행",
     "header.switchLanguage": "English",
     "header.lastSaved": "마지막 저장",
+    "create.autoConfirm.hint": "초 후 자동 반영. 수정하려면 클릭/입력하세요.",
+    "create.autoConfirm.cancel": "취소",
 
     // Dialogs
     "dialog.createBlock.title": "새 블럭 만들기",
@@ -139,6 +141,8 @@ export const DICT = {
     "header.redo": "Redo",
     "header.switchLanguage": "한국어",
     "header.lastSaved": "Last saved",
+    "create.autoConfirm.hint": "s — auto-applies. Click or type to edit.",
+    "create.autoConfirm.cancel": "Cancel",
 
     // Dialogs
     "dialog.createBlock.title": "Create Block",
