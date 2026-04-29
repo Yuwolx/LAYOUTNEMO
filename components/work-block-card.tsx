@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { BlockDetailDialog } from "@/components/block-detail-dialog"
-import { MoreVertical, Trash2, Sparkles, Power } from "lucide-react"
+import { MoreVertical, Trash2, Sparkles, Power, ExternalLink, Archive } from "lucide-react"
 import type { WorkBlock } from "@/types"
 import { URGENCY_META } from "@/lib/constants/urgency"
 import { useLanguage, useT } from "@/lib/i18n/context"
@@ -159,7 +159,7 @@ export function WorkBlockCard({
       >
         <div
           className={`
-          w-full h-full bg-card text-card-foreground border-border/60 rounded-2xl
+          relative w-full h-full bg-card text-card-foreground border-border/60 rounded-2xl
           hover:shadow-xl hover:border-border
           ${isDarkMode ? urgencyShadowsDark[block.urgency || "stable"] : urgencyShadows[block.urgency || "stable"]}
           ${isCompleted ? "opacity-80" : "opacity-100"}
@@ -179,9 +179,15 @@ export function WorkBlockCard({
                   {aiEnabled ? <Sparkles className="w-5 h-5" /> : <Power className="w-5 h-5" />}
                 </div>
               )}
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
+                {/* 태그가 길어도 줄바꿈되지 않도록 자체 라인. 길이 초과 시 ellipsis. */}
+                {block.tag && !isCompleted && (
+                  <p className="text-[10px] font-medium text-card-foreground/60 truncate mb-0.5">
+                    [{block.tag}]
+                  </p>
+                )}
                 <h3
-                  className={`font-normal leading-tight text-card-foreground ${isCompleted ? "text-sm truncate mb-0" : "text-[13px] mb-0.5"}`}
+                  className={`font-normal leading-tight text-card-foreground break-words ${isCompleted ? "text-sm truncate mb-0" : "text-[13px] mb-0.5"}`}
                 >
                   {displayTitle}
                 </h3>
@@ -223,7 +229,7 @@ export function WorkBlockCard({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleCompleteBlock} className="text-muted-foreground font-light">
-                    <Sparkles className="w-4 h-4 mr-2" />
+                    <Archive className="w-4 h-4 mr-2" />
                     {t("action.archive")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -247,6 +253,24 @@ export function WorkBlockCard({
             >
               {displayDescription}
             </p>
+          )}
+
+          {/* 외부 링크 — 본문 바로 아래 별도 행, 우측 정렬. 본문/제목과 같은 레벨로 겹치지 않게. */}
+          {!isCompleted && block.url && (
+            <div className="flex justify-end mt-1.5">
+              <a
+                href={block.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] text-card-foreground/60 hover:text-card-foreground hover:bg-foreground/5 transition-colors"
+                title={block.url}
+                aria-label="외부 링크 열기"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
           )}
         </div>
       </div>

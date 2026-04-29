@@ -117,6 +117,20 @@ export function mockCreateBlockOutput(input: CreateBlockAIInput): CreateBlockAIO
     }
   }
 
+  // URL 추출 — http(s) 로 시작하는 첫 토큰
+  const urlMatch = text.match(/https?:\/\/\S+/)
+  const suggestedUrl = urlMatch ? urlMatch[0].replace(/[.,;)\]]+$/, "") : null
+
+  // 태그 추출 — [TAG] 패턴 우선, 없으면 null. 짧은 식별자만 인정 (한/영/숫자/하이픈, 20자 이하)
+  let suggestedTag: string | null = null
+  const tagMatch = text.match(/\[([^\]]{1,20})\]/)
+  if (tagMatch) {
+    const candidate = tagMatch[1].trim()
+    if (candidate && /^[A-Za-z0-9가-힣_-]+$/.test(candidate.replace(/\s+/g, ""))) {
+      suggestedTag = candidate
+    }
+  }
+
   return {
     title,
     summary,
@@ -124,5 +138,7 @@ export function mockCreateBlockOutput(input: CreateBlockAIInput): CreateBlockAIO
     zoneReason: "키워드를 보고 임시로 골랐어요. 필요하면 직접 바꿔주세요.",
     suggestedDueDate,
     suggestedUrgency,
+    suggestedUrl,
+    suggestedTag,
   }
 }
