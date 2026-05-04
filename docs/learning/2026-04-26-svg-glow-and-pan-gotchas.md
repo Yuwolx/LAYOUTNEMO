@@ -122,11 +122,13 @@ blocks.forEach(b => onUpdate(b.id, { x: b.x + dx, y: b.y + dy }))
 
 ### 되는 방법 — wrapper transform 한 번만
 
+{% raw %}
 ```tsx
 <div style={{ transform: `translate3d(${pan.x}px, ${pan.y}px, 0)` }}>
   {/* 모든 블럭 + 관계선 SVG 가 여기 안에 */}
 </div>
 ```
+{% endraw %}
 
 블럭은 여전히 자기 world 좌표(`block.x`)에 있다. wrapper 만 시각적으로 이동. 모든 hit-test (블럭 겹침, 관계선 그리기) 가 그대로 동작.
 

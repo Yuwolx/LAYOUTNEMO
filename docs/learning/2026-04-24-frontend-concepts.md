@@ -109,6 +109,7 @@ setProgress(70)
 }
 ```
 
+{% raw %}
 ```tsx
 <div className="w-full bg-muted rounded-full h-2 overflow-hidden relative">
   <div
@@ -117,6 +118,7 @@ setProgress(70)
   />
 </div>
 ```
+{% endraw %}
 
 ### 언제 확정 vs 불확정?
 

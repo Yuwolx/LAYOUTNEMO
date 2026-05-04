@@ -53,11 +53,13 @@ const handleKeyDown = (e: KeyboardEvent) => {
 
 블럭들의 `block.x`, `block.y` 는 그대로 두고, **wrapper 에 `translate3d(panX, panY, 0)`** 만 적용했다. 블럭 내부 좌표 체계는 손대지 않으니 모든 hit-test 가 그대로 동작한다.
 
+{% raw %}
 ```tsx
 <div style={{ transform: `translate3d(${pan.x}px, ${pan.y}px, 0)` }}>
   {/* 블럭들 + 관계선 SVG 모두 여기 안 */}
 </div>
 ```
+{% endraw %}
 
 다만 한 가지 보정 필요: 블럭 드래그 시 마우스 좌표는 화면좌표(pan 포함), block.x 는 world 좌표(pan 제외). 그래서 offset 계산할 때 pan 을 한 번 빼주고, 이동 시점에 다시 pan 을 빼서 world 로 환원한다.
 
@@ -121,6 +123,7 @@ setTossingBackId(draggingId)
 window.setTimeout(() => setTossingBackId(null), 480)
 ```
 
+{% raw %}
 ```tsx
 <div style={{
   transition: isTossingBack
@@ -128,6 +131,7 @@ window.setTimeout(() => setTossingBackId(null), 480)
     : "none",
 }}>
 ```
+{% endraw %}
 
 Cubic bezier `(0.34, 1.35, 0.64, 1)` 은 살짝 오버슛하는 곡선 — 도착 지점 근처에서 한 번 통통 튕기듯 안착한다. 이게 "툭 던졌다가 제자리로 톡 돌아오는" 물리감을 만든다.
 
