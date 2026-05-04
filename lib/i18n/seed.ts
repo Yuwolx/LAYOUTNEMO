@@ -65,7 +65,10 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
 블럭에 외부 URL 을 달아두면 카드 본문 아래 우측에 작은 링크 버튼이 보입니다. 클릭하면 새 탭으로 이동.
 
 6) 연결
-Shift 를 누른 채 한 블럭을 다른 블럭 위에 떨어뜨리면 두 블럭이 곡선으로 이어집니다. Shift 없이 그냥 드롭하면 위치만 옮길 뿐 연결은 만들어지지 않습니다 — 블럭을 겹쳐 쌓을 때 의도치 않은 연결이 안 생기게 하기 위함이에요. 연결을 끊으려면 선을 클릭.
+연결은 두 가지 드래그 제스처가 명확히 구분됩니다.
+• 그냥 드래그: 원하는 자리에 블럭을 옮길 뿐, 연결은 만들지 않음. 블럭 위에 블럭을 쌓아도 연결이 생기지 않아요.
+• Shift + 드래그: 한 블럭을 다른 블럭 위에 떨어뜨리면 곡선으로 이어지고, 드래그한 블럭은 원래 자리로 부드럽게 돌아옵니다 (위치는 바꾸지 않고 연결만 만드는 토스 제스처).
+연결을 끊으려면 선을 클릭하세요.
 
 7) 시급도
 블럭의 그림자 색으로 머릿속 무게를 표현합니다. 크기는 바뀌지 않습니다.
@@ -112,7 +115,10 @@ For finer grouping inside a facet — e.g. "Planning" facet containing both LAYO
 Attach an external URL — a small link button appears below the body, opens in a new tab.
 
 6) Connections
-Hold Shift and drop one block onto another to draw a curve between them. Without Shift, dropping just moves the block — no connection is created — so you can stack blocks freely without accidentally linking them. Click a line to disconnect.
+Two distinct drag gestures:
+• Plain drag: just moves the block to where you drop it. No connection is created, even if you stack one block on another.
+• Shift + drag: drop one block onto another and a curve is drawn between them — the dragged block then glides back to its starting position. (A "toss" gesture: makes a connection without changing positions.)
+Click a line to disconnect.
 
 7) Urgency
 The shadow color reflects mental weight. Size doesn't change.
@@ -153,7 +159,7 @@ Add a due date from the block details — it shows up under the title.`,
       ko: `[캔버스 조작]
 • 스페이스바 + 드래그: 캔버스 이동 (피그마 방식)
 • Alt/Option + 블럭 클릭: 블럭 복사
-• Shift + 블럭 드롭: 두 블럭 연결 (연결을 만드는 유일한 방법)
+• Shift + 블럭 드롭: 연결만 만들고 원위치로 (연결 토스)
 
 [작업]
 • Cmd/Ctrl + N: 새 블럭 만들기
@@ -169,7 +175,7 @@ Add a due date from the block details — it shows up under the title.`,
 [마우스]
 • 블럭 드래그: 위치 이동
 • 블럭 → 우하단 박스: 갈무리
-• Shift + 한 블럭을 다른 블럭에 드롭: 연결
+• Shift + 한 블럭을 다른 블럭에 드롭: 연결 + 원위치 복귀 (토스)
 • 연결선 클릭: 연결 끊기
 
 [참고]
@@ -178,7 +184,7 @@ Add a due date from the block details — it shows up under the title.`,
       en: `[Canvas]
 • Spacebar + drag: pan the canvas (Figma-style)
 • Alt/Option + click on a block: duplicate
-• Shift + drop one block onto another: connect them (the only way to create a connection)
+• Shift + drop one block onto another: connect only and bounce back to start ("connection toss")
 
 [Actions]
 • Cmd/Ctrl + N: new block
@@ -194,7 +200,7 @@ Add a due date from the block details — it shows up under the title.`,
 [Mouse]
 • Drag a block: move it
 • Drag a block to the bottom-right box: archive
-• Shift + drop one block onto another: connect
+• Shift + drop one block onto another: connect + bounce back (toss)
 • Click a connection line: disconnect
 
 [Notes]

@@ -21,6 +21,7 @@ interface WorkBlockCardProps {
   zones: Array<{ id: string; label: string }>
   isDarkMode: boolean
   isCopyMode?: boolean
+  isTossingBack?: boolean
 }
 
 const urgencyShadows = {
@@ -47,6 +48,7 @@ export function WorkBlockCard({
   zones,
   isDarkMode,
   isCopyMode = false,
+  isTossingBack = false,
 }: WorkBlockCardProps) {
   const { language } = useLanguage()
   const t = useT()
@@ -145,8 +147,10 @@ export function WorkBlockCard({
           minHeight: isCompleted ? 56 : 64,
           // line-clamp-3 + 패딩 + 여유. 너무 커지지 않도록 상한.
           maxHeight: isCompleted ? 56 : 200,
-          // 드래그 중 끊김 방지를 위해 transition 없음.
-          transition: "none",
+          // 평소엔 transition 없음(드래그 중 끊김 방지). Shift 토스 복귀 동안만 부드럽게 미끄러진다.
+          transition: isTossingBack
+            ? "left 420ms cubic-bezier(0.34, 1.35, 0.64, 1), top 420ms cubic-bezier(0.34, 1.35, 0.64, 1)"
+            : "none",
           zIndex: isDragging ? 50 : visibility === "emphasized" ? 20 : isCompleted ? 5 : 10,
         }}
         onMouseDown={handleMouseDown}
