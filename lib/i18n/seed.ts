@@ -65,7 +65,7 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
 블럭에 외부 URL 을 달아두면 카드 본문 아래 우측에 작은 링크 버튼이 보입니다. 클릭하면 새 탭으로 이동.
 
 6) 연결
-블럭을 서로 겹쳐놓으면 자동으로 곡선이 이어집니다. 연결을 끊으려면 선을 클릭. Shift 누른 채 다른 블럭에 떨어뜨리면 연결만 만들고 원위치로 돌아옵니다 (연결 토스).
+Shift 를 누른 채 한 블럭을 다른 블럭 위에 떨어뜨리면 두 블럭이 곡선으로 이어집니다. Shift 없이 그냥 드롭하면 위치만 옮길 뿐 연결은 만들어지지 않습니다 — 블럭을 겹쳐 쌓을 때 의도치 않은 연결이 안 생기게 하기 위함이에요. 연결을 끊으려면 선을 클릭.
 
 7) 시급도
 블럭의 그림자 색으로 머릿속 무게를 표현합니다. 크기는 바뀌지 않습니다.
@@ -112,7 +112,7 @@ For finer grouping inside a facet — e.g. "Planning" facet containing both LAYO
 Attach an external URL — a small link button appears below the body, opens in a new tab.
 
 6) Connections
-Overlap two blocks to auto-connect. Click a line to disconnect. Shift + drop onto another block makes only the connection and bounces back to the original spot ("connection toss").
+Hold Shift and drop one block onto another to draw a curve between them. Without Shift, dropping just moves the block — no connection is created — so you can stack blocks freely without accidentally linking them. Click a line to disconnect.
 
 7) Urgency
 The shadow color reflects mental weight. Size doesn't change.
@@ -153,7 +153,7 @@ Add a due date from the block details — it shows up under the title.`,
       ko: `[캔버스 조작]
 • 스페이스바 + 드래그: 캔버스 이동 (피그마 방식)
 • Alt/Option + 블럭 클릭: 블럭 복사
-• Shift + 블럭 드롭: 연결만 만들고 원위치로 (연결 토스)
+• Shift + 블럭 드롭: 두 블럭 연결 (연결을 만드는 유일한 방법)
 
 [작업]
 • Cmd/Ctrl + N: 새 블럭 만들기
@@ -169,7 +169,7 @@ Add a due date from the block details — it shows up under the title.`,
 [마우스]
 • 블럭 드래그: 위치 이동
 • 블럭 → 우하단 박스: 갈무리
-• 두 블럭을 가까이: 자동 연결
+• Shift + 한 블럭을 다른 블럭에 드롭: 연결
 • 연결선 클릭: 연결 끊기
 
 [참고]
@@ -178,7 +178,7 @@ Add a due date from the block details — it shows up under the title.`,
       en: `[Canvas]
 • Spacebar + drag: pan the canvas (Figma-style)
 • Alt/Option + click on a block: duplicate
-• Shift + drop a block onto another: connect only and bounce back ("connection toss")
+• Shift + drop one block onto another: connect them (the only way to create a connection)
 
 [Actions]
 • Cmd/Ctrl + N: new block
@@ -194,7 +194,7 @@ Add a due date from the block details — it shows up under the title.`,
 [Mouse]
 • Drag a block: move it
 • Drag a block to the bottom-right box: archive
-• Place two blocks close: auto-connect
+• Shift + drop one block onto another: connect
 • Click a connection line: disconnect
 
 [Notes]
