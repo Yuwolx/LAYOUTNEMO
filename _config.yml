@@ -1,20 +1,58 @@
 title: LAYOUTNEMO
 description: 개인 사고 기반 업무 모델링 및 AI 인지 보조 공간
-remote_theme: just-the-docs/just-the-docs
-plugins:
-- jekyll-remote-theme
 url: https://Yuwolx.github.io
 baseurl: /LAYOUTNEMO
-aux_links:
-  LAYOUTNEMO on GitHub: https://github.com/Yuwolx/LAYOUTNEMO
-color_scheme: eggit_custom
-permalink: pretty
-search_enabled: true
-heading_anchors: true
 
+# 미니멀 커스텀 테마. just-the-docs 제거.
+# 본문 720px 중심, Inter+Pretendard, 다크모드 토글.
+permalink: pretty
+
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+# 마크다운 + Rouge 신택스 하이라이팅 (GitHub 톤)
+markdown: kramdown
+kramdown:
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+  toc_levels: 2..4
+
+# SEO
+author:
+  name: 권혁준
+twitter:
+  username: yuwolx
+
+# 사이트 메뉴 (헤더 우측에 노출)
+nav:
+  - title: Devlog
+    url: /docs/devlog/
+  - title: Learning
+    url: /docs/learning/
+  - title: Roadmap
+    url: /docs/roadmap/
+  - title: About
+    url: /docs/about/
+
+# 외부 링크 (푸터)
+social:
+  github: https://github.com/Yuwolx/LAYOUTNEMO
+  email: yuwolxx@gmail.com
+
+# 빌드 제외
 exclude:
   - WORKSPACE.md
   - DEMO_LEGACY.md
   - ARCHITECTURE.md
   - .claude/
   - README.md
+  - Gemfile
+  - Gemfile.lock
+  - vendor/
+  - node_modules/
+
+# Sass 컴파일
+sass:
+  style: compressed
