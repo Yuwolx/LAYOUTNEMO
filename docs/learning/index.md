@@ -19,3 +19,4 @@ Devlog가 **시간순 일기**라면, Learning은 **주제별 노트**입니다.
 | 2026-04-23 | [백엔드 아키텍처 기본 개념]({{ site.baseurl }}/docs/learning/2026-04-23-backend-concepts/) — RLS, Entitlements, Soft Delete, LWW, Optimistic UI, Rate Limiting, Migrations, Service Role, Triggers, Realtime |
 | 2026-04-24 | [프런트 UX/코드 패턴 3가지]({{ site.baseurl }}/docs/learning/2026-04-24-frontend-concepts/) — i18n 편집 존중 규칙, 불확정 progress bar, 드래그 원위치 복원 |
 | 2026-04-26 | [SVG 발광체, 캔버스 팬 좌표, ResizeObserver 함정]({{ site.baseurl }}/docs/learning/2026-04-26-svg-glow-and-pan-gotchas/) — feGaussianBlur 2단계 halo, world vs screen 좌표, 클로저 stale + undo 오염 |
+| 2026-04-28 | [LAYOUTNEMO 시스템 처음부터 끝까지 (PM 학습용)]({{ site.baseurl }}/docs/learning/2026-04-28-system-deep-dive/) — 아키텍처 / 데이터 모델 / API / 시나리오 / AI / 보안 / 운영 / 기술 부채 한 번에 정리 |
