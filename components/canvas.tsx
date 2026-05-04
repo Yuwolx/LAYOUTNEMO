@@ -42,7 +42,7 @@ export function Canvas({
   // 드래그 시작 시점의 블럭 좌표. 독으로 드롭해서 갈무리될 때 이 좌표로 복원해 꺼낼 때 원래 자리로 돌려놓는다.
   const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null)
   const [isCopyMode, setIsCopyMode] = useState(false)
-  // Shift 토스 복귀 애니메이션 — 해당 블럭만 일시적으로 left/top 트랜지션을 켠다.
+  // Shift 토스 — 연결 + 원위치 복귀 시 해당 블럭만 일시적으로 left/top transition 켠다.
   const [tossingBackId, setTossingBackId] = useState<string | null>(null)
   // 피그마식 팬: 스페이스바 누른 채 드래그하면 캔버스 전체가 따라온다.
   const [pan, setPan] = useState({ x: 0, y: 0 })
@@ -217,59 +217,51 @@ export function Canvas({
         }
 
         if (!block.isCompleted && !block.isGuide) {
-          // Shift 누른 채 드롭 = "연결 토스" 제스처. 연결만 만들고 원위치로 튕겨 돌아간다.
-          const tossBack = e.shiftKey
-
-          // 실제로 겹쳐야 연결. 가까이 있다고 자동 연결하지 않음.
-          const overlappingBlocks = blocks.filter((b) => {
-            if (b.id === draggingId || b.isCompleted || b.isGuide) return false
-
-            const horizontalOverlap = block.x + block.width > b.x && block.x < b.x + b.width
-            const verticalOverlap = block.y + block.height > b.y && block.y < b.y + b.height
-
-            return horizontalOverlap && verticalOverlap
-          })
-
-          if (overlappingBlocks.length > 0) {
-            const updates: Array<{ id: string; updates: Partial<WorkBlock> }> = []
-
-            const currentRelations = new Set(block.relatedTo || [])
-            const overlappingIds = overlappingBlocks.map((b) => b.id)
-
-            const newConnections = overlappingIds.filter((id) => !currentRelations.has(id))
-
-            // 드래그된 블럭 업데이트 — 토스면 원위치 복원 같이.
-            const draggingUpdates: Partial<WorkBlock> = {}
-            if (newConnections.length > 0) {
-              draggingUpdates.relatedTo = [...currentRelations, ...newConnections]
-            }
-            if (tossBack && dragStartPos) {
-              draggingUpdates.x = dragStartPos.x
-              draggingUpdates.y = dragStartPos.y
-            }
-            if (Object.keys(draggingUpdates).length > 0) {
-              updates.push({ id: draggingId, updates: draggingUpdates })
-            }
-
-            // 상대 블럭의 relatedTo 도 양방향으로 동기화 (새 연결만).
-            overlappingBlocks.forEach((nearby) => {
-              if (!newConnections.includes(nearby.id)) return
-              const nearbyRelations = new Set(nearby.relatedTo || [])
-              if (!nearbyRelations.has(block.id)) {
-                nearbyRelations.add(block.id)
-                updates.push({
-                  id: nearby.id,
-                  updates: { relatedTo: Array.from(nearbyRelations) },
-                })
-              }
+          // 연결은 Shift 누른 채 드롭한 경우에만. 그 외 드롭은 단순 위치 이동(쌓기 가능).
+          if (!e.shiftKey) {
+            // 평범한 드롭 — 위치만 이미 갱신되었고, 따로 할 일 없음.
+          } else {
+            // Shift 드롭 = 토스 — 겹친 블럭과 연결 형성 + 원위치로 부드럽게 복귀.
+            const overlappingBlocks = blocks.filter((b) => {
+              if (b.id === draggingId || b.isCompleted || b.isGuide) return false
+              const horizontalOverlap = block.x + block.width > b.x && block.x < b.x + b.width
+              const verticalOverlap = block.y + block.height > b.y && block.y < b.y + b.height
+              return horizontalOverlap && verticalOverlap
             })
 
-            if (updates.length > 0) {
-              if (tossBack) {
-                // 부드러운 복귀 애니메이션 — 해당 블럭 wrapper 의 transition 을 잠시 켜둔다.
-                setTossingBackId(draggingId)
-                window.setTimeout(() => setTossingBackId(null), 480)
+            const currentRelations = new Set(block.relatedTo || [])
+            const newConnections =
+              overlappingBlocks.length > 0
+                ? overlappingBlocks.map((b) => b.id).filter((id) => !currentRelations.has(id))
+                : []
+
+            // 드래그된 블럭 — 무조건 원위치로 복귀 (Shift 의 의도). 연결 페어가 있으면 같이 갱신.
+            if (dragStartPos) {
+              const draggingUpdates: Partial<WorkBlock> = {
+                x: dragStartPos.x,
+                y: dragStartPos.y,
               }
+              if (newConnections.length > 0) {
+                draggingUpdates.relatedTo = [...currentRelations, ...newConnections]
+              }
+              const updates: Array<{ id: string; updates: Partial<WorkBlock> }> = [
+                { id: draggingId, updates: draggingUpdates },
+              ]
+              // 양방향 동기화 — 상대 블럭의 relatedTo 에도 추가.
+              overlappingBlocks.forEach((nearby) => {
+                if (!newConnections.includes(nearby.id)) return
+                const nearbyRelations = new Set(nearby.relatedTo || [])
+                if (!nearbyRelations.has(block.id)) {
+                  nearbyRelations.add(block.id)
+                  updates.push({
+                    id: nearby.id,
+                    updates: { relatedTo: Array.from(nearbyRelations) },
+                  })
+                }
+              })
+              // 부드러운 복귀 애니메이션 — wrapper 의 transition 을 잠시 켠다.
+              setTossingBackId(draggingId)
+              window.setTimeout(() => setTossingBackId(null), 480)
               onBatchUpdateBlocks(updates)
               setDraggingId(null)
               setDragStartPos(null)

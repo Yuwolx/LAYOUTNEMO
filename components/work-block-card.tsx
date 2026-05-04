@@ -147,7 +147,7 @@ export function WorkBlockCard({
           minHeight: isCompleted ? 56 : 64,
           // line-clamp-3 + 패딩 + 여유. 너무 커지지 않도록 상한.
           maxHeight: isCompleted ? 56 : 200,
-          // 평소엔 transition 없음(드래그 시 끊김 방지). Shift 토스 복귀 동안만 부드럽게 미끄러진다.
+          // 평소엔 transition 없음(드래그 중 끊김 방지). Shift 토스 복귀 동안만 부드럽게 미끄러진다.
           transition: isTossingBack
             ? "left 420ms cubic-bezier(0.34, 1.35, 0.64, 1), top 420ms cubic-bezier(0.34, 1.35, 0.64, 1)"
             : "none",
