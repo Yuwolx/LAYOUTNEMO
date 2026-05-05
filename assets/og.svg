@@ -1,5 +1,5 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
-  <!-- OG 배너 1200x630 — 로고는 크게, 텍스트는 작게. 클러스터 전체 캔버스 중앙. -->
+  <!-- OG 배너 1200x630 — 로고 scale 0.28, 클러스터 전체 캔버스 중앙. -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#18181b"/>
@@ -9,17 +9,17 @@
 
   <rect width="1200" height="630" fill="url(#bg)"/>
 
-  <!-- 브랜드 마크 — scale 0.32 (이전 0.20 → 약 60% 확대). 가로 중앙 -->
-  <g transform="translate(436, 90) scale(0.32)">
+  <!-- 브랜드 마크 — scale 0.28. translate x = 600 - 1024*0.28/2 = 457 -->
+  <g transform="translate(457, 101) scale(0.28)">
     <rect x="280" y="220" width="160" height="600" rx="40" fill="none" stroke="#ffffff" stroke-width="80"/>
     <rect x="280" y="660" width="460" height="160" rx="40" fill="none" stroke="#ffffff" stroke-width="80"/>
   </g>
 
-  <!-- 사이트명 — 92 → 68px 로 축소 -->
-  <text x="600" y="440" text-anchor="middle" fill="#FAFAFA" font-family="system-ui, -apple-system, 'Inter', sans-serif" font-size="68" font-weight="700" letter-spacing="-1.5">LAYOUTNEMO</text>
+  <!-- 사이트명 -->
+  <text x="600" y="422" text-anchor="middle" fill="#FAFAFA" font-family="system-ui, -apple-system, 'Inter', sans-serif" font-size="68" font-weight="700" letter-spacing="-1.5">LAYOUTNEMO</text>
 
-  <!-- 슬로건 — 34 → 26px 로 축소 -->
-  <text x="600" y="485" text-anchor="middle" fill="#A1A1AA" font-family="system-ui, -apple-system, 'Inter', sans-serif" font-size="26" font-weight="400">Thinking space for work</text>
+  <!-- 슬로건 -->
+  <text x="600" y="468" text-anchor="middle" fill="#A1A1AA" font-family="system-ui, -apple-system, 'Inter', sans-serif" font-size="26" font-weight="400">Thinking space for work</text>
 
   <!-- 도메인 — 우하단 -->
   <text x="1120" y="580" text-anchor="end" fill="#52525B" font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="22">layoutnemo.com</text>
