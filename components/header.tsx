@@ -166,16 +166,14 @@ export function Header({
       <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-800" : "border-border/20"}`}>
         <div className="max-w-[2000px] mx-auto px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* 인라인 SVG 마크 + 두 줄 텍스트.
-                전체 서비스 톤(가는 폰트, 절제된 색)에 맞춰 가볍게.
-                마크-텍스트 간격 좁게(7px), 마크 stroke 도 얇게. */}
+            {/* 깃블로그(gh-pages) 헤더와 동일 톤 — 28px 마크 + LAYOUTNEMO 한 줄, gap 8px. */}
             <div
-              className={`h-10 flex items-center shrink-0 gap-[7px] ${
-                isDarkMode ? "text-zinc-300" : "text-zinc-700"
+              className={`h-10 flex items-center shrink-0 gap-2 ${
+                isDarkMode ? "text-zinc-100" : "text-zinc-900"
               }`}
               aria-label="LAYOUTNEMO"
             >
-              <svg viewBox="0 0 1024 1024" width="30" height="30" aria-hidden="true">
+              <svg viewBox="0 0 1024 1024" width="28" height="28" aria-hidden="true">
                 <rect
                   x="280"
                   y="220"
@@ -184,7 +182,7 @@ export function Header({
                   rx="40"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="60"
+                  strokeWidth="80"
                 />
                 <rect
                   x="280"
@@ -194,19 +192,10 @@ export function Header({
                   rx="40"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="60"
+                  strokeWidth="80"
                 />
               </svg>
-              <div className="flex flex-col justify-center leading-none gap-[1.5px]">
-                <span className="text-[12px] font-medium tracking-tight">LAYOUTNEMO</span>
-                <span
-                  className={`text-[9px] font-light tracking-wide ${
-                    isDarkMode ? "text-zinc-500" : "text-zinc-400"
-                  }`}
-                >
-                  Make. Connect. Layout.
-                </span>
-              </div>
+              <span className="text-base font-bold tracking-tight">LAYOUTNEMO</span>
             </div>
             <button
               onClick={onOpenCanvasSelector}
