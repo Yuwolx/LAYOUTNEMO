@@ -12,6 +12,48 @@
   {% feed_meta %}
   {% seo title=false %}
 
+  <!-- 사이트 favicon / 검색 결과 작은 아이콘 -->
+  <link rel="icon" href="{{ '/assets/logo.svg' | relative_url }}" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="{{ '/assets/logo.svg' | relative_url }}" />
+
+  <!-- Open Graph 미리보기 (카톡/슬랙/페북) -->
+  {% assign og_image = '/assets/og.png' | relative_url %}
+  <meta property="og:image" content="{{ site.url }}{{ og_image }}" />
+  <meta property="og:image:secure_url" content="{{ site.url }}{{ og_image }}" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="{{ site.title }} — {{ site.description }}" />
+  <meta property="og:site_name" content="{{ site.title }}" />
+  <meta property="og:type" content="{% if page.layout == 'post' %}article{% else %}website{% endif %}" />
+  <meta property="og:locale" content="ko_KR" />
+
+  <!-- Twitter / X 카드 -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="{{ site.url }}{{ og_image }}" />
+  {% if site.twitter.username %}<meta name="twitter:site" content="@{{ site.twitter.username }}" />{% endif %}
+
+  <!-- 구조화 데이터: Organization (구글 검색 결과의 로고/사이트명 인식) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "{{ site.title }}",
+    "url": "{{ site.url }}{{ site.baseurl }}/",
+    "logo": "{{ site.url }}{{ '/assets/logo.svg' | relative_url }}"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "{{ site.title }}",
+    "url": "{{ site.url }}{{ site.baseurl }}/",
+    "description": "{{ site.description }}",
+    "inLanguage": "ko-KR"
+  }
+  </script>
+
   <!-- Pretendard (한글) + Inter (영문) + JetBrains Mono (코드) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

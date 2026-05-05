@@ -1,0 +1,25 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <!-- OG 배너 1200x630. 카카오톡/슬랙/페이스북/트위터 미리보기용. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#18181b"/>
+      <stop offset="100%" stop-color="#27272a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- 좌측 브랜드 마크 -->
+  <g transform="translate(80, 180) scale(0.28)">
+    <rect x="280" y="220" width="160" height="600" rx="40" fill="none" stroke="#FBBF24" stroke-width="80"/>
+    <rect x="280" y="660" width="460" height="160" rx="40" fill="none" stroke="#FBBF24" stroke-width="80"/>
+  </g>
+
+  <!-- 사이트명 + 슬로건 -->
+  <text x="380" y="290" fill="#FAFAFA" font-family="system-ui, -apple-system, 'Pretendard', sans-serif" font-size="92" font-weight="700" letter-spacing="-2">LAYOUTNEMO</text>
+  <text x="380" y="360" fill="#A1A1AA" font-family="system-ui, -apple-system, 'Pretendard', sans-serif" font-size="36" font-weight="400">캔버스 위 사고 공간</text>
+  <text x="380" y="420" fill="#71717A" font-family="system-ui, -apple-system, 'Pretendard', sans-serif" font-size="26" font-weight="400">블럭 · 결 · 관계선</text>
+
+  <!-- 우측 하단 도메인 -->
+  <text x="1120" y="580" text-anchor="end" fill="#52525B" font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="22">layoutnemo.com</text>
+</svg>
