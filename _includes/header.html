@@ -1,7 +1,15 @@
 <header class="site-header">
   <div class="site-header__inner">
     <a class="site-title" href="{{ '/' | relative_url }}" aria-label="{{ site.title }}">
-      {{ site.title }}
+      {%- comment -%}
+        인라인 SVG: stroke="currentColor" 라 라이트 모드에선 검정, 다크 모드에선 흰색.
+        배경 없는 마크 — 헤더 배경 그대로 통과.
+      {%- endcomment -%}
+      <svg class="site-logo" viewBox="0 0 1024 1024" width="28" height="28" aria-hidden="true">
+        <rect x="280" y="220" width="160" height="600" rx="40" fill="none" stroke="currentColor" stroke-width="80" />
+        <rect x="280" y="660" width="460" height="160" rx="40" fill="none" stroke="currentColor" stroke-width="80" />
+      </svg>
+      <span class="site-title__text">{{ site.title }}</span>
     </a>
 
     <nav class="site-nav" aria-label="Site navigation">

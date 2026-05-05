@@ -110,6 +110,9 @@ a:hover { text-decoration: underline; }
 }
 
 .site-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 700;
   font-size: 1rem;
   color: var(--fg);
@@ -117,6 +120,16 @@ a:hover { text-decoration: underline; }
   white-space: nowrap;
 }
 .site-title:hover { text-decoration: none; color: var(--fg); }
+.site-logo {
+  display: block;
+  /* stroke 가 currentColor → 부모 .site-title 의 color 따라감.
+     라이트: var(--fg) = #1a1a1a, 다크: var(--fg) = #e5e5e5 */
+  color: var(--fg);
+  flex-shrink: 0;
+}
+.site-title__text {
+  /* 모바일에선 마크만 노출하고 텍스트 숨길 수도 있지만 일단 항상 노출 */
+}
 
 .site-nav {
   display: flex;
