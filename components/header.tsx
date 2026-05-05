@@ -3,10 +3,9 @@
 import { useLayoutEffect, useRef, useState } from "react"
 import { Eye, Moon, Sun, Trash2, Undo2, Wand2, RotateCcw, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import Image from "next/image"
 import type { Zone } from "@/types"
 import { useLanguage } from "@/lib/i18n/context"
-import { translateSeedZoneLabel, translateSeedCanvasName } from "@/lib/i18n/seed"
+import { translateSeedZoneLabel } from "@/lib/i18n/seed"
 
 interface HeaderProps {
   onCreateBlock: () => void
@@ -167,16 +166,36 @@ export function Header({
       <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-800" : "border-border/20"}`}>
         <div className="max-w-[2000px] mx-auto px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* 고정 너비 래퍼. 라이트/다크 로고의 원본 aspect ratio 가 달라 헤더 레이아웃이 튀지 않도록 고정. */}
-            <div className="h-10 w-[160px] flex items-center shrink-0">
-              <Image
-                src={isDarkMode ? "/images/lo-logo-dark.png" : "/images/lo-logo.png"}
-                alt="LAYOUTNEMO"
-                width={200}
-                height={50}
-                className="max-h-10 w-auto object-contain"
-                priority
-              />
+            {/* 깃블로그(gh-pages) 헤더와 동일 톤 — 28px 마크 + LAYOUTNEMO 한 줄, gap 8px. */}
+            <div
+              className={`h-10 flex items-center shrink-0 gap-2 ml-3 ${
+                isDarkMode ? "text-zinc-100" : "text-zinc-900"
+              }`}
+              aria-label="LAYOUTNEMO"
+            >
+              <svg viewBox="0 0 1024 1024" width="28" height="28" aria-hidden="true">
+                <rect
+                  x="280"
+                  y="220"
+                  width="160"
+                  height="600"
+                  rx="40"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="80"
+                />
+                <rect
+                  x="280"
+                  y="660"
+                  width="460"
+                  height="160"
+                  rx="40"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="80"
+                />
+              </svg>
+              <span className="text-base font-bold tracking-tight">LAYOUTNEMO</span>
             </div>
             <button
               onClick={onOpenCanvasSelector}
