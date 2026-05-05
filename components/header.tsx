@@ -5,7 +5,7 @@ import { Eye, Moon, Sun, Trash2, Undo2, Wand2, RotateCcw, Info } from "lucide-re
 import { Button } from "@/components/ui/button"
 import type { Zone } from "@/types"
 import { useLanguage } from "@/lib/i18n/context"
-import { translateSeedZoneLabel, translateSeedCanvasName } from "@/lib/i18n/seed"
+import { translateSeedZoneLabel } from "@/lib/i18n/seed"
 
 interface HeaderProps {
   onCreateBlock: () => void
@@ -168,7 +168,7 @@ export function Header({
           <div className="flex items-center gap-4">
             {/* 깃블로그(gh-pages) 헤더와 동일 톤 — 28px 마크 + LAYOUTNEMO 한 줄, gap 8px. */}
             <div
-              className={`h-10 flex items-center shrink-0 gap-2 ${
+              className={`h-10 flex items-center shrink-0 gap-2 ml-3 ${
                 isDarkMode ? "text-zinc-100" : "text-zinc-900"
               }`}
               aria-label="LAYOUTNEMO"
