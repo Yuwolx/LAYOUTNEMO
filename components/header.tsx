@@ -166,10 +166,11 @@ export function Header({
       <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-800" : "border-border/20"}`}>
         <div className="max-w-[2000px] mx-auto px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* 인라인 SVG 마크 (텍스트 없음) — currentColor 가 부모 text 색을 따라가니
-                라이트=검정 / 다크=흰색 자동 전환. */}
+            {/* 인라인 SVG 마크 + 두 줄 텍스트.
+                마크 32px 높이의 세로 중앙에 텍스트 두 줄(타이틀 + 슬로건) 배치.
+                위/아래 여유 있게 — 텍스트 블럭은 마크보다 작게. */}
             <div
-              className={`h-10 flex items-center shrink-0 ${
+              className={`h-10 flex items-center gap-2.5 shrink-0 ${
                 isDarkMode ? "text-zinc-100" : "text-zinc-900"
               }`}
               aria-label="LAYOUTNEMO"
@@ -196,6 +197,16 @@ export function Header({
                   strokeWidth="80"
                 />
               </svg>
+              <div className="flex flex-col justify-center leading-none gap-[3px]">
+                <span className="text-[13px] font-bold tracking-tight">LAYOUTNEMO</span>
+                <span
+                  className={`text-[9.5px] tracking-wide ${
+                    isDarkMode ? "text-zinc-400" : "text-zinc-500"
+                  }`}
+                >
+                  Make. Connect. Layout.
+                </span>
+              </div>
             </div>
             <button
               onClick={onOpenCanvasSelector}
