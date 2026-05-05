@@ -1,5 +1,6 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
   <!-- OG 배너 1200x630. 카카오톡/슬랙/페이스북/트위터 미리보기용. -->
+  <!-- 로고와 문구를 하단(baseline) 으로 정렬. -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#18181b"/>
@@ -9,15 +10,17 @@
 
   <rect width="1200" height="630" fill="url(#bg)"/>
 
-  <!-- 좌측 브랜드 마크 (흰색) -->
-  <g transform="translate(80, 200) scale(0.28)">
+  <!-- 좌측 브랜드 마크 (흰색). bottom edge ≈ 225 + 860*0.28 = 465 -->
+  <g transform="translate(80, 225) scale(0.28)">
     <rect x="280" y="220" width="160" height="600" rx="40" fill="none" stroke="#ffffff" stroke-width="80"/>
     <rect x="280" y="660" width="460" height="160" rx="40" fill="none" stroke="#ffffff" stroke-width="80"/>
   </g>
 
-  <!-- 사이트명 + 영문 슬로건 -->
-  <text x="380" y="310" fill="#FAFAFA" font-family="system-ui, -apple-system, 'Inter', sans-serif" font-size="92" font-weight="700" letter-spacing="-2">LAYOUTNEMO</text>
-  <text x="380" y="375" fill="#A1A1AA" font-family="system-ui, -apple-system, 'Inter', sans-serif" font-size="34" font-weight="400">Thinking space for work</text>
+  <!-- 사이트명 — 슬로건 위에 위치 -->
+  <text x="380" y="405" fill="#FAFAFA" font-family="system-ui, -apple-system, 'Inter', sans-serif" font-size="92" font-weight="700" letter-spacing="-2">LAYOUTNEMO</text>
+
+  <!-- 슬로건 — baseline 을 로고 bottom 과 일치 (y=465) -->
+  <text x="380" y="465" fill="#A1A1AA" font-family="system-ui, -apple-system, 'Inter', sans-serif" font-size="34" font-weight="400">Thinking space for work</text>
 
   <!-- 우측 하단 도메인 -->
   <text x="1120" y="580" text-anchor="end" fill="#52525B" font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="22">layoutnemo.com</text>
