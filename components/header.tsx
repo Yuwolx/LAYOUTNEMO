@@ -198,9 +198,9 @@ export function Header({
                 />
               </svg>
               <div className="flex flex-col justify-center leading-none gap-[1.5px]">
-                <span className="text-[9px] font-medium tracking-tight">LAYOUTNEMO</span>
+                <span className="text-[12px] font-medium tracking-tight">LAYOUTNEMO</span>
                 <span
-                  className={`text-[6.5px] font-light tracking-wide ${
+                  className={`text-[9px] font-light tracking-wide ${
                     isDarkMode ? "text-zinc-500" : "text-zinc-400"
                   }`}
                 >
