@@ -39,4 +39,12 @@ nav_order: 1
 
 ---
 
+## 최근 Devlog
+{% include recent-posts.html section="docs/devlog/" limit=3 more_url="/docs/devlog/" more_label="Devlog 전체 →" %}
+
+## 최근 Learning
+{% include recent-posts.html section="docs/learning/" limit=3 more_url="/docs/learning/" more_label="Learning 전체 →" %}
+
+---
+
 <sub>LAYOUTNEMO 프로젝트의 개발 과정을 기록하는 공간. 피드백은 <a href="mailto:yuwolxx@gmail.com">yuwolxx@gmail.com</a></sub>

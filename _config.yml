@@ -35,6 +35,8 @@ nav:
     url: /docs/roadmap/
   - title: About
     url: /docs/about/
+  - title: Tags
+    url: /tags/
 
 # 외부 링크 (푸터)
 social:

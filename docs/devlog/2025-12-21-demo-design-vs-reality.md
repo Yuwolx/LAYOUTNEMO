@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: post
 title: "데모 회고 2편 — 기획 vs 구현의 갭"
 parent: Devlog
 nav_order: 2

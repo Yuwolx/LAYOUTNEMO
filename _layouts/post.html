@@ -6,24 +6,93 @@
 
   <main class="page page--post" role="main">
     <article class="post">
-      {% if page.date %}
+      {% comment %} 메타: 날짜 · 읽는 시간 · 태그 {% endcomment %}
       <div class="post-meta post-meta--top">
-        <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y-%m-%d" }}</time>
-        {% if page.read_time %}<span class="dot">·</span><span>{{ page.read_time }}</span>{% endif %}
+        {% if page.date %}
+          <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y-%m-%d" }}</time>
+        {% endif %}
+        {% assign words = content | strip_html | number_of_words %}
+        {% assign read_minutes = words | divided_by: 250 | plus: 1 %}
+        <span class="dot">·</span><span>{{ read_minutes }} min read</span>
         {% if page.tags %}
-        <span class="dot">·</span>
-        <span class="post-tags">{% for tag in page.tags %}#{{ tag }}{% unless forloop.last %} {% endunless %}{% endfor %}</span>
+          <span class="dot">·</span>
+          <span class="post-tags">
+            {% for tag in page.tags %}<a href="{{ '/tags/#' | append: tag | relative_url }}" class="tag">#{{ tag }}</a>{% unless forloop.last %} {% endunless %}{% endfor %}
+          </span>
         {% endif %}
       </div>
-      {% endif %}
 
-      <div class="prose">
+      <div class="prose" data-prose>
         {{ content }}
       </div>
+
+      {% comment %} 시리즈 그룹 {% endcomment %}
+      {% if page.series %}
+        {% assign series_posts = site.pages
+          | where_exp: "p", "p.series == page.series"
+          | sort: "date"
+        %}
+        {% if series_posts.size > 1 %}
+        <aside class="post-series">
+          <h2 class="post-series__title">📚 시리즈: {{ page.series }}</h2>
+          <ol class="post-series__list">
+            {% for p in series_posts %}
+            <li class="{% if p.url == page.url %}is-current{% endif %}">
+              {% if p.url == page.url %}
+                <span>{{ p.title }}</span>
+              {% else %}
+                <a href="{{ p.url | relative_url }}">{{ p.title }}</a>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ol>
+        </aside>
+        {% endif %}
+      {% endif %}
+
+      {% comment %} 같은 섹션(devlog/learning) 안에서 이전/다음 글 {% endcomment %}
+      {% assign section_path = page.path | split: '/' | slice: 0, 2 | join: '/' %}
+      {% assign siblings = site.pages
+        | where_exp: "p", "p.path contains section_path"
+        | where_exp: "p", "p.name != 'index.md'"
+        | sort: "name"
+      %}
+      {% assign prev_post = nil %}
+      {% assign next_post = nil %}
+      {% for p in siblings %}
+        {% if p.url == page.url %}
+          {% if forloop.first == false %}{% assign prev_post = siblings[forloop.index0 | minus: 1] %}{% endif %}
+          {% if forloop.last == false %}{% assign next_post = siblings[forloop.index0 | plus: 1] %}{% endif %}
+        {% endif %}
+      {% endfor %}
+
+      {% if prev_post or next_post %}
+      <nav class="post-nav" aria-label="Post navigation">
+        {% if prev_post %}
+        <a class="post-nav__link post-nav__link--prev" href="{{ prev_post.url | relative_url }}">
+          <span class="post-nav__label">← 이전</span>
+          <span class="post-nav__title">{{ prev_post.title }}</span>
+        </a>
+        {% else %}<span></span>{% endif %}
+
+        {% if next_post %}
+        <a class="post-nav__link post-nav__link--next" href="{{ next_post.url | relative_url }}">
+          <span class="post-nav__label">다음 →</span>
+          <span class="post-nav__title">{{ next_post.title }}</span>
+        </a>
+        {% else %}<span></span>{% endif %}
+      </nav>
+      {% endif %}
     </article>
+
+    <aside class="post-toc" aria-label="Table of contents" data-toc hidden>
+      <h2 class="post-toc__title">목차</h2>
+      <ol class="post-toc__list" data-toc-list></ol>
+    </aside>
   </main>
 
   {% include footer.html %}
   <script src="{{ '/assets/js/theme.js' | relative_url }}" defer></script>
+  <script src="{{ '/assets/js/blog.js' | relative_url }}" defer></script>
 </body>
 </html>

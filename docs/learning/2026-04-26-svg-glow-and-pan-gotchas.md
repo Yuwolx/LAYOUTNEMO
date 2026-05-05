@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: post
 title: "2026-04-26 — SVG 발광체, 캔버스 팬 좌표, ResizeObserver 함정"
 parent: Learning
 nav_order: 3

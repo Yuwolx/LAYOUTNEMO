@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: post
 title: "v2 아키텍처를 결정한 날"
 parent: Devlog
 nav_order: 4

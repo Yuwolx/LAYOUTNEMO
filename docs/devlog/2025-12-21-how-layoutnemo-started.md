@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: post
 title: "LAYOUTNEMO는 어떻게 시작되었나"
 parent: Devlog
 nav_order: 1

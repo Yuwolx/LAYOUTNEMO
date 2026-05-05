@@ -1,0 +1,27 @@
+{% comment %}
+  사용법: {% include recent-posts.html section="docs/devlog/" title="최근 Devlog" limit=3 %}
+{% endcomment %}
+
+{% assign section = include.section %}
+{% assign limit = include.limit | default: 5 %}
+
+{% assign all = site.pages
+  | where_exp: "p", "p.path contains section"
+  | where_exp: "p", "p.name != 'index.md'"
+%}
+{% assign sorted = all | sort: "name" | reverse %}
+
+<ul class="recent-posts">
+  {% for post in sorted limit: limit %}
+    {% comment %} 파일명 앞 YYYY-MM-DD 추출 {% endcomment %}
+    {% assign date_part = post.name | slice: 0, 10 %}
+    <li class="recent-posts__item">
+      <span class="recent-posts__date">{{ date_part }}</span>
+      <a class="recent-posts__link" href="{{ post.url | relative_url }}">{{ post.title }}</a>
+    </li>
+  {% endfor %}
+</ul>
+
+{% if include.more_url %}
+<a class="recent-posts__more" href="{{ include.more_url | relative_url }}">{{ include.more_label | default: "전체 보기 →" }}</a>
+{% endif %}
