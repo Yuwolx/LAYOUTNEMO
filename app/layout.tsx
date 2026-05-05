@@ -5,6 +5,7 @@ import { headers } from "next/headers"
 // import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { LanguageProvider } from "@/lib/i18n/context"
+import { AuthProvider } from "@/lib/auth/context"
 import { Toaster } from "@/components/ui/sonner"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -63,7 +64,9 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={`font-sans antialiased`}>
-        <LanguageProvider>{children}</LanguageProvider>
+        <AuthProvider>
+          <LanguageProvider>{children}</LanguageProvider>
+        </AuthProvider>
         <Toaster position="top-center" richColors closeButton />
         {/* <Analytics /> */}
       </body>
