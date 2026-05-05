@@ -167,15 +167,15 @@ export function Header({
         <div className="max-w-[2000px] mx-auto px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {/* 인라인 SVG 마크 + 두 줄 텍스트.
-                마크 32px 높이의 세로 중앙에 텍스트 두 줄(타이틀 + 슬로건) 배치.
-                위/아래 여유 있게 — 텍스트 블럭은 마크보다 작게. */}
+                전체 서비스 톤(가는 폰트, 절제된 색)에 맞춰 가볍게.
+                마크-텍스트 간격 좁게(7px), 마크 stroke 도 얇게. */}
             <div
-              className={`h-10 flex items-center gap-2.5 shrink-0 ${
-                isDarkMode ? "text-zinc-100" : "text-zinc-900"
+              className={`h-10 flex items-center shrink-0 gap-[7px] ${
+                isDarkMode ? "text-zinc-300" : "text-zinc-700"
               }`}
               aria-label="LAYOUTNEMO"
             >
-              <svg viewBox="0 0 1024 1024" width="32" height="32" aria-hidden="true">
+              <svg viewBox="0 0 1024 1024" width="30" height="30" aria-hidden="true">
                 <rect
                   x="280"
                   y="220"
@@ -184,7 +184,7 @@ export function Header({
                   rx="40"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="80"
+                  strokeWidth="60"
                 />
                 <rect
                   x="280"
@@ -194,14 +194,14 @@ export function Header({
                   rx="40"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="80"
+                  strokeWidth="60"
                 />
               </svg>
               <div className="flex flex-col justify-center leading-none gap-[3px]">
-                <span className="text-[13px] font-bold tracking-tight">LAYOUTNEMO</span>
+                <span className="text-[13px] font-medium tracking-tight">LAYOUTNEMO</span>
                 <span
-                  className={`text-[9.5px] tracking-wide ${
-                    isDarkMode ? "text-zinc-400" : "text-zinc-500"
+                  className={`text-[9.5px] font-light tracking-wide ${
+                    isDarkMode ? "text-zinc-500" : "text-zinc-400"
                   }`}
                 >
                   Make. Connect. Layout.
