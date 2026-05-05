@@ -2,7 +2,7 @@
   <!-- 정사각 브랜드 마크 — 검색 결과 / Organization JSON-LD logo 용 -->
   <rect width="1024" height="1024" rx="180" fill="#18181b"/>
   <!-- 세로 블럭 -->
-  <rect x="280" y="220" width="160" height="600" rx="40" fill="none" stroke="#FBBF24" stroke-width="80"/>
+  <rect x="280" y="220" width="160" height="600" rx="40" fill="none" stroke="#ffffff" stroke-width="80"/>
   <!-- 가로 블럭 -->
-  <rect x="280" y="660" width="460" height="160" rx="40" fill="none" stroke="#FBBF24" stroke-width="80"/>
+  <rect x="280" y="660" width="460" height="160" rx="40" fill="none" stroke="#ffffff" stroke-width="80"/>
 </svg>
