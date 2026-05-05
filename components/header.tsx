@@ -197,7 +197,7 @@ export function Header({
                   strokeWidth="60"
                 />
               </svg>
-              <div className="flex flex-col justify-center leading-none gap-[3px]">
+              <div className="flex flex-col justify-center leading-none gap-[1.5px]">
                 <span className="text-[13px] font-medium tracking-tight">LAYOUTNEMO</span>
                 <span
                   className={`text-[9.5px] font-light tracking-wide ${
