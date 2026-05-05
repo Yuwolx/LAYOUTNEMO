@@ -166,15 +166,15 @@ export function Header({
       <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-800" : "border-border/20"}`}>
         <div className="max-w-[2000px] mx-auto px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* 인라인 SVG 마크 — currentColor 가 텍스트 색을 따라가니 라이트=검정 / 다크=흰색 자동 전환.
-                옛 PNG 두 개(라이트/다크) 갈아끼우던 방식 대체. */}
+            {/* 인라인 SVG 마크 (텍스트 없음) — currentColor 가 부모 text 색을 따라가니
+                라이트=검정 / 다크=흰색 자동 전환. */}
             <div
-              className={`h-10 flex items-center gap-2 shrink-0 ${
+              className={`h-10 flex items-center shrink-0 ${
                 isDarkMode ? "text-zinc-100" : "text-zinc-900"
               }`}
               aria-label="LAYOUTNEMO"
             >
-              <svg viewBox="0 0 1024 1024" width="28" height="28" aria-hidden="true">
+              <svg viewBox="0 0 1024 1024" width="32" height="32" aria-hidden="true">
                 <rect
                   x="280"
                   y="220"
@@ -196,7 +196,6 @@ export function Header({
                   strokeWidth="80"
                 />
               </svg>
-              <span className="text-base font-bold tracking-tight">LAYOUTNEMO</span>
             </div>
             <button
               onClick={onOpenCanvasSelector}
