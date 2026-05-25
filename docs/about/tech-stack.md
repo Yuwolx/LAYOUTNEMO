@@ -24,11 +24,10 @@ nav_order: 4
   - Vercel AI Gateway는 결제 카드 요구 이슈로 미사용 (개발 중 전환)
 
 ### Storage
-- **localStorage** — 기본 (로그인 없이 사용 가능)
-- **Supabase** — 구글 로그인 시 동기화
+- **localStorage** — 현재 `master` 기준 유일한 저장소
 
 ### Auth
-- **Supabase Auth + Google OAuth**
+- **Supabase Auth + Google OAuth** — v2 브랜치에서 실험 중, 현재 제품에는 미포함
 
 ---
 
@@ -93,9 +92,9 @@ nav_order: 4
   → create-block-dialog
   → /api/ai/create-block
   → OpenAI (gpt-4o-mini)
-  → 제목 / 요약 / 기한 / 시급도 추출
+  → 제목 / 요약 / 결 / 기한 / 시급도 / 태그 / 링크 추출
   → handleCreateBlock() (page.tsx)
-  → findOptimalPosition() — 스마트 배치
+  → findSmartPosition() — 스마트 배치
   → localStorage 저장
   → Canvas 렌더링
 ```
@@ -104,8 +103,10 @@ nav_order: 4
 
 - `layout_canvases` — 모든 캔버스 데이터
 - `layout_current_canvas` — 현재 선택된 캔버스 ID
-- **저장 타이밍**: CRUD 즉시 + 30초 주기 자동 저장
-- **히스토리**: 최대 50개까지 Undo 가능
+- `layout_ai_enabled` — AI 보조 토글
+- `layout_language` — UI 언어
+- **저장 타이밍**: 캔버스/블럭/결 상태 변경 시 즉시 localStorage 반영
+- **히스토리**: 블럭 변경 기준 최대 50개까지 Undo 가능
 
 ### 데이터 타입 (핵심만)
 
@@ -123,6 +124,8 @@ interface WorkBlock {
   relatedTo?: string[]
   isCompleted?: boolean
   isDeleted?: boolean
+  tag?: string
+  url?: string
 }
 ```
 
@@ -131,7 +134,7 @@ interface WorkBlock {
 ## 🔐 데이터 안전
 
 - **로컬 우선** — 로그인 없이도 브라우저에 영구 저장
-- **자동 저장** — 30초마다
+- **즉시 저장** — 상태 변경 시 localStorage 에 반영
 - **히스토리 관리** — 최대 50단계 되돌리기
 - **휴지통** — 삭제한 블럭은 10개까지 보관 (복원 가능)
-- **내보내기** — JSON 전체 구조 또는 Markdown 문서 형식
+- **갈무리함** — 캔버스에서 잠시 치운 블럭을 별도 모달에서 복원

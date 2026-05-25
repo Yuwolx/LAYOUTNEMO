@@ -250,7 +250,7 @@ layout_current_canvas // 현재 선택된 캔버스 ID
 
 ### 실제 구현
 
-현재는 **localStorage 만 쓰고 있고**, 로그인 기능은 이미 **Google OAuth via Supabase** 로 붙어 있습니다 ([Roadmap](../roadmap) 참조).
+현재 `master` 는 **localStorage 만 쓰고 있고**, 로그인 기능은 아직 포함하지 않았습니다. Google OAuth via Supabase 는 `feature/v2-supabase-auth` 에서 v2 후보로 실험 중입니다 ([Roadmap](../roadmap) 참조).
 
 데모 버전(12/21 시점)에는 로그인이 없었고, **의도적으로 제외**한 선택이었습니다. "이번 단계의 서비스 가치에 얼마나 기여하는가" 라는 기준으로 봤을 때, 로그인 구현에 하루를 쓰느니 **정리하기 기능의 안정화**에 시간을 쓰는 게 맞다고 판단했어요.
 

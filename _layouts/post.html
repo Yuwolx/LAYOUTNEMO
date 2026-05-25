@@ -61,8 +61,14 @@
       {% assign next_post = nil %}
       {% for p in siblings %}
         {% if p.url == page.url %}
-          {% if forloop.first == false %}{% assign prev_post = siblings[forloop.index0 | minus: 1] %}{% endif %}
-          {% if forloop.last == false %}{% assign next_post = siblings[forloop.index0 | plus: 1] %}{% endif %}
+          {% if forloop.first == false %}
+            {% assign prev_index = forloop.index0 | minus: 1 %}
+            {% assign prev_post = siblings[prev_index] %}
+          {% endif %}
+          {% if forloop.last == false %}
+            {% assign next_index = forloop.index0 | plus: 1 %}
+            {% assign next_post = siblings[next_index] %}
+          {% endif %}
         {% endif %}
       {% endfor %}
 

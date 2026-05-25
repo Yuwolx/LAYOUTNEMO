@@ -53,9 +53,9 @@ Make. Connect. Layout.
 
 > **LAYOUTNEMO**는 업무를 리스트나 보드에 욱여넣는 대신, **캔버스 위에 자유롭게 펼쳐놓는 공간**입니다.
 >
-> 블럭을 만들어 할 일을 적고, 가까이 놓기만 해도 자동으로 선이 이어지며, 결(Facet)로 맥락을 나누어 정리합니다. "긴급", "고민 중", "방치 중" 같은 **감정과 상태까지 담는 시급도**를 **색상으로** 표현해, 정돈되지 않은 사고의 흐름 그대로를 시각화합니다.
+> 블럭을 만들어 할 일을 적고, 결(Facet)로 맥락을 나누고, Shift 드롭으로 관계선을 이어 정리합니다. "시급", "생각 중", "머물러 있음" 같은 **감정과 상태까지 담는 시급도**를 **색상으로** 표현해, 정돈되지 않은 사고의 흐름 그대로를 시각화합니다.
 >
-> 로컬 우선으로 가볍게 쓰다가, 필요하면 구글 로그인 한 번으로 여러 기기에서 이어가세요. AI는 도와주되, 원하지 않으면 언제든 끌 수 있습니다.
+> 로그인 없이 로컬 브라우저에서 바로 쓰는 것을 기본으로 합니다. AI는 도와주되, 원하지 않으면 언제든 끌 수 있습니다. 여러 기기 동기화와 구글 로그인은 v2로 준비 중입니다.
 
 **작성 규칙**:
 - "영역" 대신 **`결(Facet)`** 사용
@@ -91,7 +91,7 @@ Make. Connect. Layout.
 
 ## 🎨 시급도 4단계 (실제 구현 기준 — 공식)
 
-> **master 브랜치 실측 기준**. 모든 블럭은 **동일한 크기** (360px 고정). **오직 색상**이 시급도를 표현.
+> **master 브랜치 실측 기준**. 모든 블럭은 같은 기본 폭을 가지며, 내용에 따라 높이는 조금 늘어날 수 있다. **시급도는 오직 색상/그림자로만** 표현.
 
 | # | urgency 값 | 한글 라벨 (블로그 표기) | 색상 |
 |---|-----------|-------------------------|------|
@@ -103,8 +103,8 @@ Make. Connect. Layout.
 **작성 규칙**:
 - 블로그에서는 위 **한글 라벨**을 기본 사용
 - `stable/thinking/lingering/urgent` 같은 값은 기술 설명 맥락에서만 노출
-- ⚠️ **참고 — 코드 내부 라벨 불일치**: `block-detail-dialog`는 "안정적/생각 중/머물러 있음/시급함" / `create-block-dialog`는 "안정/보통/주의/시급" 으로 다름. 블로그에서는 **"안정 / 생각 중 / 머물러 있음 / 시급"** 으로 통일하여 표기.
-- ⏳ **후속 작업 예정**: 사용자가 시급도 단계를 향후 확장하거나 라벨을 통일할 가능성 있음 (현재 미정)
+- 시급도 라벨은 `lib/constants/urgency.ts` 와 i18n dictionary 기준으로 통일.
+- ⏳ **후속 작업 예정**: 시급도 단계를 향후 확장할 가능성 있음 (현재 미정)
 
 ---
 
@@ -117,7 +117,7 @@ Make. Connect. Layout.
 블럭이 가질 수 있는 속성 태그. "기획의 결", "개발의 결" 처럼 맥락을 나누는 기준이다. 결을 클릭하면 그 결에 속한 블럭들이 캔버스 위에서 강조된다. 블럭은 사라지지 않고, 다만 눈에 띌 뿐이다.
 
 ### 관계선 (Relationship)
-블럭과 블럭 사이를 잇는 선. 두 블럭을 가까이 놓으면 자동으로 연결되고, 선을 클릭하면 연결이 끊어진다. 업무 간 흐름과 의존성이 한눈에 보인다.
+블럭과 블럭 사이를 잇는 선. Shift 를 누른 채 한 블럭을 다른 블럭 위에 드롭하면 연결되고, 선을 클릭하면 연결이 끊어진다. 업무 간 흐름과 의존성이 한눈에 보인다.
 
 ### 시급도 (Urgency)
 블럭이 머릿속에서 차지하는 무게. 오직 **색상**으로만 표현되며, 네 단계로 나뉜다 (안정 / 생각 중 / 머물러 있음 / 시급). 블럭 크기는 모두 같다.
@@ -133,7 +133,7 @@ Make. Connect. Layout.
 3. **결(Facet)로 맥락을 분리하되, 블럭은 사라지지 않는다** — 필터는 강조, 삭제가 아니다.
 4. **관계 중심 사고** — 의존성과 흐름을 시각적으로.
 5. **AI는 판단을 대신하지 않고, 흐름이 끊기지 않게 돕는다** — 마찰 최소화, 판단은 사용자.
-6. **로컬 우선, 클라우드 선택** — 로그인 없이 쓰다가 필요할 때 연동.
+6. **로컬 우선, 클라우드 준비** — 현재는 로그인 없이 쓰고, 여러 기기 동기화는 v2에서 준비.
 
 ---
 
@@ -143,8 +143,8 @@ Make. Connect. Layout.
 - **Styling**: Tailwind CSS v4, shadcn/ui
 - **Icons**: lucide-react
 - **AI**: OpenAI `gpt-4o-mini` (직접 호출, Vercel AI Gateway 미사용)
-- **Storage**: localStorage (`layout_canvases`, `layout_current_canvas`)
-- **Auth**: Google OAuth via Supabase (옵션, 로컬 우선)
+- **Storage**: localStorage (`layout_canvases`, `layout_current_canvas`, `layout_ai_enabled`, `layout_language`)
+- **Auth**: 현재 `master`에는 없음. Google OAuth via Supabase 는 `feature/v2-supabase-auth` 에서 실험 중.
 - **초기 프로토타이핑**: Vercel **v0**
 - **배포**: **Vercel** (GitHub `master` push → 자동 빌드/배포)
 - **도메인**: `layoutnemo.com` (Namecheap 구매, DNS Namecheap 기본 유지)
@@ -161,14 +161,15 @@ interface WorkBlock {
   urgency?: "stable" | "thinking" | "lingering" | "urgent"
   dueDate?, relatedTo?[], isGuide?, isCompleted?
   isDeleted?, deletedAt?, originalState?
+  url?, tag?
 }
 interface Canvas {
   id, name, blocks[], zones[], createdAt, updatedAt
 }
 ```
 
-- localStorage 2키: `layout_canvases`, `layout_current_canvas`
-- 30초 자동 저장, 히스토리 최대 50개
+- localStorage 주요 키: `layout_canvases`, `layout_current_canvas`, `layout_ai_enabled`, `layout_language`
+- 상태 변경 시 즉시 저장, 블럭 히스토리 최대 50개
 
 ---
 
@@ -232,9 +233,14 @@ interface Canvas {
 ## 🗺 로드맵 (공식)
 
 ### 완료
-- [x] 구글 소셜 로그인 (Supabase Auth)
+- [x] 타입 안전망 복구 + 시급도 라벨/색상 정리
+- [x] 결(Facet) 용어 정리 + 한영 UI 전환
+- [x] 갈무리(Archive) UX 전면 개편
+- [x] 캔버스 팬 + Shift 연결 토스 + 관계선 시각 개선
+- [x] AI 생성 8초 자동 반영, 태그/외부 링크 지원, 헤더 로고 polish
 
 ### 예정 (우선순위 미정 — 사용자와 후속 논의)
+- [ ] 구글 소셜 로그인 / 멀티 기기 동기화 (v2 Supabase)
 - [ ] 협업 기능 (공유 링크, 실시간 동기화)
 - [ ] 모바일 앱
 - [ ] 블럭 템플릿
@@ -242,8 +248,11 @@ interface Canvas {
 - [ ] 통계 및 인사이트
 
 ### 내부 개선 항목
-- [ ] 시급도 단계/라벨 통일 (현재 코드 내 불일치)
-- [ ] 설계 vs 구현 갭 리팩터링 (sizeLevel 재설계 또는 공식 폐기)
+- [ ] 일반 드래그 이동을 Undo 히스토리에 정확히 남기기
+- [ ] 정리하기 적용 시 삭제 블럭 보존/히스토리 처리 강화
+- [ ] 정리하기 AI 입력에 태그/기한까지 포함
+- [ ] 결 삭제 시 기존 블럭 재배정 UX 정리
+- [ ] Next.js 보안 패치 버전 업그레이드 검토
 
 ---
 
@@ -281,3 +290,8 @@ interface Canvas {
 | 2026-04-24 | **Reflect 가짜 딜레이 제거** — setTimeout 1.4초 → 실제 API 대기만, 불확정 progress bar |
 | 2026-04-24 | **다크 모드 톤 개편** — 남색 기조 oklch 변수 (hue 265), 시급도 그림자 완화, 로고 래퍼 너비 고정 |
 | 2026-04-24 | **갈무리(Archive) UX 전면 개편** — "완료" → "갈무리", 우하단 박스 아이콘 + 조약돌 모달, bounds overlap 드롭 감지, dragStartPos 로 원래 위치 복원 |
+| 2026-04-26 | **캔버스 팬 + Shift 연결 토스** — Space 드래그 팬, Shift 드롭 연결, 관계선 발광, 블럭 사이즈 다이어트 |
+| 2026-04-28 | **시스템 딥다이브 문서화** — 현재 localStorage 기반 구조와 v2 Supabase 계획 정리 |
+| 2026-04-29 | **AI 자동 반영 + 태그/링크** — 8초 자동 생성, 태그/외부 링크, 정리하기 우선순위 보강 |
+| 2026-05-05 | **헤더 로고/OG polish** — 서비스/블로그 로고 톤 정리 |
+| 2026-05-25 | **블로그 현재화** — 자동 연결/로그인/검색/내보내기 등 오래된 설명을 master 기준으로 정정 |

@@ -33,7 +33,7 @@ Vercel
        └─ 블럭 / 캔버스 / 결 CRUD
             ↓ (service_role key 로 서버 측 호출)
 Supabase
-  ├─ Auth         : 이미 활성 (Google OAuth)
+  ├─ Auth         : v2 후보 브랜치에서 실험 중 (Google OAuth)
   ├─ Postgres     : canvases, zones, blocks, block_relations, ai_usage
   ├─ Realtime     : 다른 기기/탭 변경 푸시
   └─ Row-Level Security (RLS)
@@ -740,8 +740,8 @@ Phase 0 의 ARCHITECTURE 레벨 점검으로 도출된 20개 이슈에 대한 �
 
 ```
 블럭 1: "더블클릭으로 블럭을 편집하세요"       (urgency=stable, 기본 결 '일상')
-블럭 2: "블럭을 가까이 놓으면 자동 연결됩니다"   (urgency=stable)
-블럭 3: "완료 영역으로 드래그하면 완료 처리"    (urgency=stable)
+블럭 2: "Shift 를 누른 채 겹쳐 놓으면 연결됩니다" (urgency=stable)
+블럭 3: "갈무리 독으로 드래그하면 잠시 치워둡니다" (urgency=stable)
 ```
 
 - 블럭에 `is_guide = true` (이미 master 코드에 있는 플래그)
