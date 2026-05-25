@@ -1,25 +1,8 @@
-<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-  <style>
-    /* OS / 브라우저 테마 따라 자동 전환. 라이트면 검정, 다크면 흰색. */
-    .mark { stroke: #18181B; }
-    @media (prefers-color-scheme: dark) {
-      .mark { stroke: #FAFAFA; }
-    }
-  </style>
-
+<svg width="512" height="512" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- 정사각 브랜드 마크 — 검색 결과 / Organization JSON-LD logo 용 -->
+  <rect width="1024" height="1024" rx="180" fill="#18181b"/>
   <!-- 세로 블럭 -->
-  <rect class="mark" x="140" y="100"
-        width="160"
-        height="780"
-        rx="40"
-        fill="none"
-        stroke-width="80"/>
-
+  <rect x="280" y="220" width="160" height="600" rx="40" fill="none" stroke="#ffffff" stroke-width="80"/>
   <!-- 가로 블럭 -->
-  <rect class="mark" x="140" y="720"
-        width="420"
-        height="160"
-        rx="40"
-        fill="none"
-        stroke-width="80"/>
+  <rect x="280" y="660" width="460" height="160" rx="40" fill="none" stroke="#ffffff" stroke-width="80"/>
 </svg>
