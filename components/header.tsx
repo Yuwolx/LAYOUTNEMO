@@ -16,8 +16,6 @@ interface HeaderProps {
   onManageAreas: () => void
   showRelationships: boolean
   onToggleRelationships: () => void
-  showCompletedBlocks: boolean
-  onToggleCompletedBlocks: () => void
   isDarkMode: boolean
   onToggleDarkMode: () => void
   trashCount: number
@@ -45,8 +43,6 @@ export function Header({
   onManageAreas,
   showRelationships,
   onToggleRelationships,
-  showCompletedBlocks,
-  onToggleCompletedBlocks,
   isDarkMode,
   onToggleDarkMode,
   trashCount,
@@ -462,24 +458,6 @@ export function Header({
               <span>{showRelationships ? t("header.showRelationships") : t("header.hideRelationships")}</span>
             </button>
 
-            <button
-              onClick={onToggleCompletedBlocks}
-              className={`
-                flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-all
-                ${
-                  showCompletedBlocks
-                    ? isDarkMode
-                      ? "bg-zinc-800 text-zinc-200"
-                      : "bg-foreground/10 text-foreground"
-                    : isDarkMode
-                      ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-                      : "text-muted-foreground/60 hover:bg-accent/40"
-                }
-              `}
-            >
-              <Eye className="w-3.5 h-3.5" />
-              <span>{showCompletedBlocks ? t("header.showCompleted") : t("header.hideCompleted")}</span>
-            </button>
           </div>
         </div>
       </div>

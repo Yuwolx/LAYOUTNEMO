@@ -57,14 +57,14 @@ export const DICT = {
     "label.optional": "선택",
 
     // Urgency
-    "urgency.stable": "안정",
-    "urgency.thinking": "생각 중",
-    "urgency.lingering": "머물러 있음",
+    "urgency.stable": "여유",
+    "urgency.thinking": "미정",
+    "urgency.lingering": "진행",
     "urgency.urgent": "시급",
-    "urgency.stable.color": "회색",
-    "urgency.thinking.color": "파란색",
-    "urgency.lingering.color": "노란색",
-    "urgency.urgent.color": "주황색",
+    "urgency.stable.color": "파란색",
+    "urgency.thinking.color": "회색",
+    "urgency.lingering.color": "초록색",
+    "urgency.urgent.color": "빨간색",
 
     // Actions
     "action.save": "저장",
@@ -171,14 +171,14 @@ export const DICT = {
     "label.optional": "optional",
 
     // Urgency
-    "urgency.stable": "Stable",
-    "urgency.thinking": "Thinking",
-    "urgency.lingering": "Lingering",
+    "urgency.stable": "Flexible",
+    "urgency.thinking": "Undecided",
+    "urgency.lingering": "In progress",
     "urgency.urgent": "Urgent",
-    "urgency.stable.color": "gray",
-    "urgency.thinking.color": "blue",
-    "urgency.lingering.color": "yellow",
-    "urgency.urgent.color": "orange",
+    "urgency.stable.color": "blue",
+    "urgency.thinking.color": "gray",
+    "urgency.lingering.color": "green",
+    "urgency.urgent.color": "red",
 
     // Actions
     "action.save": "Save",

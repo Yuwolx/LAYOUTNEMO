@@ -35,10 +35,10 @@ export function ArchiveDialog({
   const t = useT()
 
   const urgencyDotColor: Record<string, string> = {
-    stable: "bg-zinc-400",
-    thinking: "bg-blue-400",
-    lingering: "bg-yellow-400",
-    urgent: "bg-orange-400",
+    stable: "bg-blue-400",
+    thinking: "bg-zinc-400",
+    lingering: "bg-green-400",
+    urgent: "bg-red-400",
   }
 
   return (
@@ -73,7 +73,7 @@ export function ArchiveDialog({
                 const description =
                   translateSeedBlockField(block, "description", language) ?? block.description
                 const zoneLabel = zone ? translateSeedZoneLabel(zone, language) : ""
-                const dotClass = urgencyDotColor[block.urgency || "stable"]
+                const dotClass = urgencyDotColor[block.urgency || "thinking"]
                 return (
                   <div
                     key={block.id}

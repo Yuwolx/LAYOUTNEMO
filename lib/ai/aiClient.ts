@@ -65,14 +65,16 @@ export function mockCreateBlockOutput(input: CreateBlockAIInput): CreateBlockAIO
   const summary = text.length > 80 ? text.slice(0, 77) + "…" : text
 
   // 시급도 추정: 키워드 매칭
-  const urgentKeywords = ["급해", "시급", "asap", "urgent", "빨리", "당장", "오늘", "내일까지"]
-  const thinkingKeywords = ["고민", "아이디어", "생각", "검토", "탐색", "idea", "think"]
-  const lingeringKeywords = ["미루", "언젠가", "나중에", "later", "someday"]
+  const urgentKeywords = ["급해", "시급", "asap", "urgent", "빨리", "당장", "오늘", "내일까지", "바로", "즉시"]
+  const stableKeywords = ["여유", "천천히", "급하지 않", "느긋", "시간 될 때", "flexible"]
+  const lingeringKeywords = ["진행", "진행중", "하는 중", "꾸준", "계속", "운영", "관리", "반복", "in progress"]
+  const thinkingKeywords = ["미정", "일단", "메모", "후보", "아이디어", "할지 말지", "maybe", "undecided"]
 
-  let suggestedUrgency: CreateBlockAIOutput["suggestedUrgency"] = "stable"
+  let suggestedUrgency: CreateBlockAIOutput["suggestedUrgency"] = "thinking"
   if (urgentKeywords.some((k) => lower.includes(k))) suggestedUrgency = "urgent"
-  else if (thinkingKeywords.some((k) => lower.includes(k))) suggestedUrgency = "thinking"
   else if (lingeringKeywords.some((k) => lower.includes(k))) suggestedUrgency = "lingering"
+  else if (stableKeywords.some((k) => lower.includes(k))) suggestedUrgency = "stable"
+  else if (thinkingKeywords.some((k) => lower.includes(k))) suggestedUrgency = "thinking"
 
   // zone 추정: zone label 부분 일치 → 일치 없으면 첫 zone
   const matched = input.zones.find((z) => {

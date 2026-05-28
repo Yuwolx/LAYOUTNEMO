@@ -69,7 +69,7 @@ export function ReflectionDialog({
             title: b.title,
             description: b.description,
             zone: b.zone,
-            urgency: b.urgency || "stable",
+            urgency: b.urgency || "thinking",
             x: b.x,
             y: b.y,
             relatedTo: b.relatedTo || [],

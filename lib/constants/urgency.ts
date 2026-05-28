@@ -5,10 +5,12 @@ import type { Urgency } from "@/types"
  *
  * - 블럭 크기는 모두 동일하며, 중요도는 오직 "색상"으로만 표현한다.
  * - 이 파일의 값이 블럭 카드의 그림자 색, 다이얼로그 라벨, 가이드 문구 전부를 지배한다.
+ * - 내부 키는 기존 저장 데이터 호환을 위해 유지한다:
+ *   thinking=미정(회색), stable=여유(파랑), lingering=진행(초록), urgent=시급(빨강).
  *
  * (이전 기획에는 "normal" 5단계가 있었으나, 현재 구현은 "normal" 을 제외한 4단계다.)
  */
-export const URGENCY_KEYS: readonly Urgency[] = ["stable", "thinking", "lingering", "urgent"] as const
+export const URGENCY_KEYS: readonly Urgency[] = ["thinking", "stable", "lingering", "urgent"] as const
 
 export const URGENCY_META: Record<Urgency, {
   /** 블럭 상세 / 필터에 노출되는 공식 한국어 라벨 */
@@ -23,38 +25,38 @@ export const URGENCY_META: Record<Urgency, {
   shadowDark: string
 }> = {
   stable: {
-    label: "안정",
-    description: "천천히 진행해도 되는 일",
+    label: "여유",
+    description: "할 일은 맞지만 급하지 않은 일",
+    colorName: "파란색",
+    shadowLight: "shadow-[0_6px_24px_rgba(59,130,246,0.45)]",
+    shadowDark: "shadow-[0_6px_22px_rgba(59,130,246,0.55)]",
+  },
+  thinking: {
+    label: "미정",
+    description: "일단 적어뒀지만 할지 말지 아직 모르는 일",
     colorName: "회색",
     shadowLight: "shadow-[0_4px_18px_rgba(0,0,0,0.12)]",
     // 다크 모드 배경(#151823)이 거의 검정이라 검정 그림자는 묻힘.
     // 흰색 계열의 부드러운 광으로 대비 확보.
     shadowDark: "shadow-[0_4px_20px_rgba(255,255,255,0.10)]",
   },
-  thinking: {
-    label: "생각 중",
-    description: "아직 구체화되지 않은 아이디어",
-    colorName: "파란색",
-    shadowLight: "shadow-[0_6px_24px_rgba(59,130,246,0.45)]",
-    shadowDark: "shadow-[0_6px_22px_rgba(59,130,246,0.55)]",
-  },
   lingering: {
-    label: "머물러 있음",
-    description: "미루고 있지만 언젠가 해야 할 일",
-    colorName: "노란색",
-    shadowLight: "shadow-[0_6px_24px_rgba(251,191,36,0.5)]",
-    shadowDark: "shadow-[0_6px_22px_rgba(251,191,36,0.55)]",
+    label: "진행",
+    description: "꾸준히 진행하거나 계속 관리 중인 일",
+    colorName: "초록색",
+    shadowLight: "shadow-[0_6px_24px_rgba(34,197,94,0.45)]",
+    shadowDark: "shadow-[0_6px_22px_rgba(34,197,94,0.55)]",
   },
   urgent: {
     label: "시급",
     description: "즉시 처리가 필요한 일",
-    colorName: "주황색",
-    shadowLight: "shadow-[0_6px_26px_rgba(251,146,60,0.55)]",
-    shadowDark: "shadow-[0_6px_24px_rgba(251,146,60,0.6)]",
+    colorName: "빨간색",
+    shadowLight: "shadow-[0_6px_26px_rgba(239,68,68,0.55)]",
+    shadowDark: "shadow-[0_6px_24px_rgba(248,113,113,0.6)]",
   },
 }
 
-/** 다이얼로그 등에서 "안정 (회색)" 형태로 보여줄 때 사용 */
+/** 다이얼로그 등에서 "여유 (파란색)" 형태로 보여줄 때 사용 */
 export function formatUrgencyLabel(urgency: Urgency): string {
   const meta = URGENCY_META[urgency]
   return `${meta.label} (${meta.colorName})`
