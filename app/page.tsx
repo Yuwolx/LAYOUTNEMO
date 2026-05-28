@@ -189,6 +189,7 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
 
 const STORAGE_KEY = "layout_canvases"
 const CURRENT_CANVAS_KEY = "layout_current_canvas"
+const GUIDE_BLOCK_TEMPLATES = new Map(initialBlocks.filter((block) => block.isGuide).map((block) => [block.id, block]))
 
 const getDefaultCanvas = (): CanvasType => ({
   id: "main",
@@ -206,6 +207,21 @@ const LEGACY_ZONE_ID_MAP: Record<string, string> = {
   operations: "marketing",
 }
 
+const migrateGuideBlock = (block: WorkBlock): WorkBlock => {
+  if (!block.isGuide) return block
+
+  const template = GUIDE_BLOCK_TEMPLATES.get(block.id)
+  if (!template) return block
+
+  return {
+    ...block,
+    title: template.title,
+    description: template.description,
+    detailedNotes: template.detailedNotes,
+    urgency: template.urgency,
+  }
+}
+
 const migrateCanvas = (canvas: CanvasType): CanvasType => ({
   ...canvas,
   zones: canvas.zones.map((z) => ({
@@ -213,7 +229,7 @@ const migrateCanvas = (canvas: CanvasType): CanvasType => ({
     id: LEGACY_ZONE_ID_MAP[z.id] ?? z.id,
   })),
   blocks: canvas.blocks.map((b) => {
-    const migrated: WorkBlock = { ...b, zone: LEGACY_ZONE_ID_MAP[b.zone] ?? b.zone }
+    let migrated: WorkBlock = { ...b, zone: LEGACY_ZONE_ID_MAP[b.zone] ?? b.zone }
     // 구버전에서 갈무리 처리된 블럭은 x/y 가 우하단 스택 좌표로, 크기는 340x56 으로
     // 변경되어 있다. originalState 에서 원래 크기/시급도를 복원하고,
     // x/y 는 과거 값 그대로 두되 width/height 만 원본으로 되돌린다.
@@ -225,6 +241,7 @@ const migrateCanvas = (canvas: CanvasType): CanvasType => ({
       }
       migrated.originalState = undefined
     }
+    migrated = migrateGuideBlock(migrated)
     return migrated
   }),
 })

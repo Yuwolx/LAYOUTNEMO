@@ -178,6 +178,12 @@ export function Canvas({
   }
 
   useEffect(() => {
+    const hasMovedFromStart = (block: WorkBlock) =>
+      Boolean(
+        dragStartPos &&
+          (Math.abs(block.x - dragStartPos.x) > 0.5 || Math.abs(block.y - dragStartPos.y) > 0.5),
+      )
+
     const handleMouseMove = (e: MouseEvent) => {
       if (draggingId) {
         const newX = (e.clientX - offset.x - pan.x) / DEFAULT_CANVAS_SCALE
@@ -239,9 +245,7 @@ export function Canvas({
 
         if (!block.isCompleted && !block.isGuide) {
           // 연결은 Shift 누른 채 드롭한 경우에만. 그 외 드롭은 단순 위치 이동(쌓기 가능).
-          if (!e.shiftKey) {
-            // 평범한 드롭 — 위치만 이미 갱신되었고, 따로 할 일 없음.
-          } else {
+          if (e.shiftKey) {
             // Shift 드롭 = 토스 — 겹친 블럭과 연결 형성 + 원위치로 부드럽게 복귀.
             const overlappingBlocks = blocks.filter((b) => {
               if (b.id === draggingId || b.isCompleted || b.isGuide) return false
@@ -289,6 +293,12 @@ export function Canvas({
               return
             }
           }
+        }
+
+        // 평범한 드롭은 드래그 중 skipHistory 로 위치만 갱신하고,
+        // 마우스를 놓는 순간 최종 좌표 하나만 히스토리에 남긴다.
+        if (hasMovedFromStart(block)) {
+          onUpdateBlock(draggingId, { x: block.x, y: block.y })
         }
       }
       setDraggingId(null)
