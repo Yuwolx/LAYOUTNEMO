@@ -50,7 +50,7 @@ export const SEED_BLOCK_STRINGS: Record<
       ko: `LAYOUTNEMO 는 할 일을 리스트나 보드에 넣지 않고, 캔버스 위에 펼쳐놓는 도구입니다.
 
 1) 블럭 만들기
-오른쪽 위 '새 블럭 만들기' 또는 Cmd/Ctrl + N. AI 보조가 켜져 있으면 한 줄만 적어도 제목·요약·결·시급도·태그·링크까지 자동으로 정리해줍니다. 입력에 [태그] 나 https:// 가 있으면 알아서 추출해요. 꺼져 있으면 직접 입력하세요. 내용은 비워둬도 됩니다.
+오른쪽 위 '새 블럭 만들기' 또는 Cmd/Ctrl + N. AI 보조가 켜져 있으면 한 줄만 적어도 제목·요약·결·상태·태그·링크까지 자동으로 정리해줍니다. 입력에 [태그] 나 https:// 가 있으면 알아서 추출해요. 꺼져 있으면 직접 입력하세요. 내용은 비워둬도 됩니다.
 
 2) AI 자동 반영 (8초)
 AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생성됩니다. 카운트다운이 보이고, 어디든 클릭하거나 입력하면 즉시 멈춥니다. "취소" 글자도 누를 수 있어요.
@@ -70,7 +70,7 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
 • Shift + 드래그: 한 블럭을 다른 블럭 위에 떨어뜨리면 곡선으로 이어지고, 드래그한 블럭은 원래 자리로 부드럽게 돌아옵니다 (위치는 바꾸지 않고 연결만 만드는 토스 제스처).
 연결을 끊으려면 선을 클릭하세요.
 
-7) 시급도
+7) 상태
 블럭의 그림자 색으로 머릿속 무게를 표현합니다. 크기는 바뀌지 않습니다.
 • 미정 (회색): 일단 적어뒀지만 할지 말지 아직 모르는 일
 • 여유 (파랑): 할 일은 맞지만 급하지 않은 일
@@ -100,7 +100,7 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
       en: `LAYOUTNEMO is a tool for spreading tasks across a canvas instead of stuffing them into lists or boards.
 
 1) Creating Blocks
-"Create Block" at the top right, or Cmd/Ctrl + N. With AI Assist on, one line is enough — title, summary, facet, urgency, tag and link are filled in automatically. If your input contains [TAG] or https://, they get extracted. With AI off, fill them in yourself. The description is optional.
+"Create Block" at the top right, or Cmd/Ctrl + N. With AI Assist on, one line is enough — title, summary, facet, state, tag and link are filled in automatically. If your input contains [TAG] or https://, they get extracted. With AI off, fill them in yourself. The description is optional.
 
 2) Auto-apply (8s)
 After AI replies, an 8-second countdown starts. If you don't touch anything, the block is created automatically. Click or type anywhere to cancel — there's also a "Cancel" link.
@@ -120,7 +120,7 @@ Two distinct drag gestures:
 • Shift + drag: drop one block onto another and a curve is drawn between them — the dragged block then glides back to its starting position. (A "toss" gesture: makes a connection without changing positions.)
 Click a line to disconnect.
 
-7) Urgency
+7) State
 The shadow color reflects mental weight. Size doesn't change.
 • Undecided (gray): captured for now, not sure if you'll do it
 • Flexible (blue): real work, but not urgent

@@ -1,20 +1,23 @@
 import { NextResponse } from "next/server"
 import { tidyComprehensiveResponseSchema, type AIErrorPayload } from "@/lib/ai/schemas"
 import { TIDY_COMPREHENSIVE_PROMPT } from "@/lib/ai/prompts"
+import { URGENCY_META } from "@/lib/constants/urgency"
+import type { WorkBlock, Zone } from "@/types"
 
 const errorResponse = (code: AIErrorPayload["code"], message: string, status: number) =>
   NextResponse.json<{ error: AIErrorPayload }>({ error: { code, message } }, { status })
 
-function analyzeBlockClusters(blocks: any[], zones: any[]) {
-  const zoneClusters: Record<string, any[]> = {}
-  const urgencyClusters: Record<string, any[]> = {}
+function analyzeBlockClusters(blocks: WorkBlock[], zones: Zone[]) {
+  const zoneClusters: Record<string, WorkBlock[]> = {}
+  const urgencyClusters: Record<string, WorkBlock[]> = {}
 
   blocks.forEach((b) => {
     if (!zoneClusters[b.zone]) zoneClusters[b.zone] = []
     zoneClusters[b.zone].push(b)
 
-    if (!urgencyClusters[b.urgency]) urgencyClusters[b.urgency] = []
-    urgencyClusters[b.urgency].push(b)
+    const urgencyKey = b.urgency ?? "thinking"
+    if (!urgencyClusters[urgencyKey]) urgencyClusters[urgencyKey] = []
+    urgencyClusters[urgencyKey].push(b)
   })
 
   // 영역별 분산도 계산 (같은 영역 블록들이 얼마나 퍼져있는지)
@@ -41,7 +44,7 @@ function analyzeBlockClusters(blocks: any[], zones: any[]) {
   return { zoneClusters, urgencyClusters, zoneDispersion }
 }
 
-function calculateBlockSimilarity(block1: any, block2: any): number {
+function calculateBlockSimilarity(block1: WorkBlock, block2: WorkBlock): number {
   let similarity = 0
 
   // 우선순위: 태그(같은 프로젝트) > 결 > 제목/설명 키워드 > 위치 근접
@@ -57,12 +60,12 @@ function calculateBlockSimilarity(block1: any, block2: any): number {
   // 3. 제목 + 설명 키워드 공통
   const text1 = `${block1.title} ${block1.description || ""}`.toLowerCase()
   const text2 = `${block2.title} ${block2.description || ""}`.toLowerCase()
-  const words1 = text1.split(/\s+/).filter((w: string) => w.length > 1)
+  const words1 = text1.split(/\s+/).filter((w) => w.length > 1)
   const words2 = new Set(text2.split(/\s+/))
-  const commonCount = words1.filter((w: string) => words2.has(w)).length
+  const commonCount = words1.filter((w) => words2.has(w)).length
   if (commonCount > 0) similarity += Math.min(20, commonCount * 5)
 
-  // 4. 시급도 동일 — 보조 신호
+  // 4. 상태 동일 — 보조 신호
   if (block1.urgency === block2.urgency) similarity += 5
 
   // 5. 위치 근접 — 가까울수록 약간 가산 (최대 15)
@@ -73,7 +76,7 @@ function calculateBlockSimilarity(block1: any, block2: any): number {
 }
 
 export async function POST(req: Request) {
-  let input: { blocks: any[]; zones: any[]; language?: "ko" | "en" }
+  let input: { blocks: WorkBlock[]; zones: Zone[]; language?: "ko" | "en" }
   try {
     input = await req.json()
   } catch {
@@ -82,7 +85,7 @@ export async function POST(req: Request) {
   const { blocks, zones, language } = input
   const lang = language ?? "ko"
 
-  const regularBlocks = blocks.filter((b: any) => !b.isGuide)
+  const regularBlocks = blocks.filter((b) => !b.isGuide)
 
   if (regularBlocks.length === 0) {
     return NextResponse.json({
@@ -125,7 +128,7 @@ export async function POST(req: Request) {
     // 우선순위순으로 정렬
     potentialConnections.sort((a, b) => b.similarity - a.similarity)
 
-    const blockSummary = regularBlocks.map((b: any) => ({
+    const blockSummary = regularBlocks.map((b) => ({
       id: b.id,
       title: b.title,
       description: b.description || "",
@@ -138,19 +141,22 @@ export async function POST(req: Request) {
       isCompleted: b.isCompleted || false,
     }))
 
-    const zoneMap = zones.reduce((acc: any, z: any) => {
+    const zoneMap = zones.reduce<Record<string, string>>((acc, z) => {
       acc[z.id] = z.label
       return acc
     }, {})
 
     const blockListText = blockSummary
       .map(
-        (b: any, idx: number) =>
-          `${idx + 1}. [${b.id}] "${b.title}" — 태그: ${b.tag || "없음"}, 영역: ${zoneMap[b.zone] || b.zone}, 시급도: ${b.urgency}, 위치: (${Math.round(
+        (b, idx) => {
+          const urgencyKey = b.urgency ?? "thinking"
+          const urgencyLabel = URGENCY_META[urgencyKey]?.label ?? urgencyKey
+          return `${idx + 1}. [${b.id}] "${b.title}" — 태그: ${b.tag || "없음"}, 영역: ${zoneMap[b.zone] || b.zone}, 상태: ${urgencyLabel}, 위치: (${Math.round(
             b.position.x,
           )}, ${Math.round(b.position.y)}), 기한: ${b.dueDate || "없음"}, 연결: ${
             b.connections.length > 0 ? b.connections.join(", ") : "없음"
-          }, 완료: ${b.isCompleted ? "예" : "아니오"}${b.description ? `\n   설명: ${b.description}` : ""}`,
+          }, 완료: ${b.isCompleted ? "예" : "아니오"}${b.description ? `\n   설명: ${b.description}` : ""}`
+        },
       )
       .join("\n")
 
@@ -161,14 +167,17 @@ export async function POST(req: Request) {
     const potentialText = potentialConnections
       .slice(0, 5)
       .map((c) => {
-        const b1 = regularBlocks.find((b: any) => b.id === c.block1)
-        const b2 = regularBlocks.find((b: any) => b.id === c.block2)
+        const b1 = regularBlocks.find((b) => b.id === c.block1)
+        const b2 = regularBlocks.find((b) => b.id === c.block2)
         return `"${b1?.title}" ↔ "${b2?.title}" (${c.similarity}%)`
       })
       .join(" / ")
 
-    const zoneDefsText = zones.map((z: any) => `${z.id}=${z.label}`).join(", ")
-    const completedCount = regularBlocks.filter((b: any) => b.isCompleted).length
+    const zoneDefsText = zones.map((z) => `${z.id}=${z.label}`).join(", ")
+    const completedCount = regularBlocks.filter((b) => b.isCompleted).length
+
+    // urgencyClusters 는 분석용으로만 사용 (현재 미사용 suppress)
+    void urgencyClusters
 
     const prompt = TIDY_COMPREHENSIVE_PROMPT.replace("{TOTAL}", String(regularBlocks.length))
       .replace("{COMPLETED}", String(completedCount))
