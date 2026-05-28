@@ -20,10 +20,10 @@ interface BlockDetailDialogProps {
 }
 
 const URGENCY_COLOR_HEX: Record<Urgency, string> = {
-  stable: "rgb(59, 130, 246)",
-  thinking: "rgb(156, 163, 175)",
-  lingering: "rgb(34, 197, 94)",
-  urgent: "rgb(239, 68, 68)",
+  stable: "rgb(147, 197, 253)",
+  thinking: "rgb(212, 212, 216)",
+  lingering: "rgb(134, 239, 172)",
+  urgent: "rgb(252, 165, 165)",
 }
 
 export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }: BlockDetailDialogProps) {

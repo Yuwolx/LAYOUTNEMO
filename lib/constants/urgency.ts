@@ -28,31 +28,31 @@ export const URGENCY_META: Record<Urgency, {
     label: "여유",
     description: "할 일은 맞지만 급하지 않은 일",
     colorName: "파란색",
-    shadowLight: "shadow-[0_6px_24px_rgba(59,130,246,0.45)]",
-    shadowDark: "shadow-[0_6px_22px_rgba(59,130,246,0.55)]",
+    shadowLight: "shadow-[0_6px_28px_rgba(147,197,253,0.65)]",
+    shadowDark: "shadow-[0_6px_26px_rgba(147,197,253,0.50)]",
   },
   thinking: {
     label: "미정",
     description: "일단 적어뒀지만 할지 말지 아직 모르는 일",
     colorName: "회색",
-    shadowLight: "shadow-[0_4px_18px_rgba(0,0,0,0.12)]",
+    shadowLight: "shadow-[0_4px_18px_rgba(0,0,0,0.10)]",
     // 다크 모드 배경(#151823)이 거의 검정이라 검정 그림자는 묻힘.
     // 흰색 계열의 부드러운 광으로 대비 확보.
-    shadowDark: "shadow-[0_4px_20px_rgba(255,255,255,0.10)]",
+    shadowDark: "shadow-[0_4px_20px_rgba(255,255,255,0.08)]",
   },
   lingering: {
     label: "진행",
     description: "꾸준히 진행하거나 계속 관리 중인 일",
     colorName: "초록색",
-    shadowLight: "shadow-[0_6px_24px_rgba(34,197,94,0.45)]",
-    shadowDark: "shadow-[0_6px_22px_rgba(34,197,94,0.55)]",
+    shadowLight: "shadow-[0_6px_28px_rgba(134,239,172,0.65)]",
+    shadowDark: "shadow-[0_6px_26px_rgba(134,239,172,0.50)]",
   },
   urgent: {
     label: "시급",
     description: "즉시 처리가 필요한 일",
     colorName: "빨간색",
-    shadowLight: "shadow-[0_6px_26px_rgba(239,68,68,0.55)]",
-    shadowDark: "shadow-[0_6px_24px_rgba(248,113,113,0.6)]",
+    shadowLight: "shadow-[0_6px_30px_rgba(252,165,165,0.70)]",
+    shadowDark: "shadow-[0_6px_28px_rgba(252,165,165,0.55)]",
   },
 }
 

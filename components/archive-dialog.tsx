@@ -35,10 +35,10 @@ export function ArchiveDialog({
   const t = useT()
 
   const urgencyDotColor: Record<string, string> = {
-    stable: "bg-blue-400",
-    thinking: "bg-zinc-400",
-    lingering: "bg-green-400",
-    urgent: "bg-red-400",
+    stable: "bg-blue-300",
+    thinking: "bg-zinc-300",
+    lingering: "bg-green-300",
+    urgent: "bg-red-300",
   }
 
   return (
