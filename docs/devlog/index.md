@@ -30,6 +30,7 @@ LAYOUTNEMO를 만들면서 마주친 문제, 선택, 삽질, 배운 것을 기�
 
 | 날짜 | 제목 | 상태 |
 |------|------|------|
+| 2026-05-28 | [새 블럭은 지금 보는 곳에 — viewport-aware 배치와 기본 배율 조정]({{ site.baseurl }}/docs/devlog/2026-05-28-viewport-aware-placement-and-scale/) | 🚧 develop 검증 중 |
 | 2026-04-24 | [하루 만에 18개 이슈 치우기 — 바이브 코딩 잔해 정리 & 갈무리 UX]({{ site.baseurl }}/docs/devlog/2026-04-24-cleanup-and-archive/) | ✅ 공개 |
 | 2026-04-26 | [캔버스를 손에 쥐다 — 스페이스바 팬, 연결 토스, 사이즈 다이어트]({{ site.baseurl }}/docs/devlog/2026-04-26-canvas-pan-and-toss/) | ✅ 공개 |
 

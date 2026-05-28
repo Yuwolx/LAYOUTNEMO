@@ -94,10 +94,12 @@ nav_order: 4
   → OpenAI (gpt-4o-mini)
   → 제목 / 요약 / 결 / 기한 / 시급도 / 태그 / 링크 추출
   → handleCreateBlock() (page.tsx)
-  → findSmartPosition() — 스마트 배치
+  → findSmartPosition() — 현재 viewport 안에서 스마트 배치
   → localStorage 저장
   → Canvas 렌더링
 ```
+
+`develop` 기준으로 스마트 배치는 삭제/갈무리 블럭만 제외하고, 가이드 블럭까지 포함한 화면 위 모든 블럭을 충돌 대상으로 봅니다. 캔버스 기본 배율 90% 를 적용하면서 viewport, drag, drop hit-test 도 같은 배율 기준으로 보정 중입니다.
 
 ### 저장 구조
 
@@ -126,6 +128,13 @@ interface WorkBlock {
   isDeleted?: boolean
   tag?: string
   url?: string
+}
+
+interface CanvasViewport {
+  x: number
+  y: number
+  width: number
+  height: number
 }
 ```
 
