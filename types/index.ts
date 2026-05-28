@@ -46,3 +46,10 @@ export interface Canvas {
   createdAt: number
   updatedAt: number
 }
+
+export interface CanvasViewport {
+  x: number
+  y: number
+  width: number
+  height: number
+}

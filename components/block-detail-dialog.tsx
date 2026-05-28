@@ -20,10 +20,10 @@ interface BlockDetailDialogProps {
 }
 
 const URGENCY_COLOR_HEX: Record<Urgency, string> = {
-  stable: "rgb(156, 163, 175)",
-  thinking: "rgb(59, 130, 246)",
-  lingering: "rgb(251, 191, 36)",
-  urgent: "rgb(251, 146, 60)",
+  stable: "rgb(59, 130, 246)",
+  thinking: "rgb(156, 163, 175)",
+  lingering: "rgb(34, 197, 94)",
+  urgent: "rgb(239, 68, 68)",
 }
 
 export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }: BlockDetailDialogProps) {
@@ -39,7 +39,7 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
   const [detailedNotes, setDetailedNotes] = useState(displayNotes || "")
   const [dueDate, setDueDate] = useState(block.dueDate || "")
   const [zone, setZone] = useState(block.zone)
-  const [urgency, setUrgency] = useState<"stable" | "thinking" | "lingering" | "urgent">(block.urgency || "stable")
+  const [urgency, setUrgency] = useState<"stable" | "thinking" | "lingering" | "urgent">(block.urgency || "thinking")
   const [url, setUrl] = useState(block.url || "")
   const [tag, setTag] = useState(block.tag || "")
 
@@ -50,7 +50,7 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
       setDetailedNotes(displayNotes || "")
       setDueDate(block.dueDate || "")
       setZone(block.zone)
-      setUrgency(block.urgency || "stable")
+      setUrgency(block.urgency || "thinking")
       setUrl(block.url || "")
       setTag(block.tag || "")
     }
@@ -85,9 +85,9 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[580px] max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <DialogContent className="sm:max-w-[760px] lg:max-w-[860px] max-h-[86vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
-          <DialogTitle className="text-xl font-light">{isGuide ? (t("dialog.blockDetail.title") === "Block Details" ? "Guide" : "사용 설명서") : t("dialog.blockDetail.title")}</DialogTitle>
+          <DialogTitle className="text-2xl font-light">{isGuide ? (t("dialog.blockDetail.title") === "Block Details" ? "Guide" : "사용 설명서") : t("dialog.blockDetail.title")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5 pt-4">
@@ -147,7 +147,7 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="min-h-[80px] resize-none"
+                  className="min-h-[120px] resize-none text-base leading-relaxed"
                 />
               </div>
 
@@ -208,7 +208,7 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
                   value={detailedNotes}
                   onChange={(e) => setDetailedNotes(e.target.value)}
                   placeholder={t("label.notes")}
-                  className="min-h-[140px] resize-none"
+                  className="min-h-[220px] resize-none text-base leading-relaxed"
                 />
               </div>
 

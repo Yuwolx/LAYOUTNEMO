@@ -4,37 +4,39 @@ import type React from "react"
 import type { JSX } from "react"
 import { useRef, useState, useEffect } from "react"
 import { WorkBlockCard } from "@/components/work-block-card"
-import type { WorkBlock, Zone } from "@/types"
+import type { CanvasViewport, WorkBlock, Zone } from "@/types"
 
 interface CanvasProps {
   blocks: WorkBlock[]
   zones: Zone[]
   selectedZone: string | null
   showRelationships: boolean
-  showCompletedBlocks: boolean
   onUpdateBlock: (id: string, updates: Partial<WorkBlock>, skipHistory?: boolean) => void
   onBatchUpdateBlocks: (updates: Array<{ id: string; updates: Partial<WorkBlock> }>) => void
   onCopyBlock: (sourceBlockId: string) => void
   onArchiveBlock: (id: string) => void
   isDarkMode: boolean
   previewBlock?: Partial<WorkBlock> | null // Add preview block prop
+  onViewportChange?: (viewport: CanvasViewport) => void
 }
 
 // 독 아이콘 drop 감지 여유 (픽셀). 아이콘 bounds 주변 이 값만큼 확장해서 hit test.
 const ARCHIVE_DROP_PADDING = 40
+// 브라우저 Cmd/Ctrl - 한 단계와 비슷한 초기 캔버스 배율.
+const DEFAULT_CANVAS_SCALE = 0.9
 
 export function Canvas({
   blocks,
   zones,
   selectedZone,
   showRelationships,
-  showCompletedBlocks,
   onUpdateBlock,
   onBatchUpdateBlocks,
   onCopyBlock,
   onArchiveBlock,
   isDarkMode,
   previewBlock, // Receive preview block
+  onViewportChange,
 }: CanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -49,6 +51,25 @@ export function Canvas({
   const [isSpacePressed, setIsSpacePressed] = useState(false)
   const [isPanning, setIsPanning] = useState(false)
   const panStartRef = useRef<{ mouseX: number; mouseY: number; panX: number; panY: number } | null>(null)
+
+  useEffect(() => {
+    if (!onViewportChange) return
+
+    const reportViewport = () => {
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (!rect) return
+      onViewportChange({
+        x: -pan.x / DEFAULT_CANVAS_SCALE,
+        y: -pan.y / DEFAULT_CANVAS_SCALE,
+        width: rect.width / DEFAULT_CANVAS_SCALE,
+        height: rect.height / DEFAULT_CANVAS_SCALE,
+      })
+    }
+
+    reportViewport()
+    window.addEventListener("resize", reportViewport)
+    return () => window.removeEventListener("resize", reportViewport)
+  }, [onViewportChange, pan.x, pan.y])
 
   useEffect(() => {
     const isEditable = (target: EventTarget | null) => {
@@ -147,11 +168,11 @@ export function Canvas({
     }
 
     setDraggingId(blockId)
-    // 블럭은 transform 된 wrapper 안에 그려지므로 화면상 위치는 block.x + pan.x.
-    // offset 을 화면좌표 기준으로 잡고, move 시점에 다시 pan 을 빼서 world 좌표로 환원.
+    // 블럭은 transform 된 wrapper 안에 그려지므로 화면상 위치는 block.x * scale + pan.x.
+    // offset 을 화면좌표 기준으로 잡고, move 시점에 다시 pan/scale 을 빼서 world 좌표로 환원.
     setOffset({
-      x: e.clientX - (block.x + pan.x),
-      y: e.clientY - (block.y + pan.y),
+      x: e.clientX - (block.x * DEFAULT_CANVAS_SCALE + pan.x),
+      y: e.clientY - (block.y * DEFAULT_CANVAS_SCALE + pan.y),
     })
     setDragStartPos({ x: block.x, y: block.y })
   }
@@ -159,8 +180,8 @@ export function Canvas({
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (draggingId) {
-        const newX = e.clientX - offset.x - pan.x
-        const newY = e.clientY - offset.y - pan.y
+        const newX = (e.clientX - offset.x - pan.x) / DEFAULT_CANVAS_SCALE
+        const newY = (e.clientY - offset.y - pan.y) / DEFAULT_CANVAS_SCALE
 
         onUpdateBlock(
           draggingId,
@@ -188,12 +209,12 @@ export function Canvas({
         const dockEl = typeof document !== "undefined" ? document.querySelector("[data-archive-dock]") : null
         const dockRect = dockEl?.getBoundingClientRect()
 
-        // 블럭은 pan 만큼 transform 된 wrapper 안에 있으니 화면좌표 계산에 pan 보정.
+        // 블럭은 pan/scale transform 된 wrapper 안에 있으니 화면좌표 계산에 둘 다 보정.
         const blockClient = {
-          left: canvasRect.left + block.x + pan.x,
-          right: canvasRect.left + block.x + block.width + pan.x,
-          top: canvasRect.top + block.y + pan.y,
-          bottom: canvasRect.top + block.y + block.height + pan.y,
+          left: canvasRect.left + block.x * DEFAULT_CANVAS_SCALE + pan.x,
+          right: canvasRect.left + (block.x + block.width) * DEFAULT_CANVAS_SCALE + pan.x,
+          top: canvasRect.top + block.y * DEFAULT_CANVAS_SCALE + pan.y,
+          bottom: canvasRect.top + (block.y + block.height) * DEFAULT_CANVAS_SCALE + pan.y,
         }
 
         const droppedOnDock = Boolean(
@@ -429,8 +450,6 @@ export function Canvas({
   }
 
   const activeBlocks = blocks.filter((b) => !b.isCompleted)
-  const completedBlocks = blocks.filter((b) => b.isCompleted)
-
   const zonesArray = zones.map((z) => ({ id: z.id, label: z.label }))
 
   return (
@@ -445,7 +464,7 @@ export function Canvas({
           ? "radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px)"
           : "radial-gradient(circle, rgba(0,0,0,0.015) 1px, transparent 1px)",
         // pan 만큼 배경 도트도 함께 흘러야 자연스럽다.
-        backgroundSize: "48px 48px",
+        backgroundSize: `${48 * DEFAULT_CANVAS_SCALE}px ${48 * DEFAULT_CANVAS_SCALE}px`,
         backgroundPosition: `${pan.x}px ${pan.y}px`,
         cursor: isPanning ? "grabbing" : isSpacePressed ? "grab" : isCopyMode ? "copy" : "default",
       }}
@@ -453,7 +472,8 @@ export function Canvas({
       <div
         className="absolute inset-0"
         style={{
-          transform: `translate3d(${pan.x}px, ${pan.y}px, 0)`,
+          transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${DEFAULT_CANVAS_SCALE})`,
+          transformOrigin: "0 0",
           // 팬 중에는 transition 없이 즉각 반응. 손 떼면 OS 가 한 프레임 보간하도록.
           willChange: isPanning ? "transform" : "auto",
         }}
@@ -540,25 +560,6 @@ export function Canvas({
         )}
       </div>
 
-      {showCompletedBlocks && (
-        <div className="relative" style={{ zIndex: 5 }}>
-          {completedBlocks.map((block) => (
-            <WorkBlockCard
-              key={block.id}
-              block={block}
-              isDragging={draggingId === block.id}
-              visibility="normal"
-              onMouseDown={(e) => handleMouseDown(e, block.id)}
-              onUpdate={(updates, skipHistory) => onUpdateBlock(block.id, updates, skipHistory)}
-              onArchive={() => onArchiveBlock(block.id)}
-              zones={zonesArray}
-              isDarkMode={isDarkMode}
-              isCopyMode={isCopyMode}
-            isTossingBack={tossingBackId === block.id}
-            />
-          ))}
-        </div>
-      )}
       </div>
     </div>
   )

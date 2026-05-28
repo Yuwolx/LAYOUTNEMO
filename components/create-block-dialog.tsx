@@ -6,7 +6,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { WorkBlock, Zone, Urgency } from "@/types"
+import type { CanvasViewport, WorkBlock, Zone, Urgency } from "@/types"
 import { createBlockWithAI, mockCreateBlockOutput, AIError } from "@/lib/ai/aiClient"
 import { toast } from "sonner"
 import { URGENCY_KEYS } from "@/lib/constants/urgency"
@@ -20,6 +20,7 @@ interface CreateBlockDialogProps {
   zones: Zone[]
   isAIEnabled: boolean
   existingBlocks: WorkBlock[]
+  visibleCanvasBounds?: CanvasViewport | null
   onShowPreview?: (block: Partial<WorkBlock> | null) => void // 미리보기 블록 전달
 }
 
@@ -35,6 +36,7 @@ export function CreateBlockDialog({
   zones,
   isAIEnabled,
   existingBlocks,
+  visibleCanvasBounds,
   onShowPreview,
 }: CreateBlockDialogProps) {
   const { language } = useLanguage()
@@ -45,7 +47,7 @@ export function CreateBlockDialog({
   const [summary, setSummary] = useState("")
   const [selectedZone, setSelectedZone] = useState<string>("")
   const [dueDate, setDueDate] = useState<string>("")
-  const [urgency, setUrgency] = useState<Urgency>("stable")
+  const [urgency, setUrgency] = useState<Urgency>("thinking")
   const [aiZoneReason, setAiZoneReason] = useState("")
   const [suggestedPosition, setSuggestedPosition] = useState({ x: 0, y: 0 })
   const [isLoading, setIsLoading] = useState(false)
@@ -185,7 +187,7 @@ export function CreateBlockDialog({
       onShowPreview(null)
     }
 
-    const position = manual ? { x: 300 + Math.random() * 400, y: 200 + Math.random() * 300 } : suggestedPosition
+    const position = manual ? findManualPosition() : suggestedPosition
 
     const newBlock: WorkBlock = {
       id: Date.now().toString(),
@@ -240,7 +242,7 @@ export function CreateBlockDialog({
     setSummary("")
     setSelectedZone("")
     setDueDate("")
-    setUrgency("stable")
+    setUrgency("thinking")
     setAiZoneReason("")
     setIsLoading(false)
     setTag("")
@@ -255,12 +257,26 @@ export function CreateBlockDialog({
     const SPACING = 40
     const MIN_X = 100
     const MIN_Y = 100
+    const VIEWPORT_PADDING = 48
 
-    // 활성 블록만 필터링 (삭제, 완료, 가이드 제외)
-    const activeBlocks = existingBlocks.filter((b) => !b.isDeleted && !b.isCompleted && !b.isGuide)
+    const fallbackBounds: CanvasViewport = {
+      x: MIN_X,
+      y: MIN_Y,
+      width: typeof window === "undefined" ? 1200 : window.innerWidth,
+      height: typeof window === "undefined" ? 800 : Math.max(window.innerHeight - 120, 480),
+    }
+
+    const viewport = visibleCanvasBounds ?? fallbackBounds
+    const minX = Math.round(viewport.x + VIEWPORT_PADDING)
+    const minY = Math.round(viewport.y + VIEWPORT_PADDING)
+    const maxX = Math.max(minX, Math.round(viewport.x + viewport.width - BLOCK_WIDTH - VIEWPORT_PADDING))
+    const maxY = Math.max(minY, Math.round(viewport.y + viewport.height - BLOCK_HEIGHT - VIEWPORT_PADDING))
+
+    // 배치 충돌은 가이드/기본 블럭까지 포함한다. 삭제/갈무리 블럭만 제외.
+    const layoutBlocks = existingBlocks.filter((b) => !b.isDeleted && !b.isCompleted)
 
     // 겹침 체크 함수
-    const isOverlapping = (x: number, y: number, checkBlocks = activeBlocks): boolean => {
+    const isOverlapping = (x: number, y: number, checkBlocks = layoutBlocks): boolean => {
       return checkBlocks.some((block) => {
         const horizontalOverlap = x < block.x + block.width + SPACING && x + BLOCK_WIDTH + SPACING > block.x
         const verticalOverlap = y < block.y + block.height + SPACING && y + BLOCK_HEIGHT + SPACING > block.y
@@ -268,11 +284,40 @@ export function CreateBlockDialog({
       })
     }
 
-    // 1. 같은 영역의 블록들 찾기
-    const sameZoneBlocks = activeBlocks.filter((b) => b.zone === selectedZone)
+    const isInsideViewport = (x: number, y: number): boolean => x >= minX && x <= maxX && y >= minY && y <= maxY
+    const blockIntersectsViewport = (block: WorkBlock): boolean =>
+      block.x + block.width >= minX &&
+      block.x <= maxX + BLOCK_WIDTH &&
+      block.y + block.height >= minY &&
+      block.y <= maxY + BLOCK_HEIGHT
+
+    const pickFirstOpen = (candidates: Array<{ x: number; y: number }>) => {
+      for (const candidate of candidates) {
+        const x = Math.round(candidate.x)
+        const y = Math.round(candidate.y)
+        if (isInsideViewport(x, y) && !isOverlapping(x, y)) {
+          return { x, y }
+        }
+      }
+      return null
+    }
+
+    const findOpenInViewport = () => {
+      const stepX = BLOCK_WIDTH + SPACING
+      const stepY = BLOCK_HEIGHT + SPACING
+      for (let y = minY; y <= maxY; y += stepY) {
+        for (let x = minX; x <= maxX; x += stepX) {
+          if (!isOverlapping(x, y)) return { x, y }
+        }
+      }
+      return { x: minX, y: minY }
+    }
+
+    // 1. 현재 보고 있는 화면 안의 같은 결 블럭 근처를 우선한다.
+    const sameZoneBlocks = layoutBlocks.filter((b) => b.zone === selectedZone && blockIntersectsViewport(b))
 
     if (sameZoneBlocks.length > 0) {
-      // 같은 영역의 블록들 중 가장 최근 블록 (가장 오른쪽 또는 아래쪽)
+      // 같은 결의 블럭들 중 현재 시선에서 가장 오른쪽/아래쪽에 가까운 블럭.
       const latestBlock = sameZoneBlocks.reduce((latest, block) => {
         const latestScore = latest.x + latest.y
         const blockScore = block.x + block.y
@@ -291,47 +336,57 @@ export function CreateBlockDialog({
         { x: latestBlock.x - BLOCK_WIDTH - SPACING, y: latestBlock.y + latestBlock.height + SPACING },
       ]
 
-      for (const candidate of candidates) {
-        if (candidate.x >= MIN_X && candidate.y >= MIN_Y && !isOverlapping(candidate.x, candidate.y)) {
-          return candidate
-        }
-      }
+      const candidate = pickFirstOpen(candidates)
+      if (candidate) return candidate
 
-      // 모든 후보가 실패하면 같은 영역 블록들 아래쪽 찾기
+      // 모든 후보가 실패하면 같은 결 블럭들 아래쪽을 먼저 시도하되, 화면 밖으로 나가면 그리드 탐색.
       const lowestSameZone = sameZoneBlocks.reduce((lowest, block) => {
         const lowestBottom = lowest.y + lowest.height
         const blockBottom = block.y + block.height
         return blockBottom > lowestBottom ? block : lowest
       })
 
-      return {
+      const below = {
         x: lowestSameZone.x,
         y: lowestSameZone.y + lowestSameZone.height + SPACING * 2,
       }
+      const openBelow = pickFirstOpen([below])
+      if (openBelow) return openBelow
     }
 
-    // 2. 같은 영역이 없으면 빈 공간 찾기 (모든 블록 아래쪽)
-    if (activeBlocks.length === 0) {
-      return { x: MIN_X + 100, y: MIN_Y + 100 }
+    // 2. 같은 결이 화면 안에 없으면, 현재 보이는 화면 안에서 빈 칸을 찾는다.
+    return findOpenInViewport()
+  }
+
+  const findManualPosition = (): { x: number; y: number } => {
+    const BLOCK_WIDTH = 280
+    const BLOCK_HEIGHT = 96
+    const VIEWPORT_PADDING = 48
+    const viewport = visibleCanvasBounds ?? {
+      x: 100,
+      y: 100,
+      width: typeof window === "undefined" ? 1200 : window.innerWidth,
+      height: typeof window === "undefined" ? 800 : Math.max(window.innerHeight - 120, 480),
+    }
+    const minX = Math.round(viewport.x + VIEWPORT_PADDING)
+    const minY = Math.round(viewport.y + VIEWPORT_PADDING)
+    const maxX = Math.max(minX, Math.round(viewport.x + viewport.width - BLOCK_WIDTH - VIEWPORT_PADDING))
+    const maxY = Math.max(minY, Math.round(viewport.y + viewport.height - BLOCK_HEIGHT - VIEWPORT_PADDING))
+    const layoutBlocks = existingBlocks.filter((b) => !b.isDeleted && !b.isCompleted)
+    const overlaps = (x: number, y: number) =>
+      layoutBlocks.some((block) => {
+        const horizontalOverlap = x < block.x + block.width + 24 && x + BLOCK_WIDTH + 24 > block.x
+        const verticalOverlap = y < block.y + block.height + 24 && y + BLOCK_HEIGHT + 24 > block.y
+        return horizontalOverlap && verticalOverlap
+      })
+
+    for (let i = 0; i < 16; i += 1) {
+      const x = Math.round(minX + Math.random() * Math.max(0, maxX - minX))
+      const y = Math.round(minY + Math.random() * Math.max(0, maxY - minY))
+      if (!overlaps(x, y)) return { x, y }
     }
 
-    // 가장 아래쪽 블록 찾기
-    const lowestBlock = activeBlocks.reduce((lowest, block) => {
-      const lowestBottom = lowest.y + lowest.height
-      const blockBottom = block.y + block.height
-      return blockBottom > lowestBottom ? block : lowest
-    })
-
-    // 가장 왼쪽 블록 찾기 (X 좌표 참고용)
-    const leftmostBlock = activeBlocks.reduce((leftmost, block) => {
-      return block.x < leftmost.x ? block : leftmost
-    })
-
-    // 가장 아래쪽 블록 기준으로 아래에 배치
-    const candidateX = Math.max(leftmostBlock.x, MIN_X + 100)
-    const candidateY = lowestBlock.y + lowestBlock.height + SPACING * 2
-
-    return { x: candidateX, y: candidateY }
+    return findSmartPosition()
   }
 
   return (

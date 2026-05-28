@@ -11,7 +11,7 @@ import { CanvasSelectorDialog } from "@/components/canvas-selector-dialog"
 import { AboutDialog } from "@/components/about-dialog"
 import { ArchiveDock } from "@/components/archive-dock"
 import { ArchiveDialog } from "@/components/archive-dialog"
-import type { WorkBlock, Zone, Canvas as CanvasType } from "@/types"
+import type { CanvasViewport, WorkBlock, Zone, Canvas as CanvasType } from "@/types"
 import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedCanvasName } from "@/lib/i18n/seed"
 
@@ -62,10 +62,10 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
 
 7) 시급도
 블럭의 그림자 색으로 머릿속 무게를 표현합니다. 크기는 바뀌지 않습니다.
-• 안정 (회색): 천천히 진행
-• 생각 중 (파랑): 아직 구체화되지 않음
-• 머물러 있음 (노랑): 미루고 있는 일
-• 시급 (주황): 즉시 처리 필요
+• 미정 (회색): 일단 적어뒀지만 할지 말지 아직 모르는 일
+• 여유 (파랑): 할 일은 맞지만 급하지 않은 일
+• 진행 (초록): 꾸준히 진행하거나 계속 관리 중인 일
+• 시급 (빨강): 바로 처리해야 하는 일
 
 8) 캔버스 이동
 스페이스바를 누른 채 마우스로 드래그하면 캔버스 전체가 따라옵니다 (피그마 방식).
@@ -266,7 +266,6 @@ export default function Page() {
   const [isClient, setIsClient] = useState(false)
   const [selectedZone, setSelectedZone] = useState<string | null>(null)
   const [showRelationships, setShowRelationships] = useState(true)
-  const [showCompletedBlocks, setShowCompletedBlocks] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isReflectionDialogOpen, setIsReflectionDialogOpen] = useState(false)
   const [isAreaManagementOpen, setIsAreaManagementOpen] = useState(false)
@@ -294,6 +293,7 @@ export default function Page() {
     }
   }, [])
   const [previewBlock, setPreviewBlock] = useState<Partial<WorkBlock> | null>(null)
+  const [canvasViewport, setCanvasViewport] = useState<CanvasViewport | null>(null)
 
   // 현재 캔버스의 blocks 스냅샷만 기록 (v1.1 최적화).
   // 과거: CanvasType[][] 로 모든 캔버스 전체를 스냅샷 → 메모리 부담.
@@ -327,6 +327,21 @@ export default function Page() {
       applySnapshot(history[newIndex])
     }
   }, [historyIndex, history, applySnapshot])
+
+  const handleCanvasViewportChange = useCallback((next: CanvasViewport) => {
+    setCanvasViewport((prev) => {
+      if (
+        prev &&
+        prev.x === next.x &&
+        prev.y === next.y &&
+        prev.width === next.width &&
+        prev.height === next.height
+      ) {
+        return prev
+      }
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     setIsClient(true)
@@ -636,8 +651,6 @@ export default function Page() {
         onReorderZones={handleReorderZones}
         showRelationships={showRelationships}
         onToggleRelationships={() => setShowRelationships(!showRelationships)}
-        showCompletedBlocks={showCompletedBlocks}
-        onToggleCompletedBlocks={() => setShowCompletedBlocks(!showCompletedBlocks)}
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
         trashCount={deletedBlocks.length}
@@ -660,13 +673,13 @@ export default function Page() {
         zones={zones}
         selectedZone={selectedZone}
         showRelationships={showRelationships}
-        showCompletedBlocks={showCompletedBlocks}
         onUpdateBlock={handleUpdateBlock}
         onBatchUpdateBlocks={handleBatchUpdateBlocks}
         onCopyBlock={handleCopyBlock}
         onArchiveBlock={handleArchiveBlock}
         isDarkMode={isDarkMode}
         previewBlock={previewBlock} // 미리보기 블록 전달
+        onViewportChange={handleCanvasViewportChange}
       />
 
       <CreateBlockDialog
@@ -676,6 +689,7 @@ export default function Page() {
         zones={zones}
         isAIEnabled={isAIEnabled}
         existingBlocks={activeBlocks}
+        visibleCanvasBounds={canvasViewport}
         onShowPreview={setPreviewBlock} // 미리보기 핸들러 전달
       />
 

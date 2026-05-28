@@ -151,7 +151,7 @@ export function WorkBlockCard({
           transition: isTossingBack
             ? "left 420ms cubic-bezier(0.34, 1.35, 0.64, 1), top 420ms cubic-bezier(0.34, 1.35, 0.64, 1)"
             : "none",
-          zIndex: isDragging ? 50 : visibility === "emphasized" ? 20 : isCompleted ? 5 : 10,
+          zIndex: isDragging ? 50 : visibility === "emphasized" ? 30 : isCompleted ? 5 : 10,
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -161,9 +161,9 @@ export function WorkBlockCard({
           className={`
           relative w-full h-full bg-card text-card-foreground border-border/60 rounded-2xl
           hover:shadow-xl hover:border-border
-          ${isDarkMode ? urgencyShadowsDark[block.urgency || "stable"] : urgencyShadows[block.urgency || "stable"]}
+          ${isDarkMode ? urgencyShadowsDark[block.urgency || "thinking"] : urgencyShadows[block.urgency || "thinking"]}
           ${isCompleted ? "opacity-80" : "opacity-100"}
-          ${visibility === "emphasized" ? "scale-[1.12] shadow-2xl" : "scale-100"}
+          ${visibility === "emphasized" ? "scale-[1.22] shadow-2xl" : "scale-100"}
           ${visibility === "emphasized" ? "brightness-105" : "brightness-100"}
           ${isDragging ? "shadow-2xl scale-105 border-border cursor-grabbing" : ""}
           ${isCompleted ? "shadow-sm hover:opacity-60 p-3 rounded-lg" : "p-3"}

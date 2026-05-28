@@ -72,10 +72,10 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
 
 7) 시급도
 블럭의 그림자 색으로 머릿속 무게를 표현합니다. 크기는 바뀌지 않습니다.
-• 안정 (회색): 천천히 진행
-• 생각 중 (파랑): 아직 구체화되지 않음
-• 머물러 있음 (노랑): 미루고 있는 일
-• 시급 (주황): 즉시 처리 필요
+• 미정 (회색): 일단 적어뒀지만 할지 말지 아직 모르는 일
+• 여유 (파랑): 할 일은 맞지만 급하지 않은 일
+• 진행 (초록): 꾸준히 진행하거나 계속 관리 중인 일
+• 시급 (빨강): 바로 처리해야 하는 일
 
 8) 캔버스 이동
 스페이스바를 누른 채 마우스로 드래그하면 캔버스 전체가 따라옵니다 (피그마 방식).
@@ -122,10 +122,10 @@ Click a line to disconnect.
 
 7) Urgency
 The shadow color reflects mental weight. Size doesn't change.
-• Stable (gray): take your time
-• Thinking (blue): still taking shape
-• Lingering (yellow): keep pushing it back
-• Urgent (orange): needs immediate action
+• Undecided (gray): captured for now, not sure if you'll do it
+• Flexible (blue): real work, but not urgent
+• In progress (green): ongoing or steadily maintained
+• Urgent (red): needs immediate action
 
 8) Canvas Pan
 Hold Spacebar and drag to pan the entire canvas (Figma-style).
