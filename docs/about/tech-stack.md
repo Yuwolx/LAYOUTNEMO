@@ -138,6 +138,8 @@ interface CanvasViewport {
 }
 ```
 
+시급도 내부 키는 기존 저장 데이터와의 호환을 위해 `stable / thinking / lingering / urgent` 를 유지합니다. 표시 라벨은 `thinking=미정`, `stable=여유`, `lingering=진행`, `urgent=시급` 순서로 정리했습니다.
+
 ---
 
 ## 🔐 데이터 안전
