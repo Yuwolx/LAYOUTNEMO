@@ -13,6 +13,7 @@ nav_order: 4
 - **Next.js 16** (App Router)
 - **React 19.2**
 - **TypeScript 5**
+- **ESLint 9 + eslint-config-next** — Next core-web-vitals 기준 lint
 
 ### Styling
 - **Tailwind CSS v4**
@@ -99,7 +100,7 @@ nav_order: 4
   → Canvas 렌더링
 ```
 
-`develop` 기준으로 스마트 배치는 삭제/갈무리 블럭만 제외하고, 가이드 블럭까지 포함한 화면 위 모든 블럭을 충돌 대상으로 봅니다. 캔버스 기본 배율 90% 를 적용하면서 viewport, drag, drop hit-test 도 같은 배율 기준으로 보정 중입니다.
+`master` 기준으로 스마트 배치는 삭제/갈무리 블럭만 제외하고, 가이드 블럭까지 포함한 화면 위 모든 블럭을 충돌 대상으로 봅니다. 캔버스 기본 배율 90% 를 적용하면서 viewport, drag, drop hit-test 도 같은 배율 기준으로 보정합니다.
 
 ### 저장 구조
 
@@ -109,6 +110,8 @@ nav_order: 4
 - `layout_language` — UI 언어
 - **저장 타이밍**: 캔버스/블럭/결 상태 변경 시 즉시 localStorage 반영
 - **히스토리**: 블럭 변경 기준 최대 50개까지 Undo 가능
+- **마이그레이션**: 오래된 결 id, 구 갈무리 상태, 저장된 가이드 블럭 문구를 로드 시 보정
+- **드래그 히스토리**: 드래그 중에는 화면만 갱신하고 mouseup 시 최종 좌표 하나만 Undo 스택에 기록
 
 ### 데이터 타입 (핵심만)
 
