@@ -2,10 +2,10 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { RotateCcw, Trash2, Package } from "lucide-react"
+import { RotateCcw, Package, Trash2 } from "lucide-react"
 import type { WorkBlock, Zone } from "@/types"
 import { useLanguage, useT } from "@/lib/i18n/context"
-import { translateSeedBlockField, translateSeedZoneLabel } from "@/lib/i18n/seed"
+import { translateSeedBlockField } from "@/lib/i18n/seed"
 import { URGENCY_META } from "@/lib/constants/urgency"
 
 interface ArchiveDialogProps {
@@ -19,7 +19,7 @@ interface ArchiveDialogProps {
 
 /**
  * 갈무리함 다이얼로그. 조약돌(작은 정사각형) 타일 그리드로 표시.
- * - 타일 클릭: "꺼내기" / "삭제" 액션 풀다운
+ * - 타일 hover: "꺼내기" / "삭제" 액션
  * - 결 색상을 타일 상단 띠로 얇게 표시해 출처 식별
  * - 시급도는 좌상단 작은 점으로만 표현 (공간 절약)
  */
@@ -70,9 +70,6 @@ export function ArchiveDialog({
               {archivedBlocks.map((block) => {
                 const zone = zones.find((z) => z.id === block.zone)
                 const title = translateSeedBlockField(block, "title", language) ?? block.title
-                const description =
-                  translateSeedBlockField(block, "description", language) ?? block.description
-                const zoneLabel = zone ? translateSeedZoneLabel(zone, language) : ""
                 const dotClass = urgencyDotColor[block.urgency || "thinking"]
                 return (
                   <div
@@ -90,22 +87,10 @@ export function ArchiveDialog({
                     <div className={`absolute top-2 right-2 w-2 h-2 rounded-full ${dotClass}`} />
 
                     {/* 타일 본문 */}
-                    <div className="p-2.5 pt-3 h-full flex flex-col justify-between">
-                      <div className="flex-1 min-h-0">
-                        <h4 className="text-xs font-medium leading-snug line-clamp-3 text-card-foreground">
-                          {title}
-                        </h4>
-                        {description && (
-                          <p className="text-[10px] text-muted-foreground/80 mt-1 line-clamp-2 leading-tight">
-                            {description}
-                          </p>
-                        )}
-                      </div>
-                      {zoneLabel && (
-                        <div className="text-[9px] text-muted-foreground/70 truncate mt-1">
-                          {zoneLabel}
-                        </div>
-                      )}
+                    <div className="p-2.5 pt-4 h-full flex items-start">
+                      <h4 className="text-xs font-medium leading-snug line-clamp-4 text-card-foreground pr-3">
+                        {title}
+                      </h4>
                     </div>
 
                     {/* hover 액션 */}

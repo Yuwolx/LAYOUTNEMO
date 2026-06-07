@@ -1,7 +1,7 @@
 "use client"
 
 import { useLayoutEffect, useRef, useState } from "react"
-import { Eye, Moon, Sun, Trash2, Undo2, Wand2, RotateCcw, Info } from "lucide-react"
+import { Eye, Moon, Sun, Undo2, Wand2, RotateCcw, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Zone } from "@/types"
 import { useLanguage } from "@/lib/i18n/context"
@@ -18,8 +18,6 @@ interface HeaderProps {
   onToggleRelationships: () => void
   isDarkMode: boolean
   onToggleDarkMode: () => void
-  trashCount: number
-  onOpenTrash: () => void
   onUndo: () => void
   onRedo: () => void
   canUndo: boolean
@@ -45,8 +43,6 @@ export function Header({
   onToggleRelationships,
   isDarkMode,
   onToggleDarkMode,
-  trashCount,
-  onOpenTrash,
   onUndo,
   onRedo,
   canUndo,
@@ -297,21 +293,6 @@ export function Header({
 
             <Button
               variant="outline"
-              onClick={onOpenTrash}
-              className={`relative ${isDarkMode ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700" : "bg-background hover:bg-accent"}`}
-            >
-              <Trash2 className="w-4 h-4" />
-              {trashCount > 0 && (
-                <span
-                  className={`absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] flex items-center justify-center ${isDarkMode ? "bg-zinc-100 text-zinc-900" : "bg-foreground text-background"}`}
-                >
-                  {trashCount}
-                </span>
-              )}
-            </Button>
-
-            <Button
-              variant="outline"
               onClick={onToggleDarkMode}
               className={
                 isDarkMode
@@ -334,7 +315,15 @@ export function Header({
       </div>
 
       <div
-        className={`border-t border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-600 border-b border-b-zinc-900" : "border-zinc-300 border-b border-b-stone-50"}`}
+        className={`border-t border-b transition-colors duration-700 ${
+          isDarkMode
+            ? selectedZone
+              ? "bg-zinc-800 border-zinc-700 border-b-zinc-800"
+              : "bg-zinc-900 border-zinc-700 border-b-zinc-900"
+            : selectedZone
+              ? "bg-[#f5f5f4] border-stone-300 border-b-[#f5f5f4]"
+              : "bg-[#fafaf9] border-stone-300 border-b-[#fafaf9]"
+        }`}
       >
         <div className="max-w-[2000px] mx-auto px-8 py-2 flex items-center gap-2">
           {/* 결 탭 + 갭 인디케이터. 시각 포인트는 결들 사이 갭. */}

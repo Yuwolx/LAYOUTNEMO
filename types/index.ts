@@ -28,8 +28,6 @@ export interface WorkBlock {
   aiEnabled?: boolean
   /** 외부 링크 URL — 있으면 카드 하단에 링크 아이콘 노출, 클릭 시 새 탭으로 이동 */
   url?: string
-  /** 태그 — 있으면 카드 제목 앞에 [태그] 형태로 노출 (예: [LAYOUT] 디자인 작업) */
-  tag?: string
 }
 
 export interface Zone {

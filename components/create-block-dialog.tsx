@@ -51,7 +51,6 @@ export function CreateBlockDialog({
   const [aiZoneReason, setAiZoneReason] = useState("")
   const [suggestedPosition, setSuggestedPosition] = useState({ x: 0, y: 0 })
   const [isLoading, setIsLoading] = useState(false)
-  const [tag, setTag] = useState("")
   const [url, setUrl] = useState("")
   // AI 응답 후 사용자 무응답 시 자동 반영. null 이면 비활성.
   const [autoConfirmAt, setAutoConfirmAt] = useState<number | null>(null)
@@ -91,7 +90,6 @@ export function CreateBlockDialog({
         setDueDate(aiOutput.suggestedDueDate)
       }
       if (aiOutput.suggestedUrl) setUrl(aiOutput.suggestedUrl)
-      if (aiOutput.suggestedTag) setTag(aiOutput.suggestedTag)
       setStep("preview")
       setAutoConfirmAt(Date.now() + AUTO_CONFIRM_MS)
     } catch (error) {
@@ -126,7 +124,6 @@ export function CreateBlockDialog({
       setUrgency(fallback.suggestedUrgency)
       if (fallback.suggestedDueDate) setDueDate(fallback.suggestedDueDate)
       if (fallback.suggestedUrl) setUrl(fallback.suggestedUrl)
-      if (fallback.suggestedTag) setTag(fallback.suggestedTag)
       setStep("preview")
       setAutoConfirmAt(Date.now() + AUTO_CONFIRM_MS)
     } finally {
@@ -149,7 +146,6 @@ export function CreateBlockDialog({
       zone: selectedZone,
       urgency,
       dueDate: dueDate || undefined,
-      tag: tag.trim() || undefined,
       url: url.trim() || undefined,
     }
     onCreateBlock(newBlock)
@@ -200,7 +196,6 @@ export function CreateBlockDialog({
       zone: selectedZone,
       urgency,
       dueDate: dueDate || undefined,
-      tag: tag.trim() || undefined,
       url: url.trim() || undefined,
     }
 
@@ -245,7 +240,6 @@ export function CreateBlockDialog({
     setUrgency("thinking")
     setAiZoneReason("")
     setIsLoading(false)
-    setTag("")
     setUrl("")
     setAutoConfirmAt(null) // 다이얼로그 닫힐 때 카운트다운 정리
     onOpenChange(false)
@@ -503,20 +497,6 @@ export function CreateBlockDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="manual-tag" className="text-sm font-normal">
-                      {t("label.tag")} ({t("label.optional")})
-                    </Label>
-                    <Input
-                      id="manual-tag"
-                      value={tag}
-                      onChange={(e) => setTag(e.target.value)}
-                      placeholder={t("placeholder.tag")}
-                      maxLength={20}
-                      className="font-light"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
                     <Label htmlFor="manual-url" className="text-sm font-normal">
                       {t("label.url")} ({t("label.optional")})
                     </Label>
@@ -649,20 +629,6 @@ export function CreateBlockDialog({
                     </Button>
                   ))}
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="preview-tag" className="text-sm font-normal">
-                  {t("label.tag")} ({t("label.optional")})
-                </Label>
-                <Input
-                  id="preview-tag"
-                  value={tag}
-                  onChange={(e) => setTag(e.target.value)}
-                  placeholder={t("placeholder.tag")}
-                  maxLength={20}
-                  className="font-light"
-                />
               </div>
 
               <div className="space-y-2">

@@ -14,16 +14,24 @@ interface CanvasProps {
   onUpdateBlock: (id: string, updates: Partial<WorkBlock>, skipHistory?: boolean) => void
   onBatchUpdateBlocks: (updates: Array<{ id: string; updates: Partial<WorkBlock> }>) => void
   onCopyBlock: (sourceBlockId: string) => void
-  onArchiveBlock: (id: string) => void
   isDarkMode: boolean
   previewBlock?: Partial<WorkBlock> | null // Add preview block prop
   onViewportChange?: (viewport: CanvasViewport) => void
 }
 
-// 독 아이콘 drop 감지 여유 (픽셀). 아이콘 bounds 주변 이 값만큼 확장해서 hit test.
+// 우하단 갈무리함 drop 감지 여유. 아이콘 가장자리 주변까지 자연스럽게 받아준다.
 const ARCHIVE_DROP_PADDING = 40
+const ARCHIVE_FLIGHT_MS = 150
 // 브라우저 Cmd/Ctrl - 한 단계와 비슷한 초기 캔버스 배율.
 const DEFAULT_CANVAS_SCALE = 0.9
+
+type ArchiveFlight = {
+  id: string
+  targetX: number
+  targetY: number
+  restoreX: number
+  restoreY: number
+}
 
 export function Canvas({
   blocks,
@@ -33,7 +41,6 @@ export function Canvas({
   onUpdateBlock,
   onBatchUpdateBlocks,
   onCopyBlock,
-  onArchiveBlock,
   isDarkMode,
   previewBlock, // Receive preview block
   onViewportChange,
@@ -41,7 +48,7 @@ export function Canvas({
   const canvasRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
-  // 드래그 시작 시점의 블럭 좌표. 독으로 드롭해서 갈무리될 때 이 좌표로 복원해 꺼낼 때 원래 자리로 돌려놓는다.
+  // 드래그 시작 시점의 블럭 좌표. Shift 토스/갈무리 드롭 시 원래 자리로 돌려놓는 데 쓴다.
   const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null)
   const [isCopyMode, setIsCopyMode] = useState(false)
   // Shift 토스 — 연결 + 원위치 복귀 시 해당 블럭만 일시적으로 left/top transition 켠다.
@@ -51,6 +58,16 @@ export function Canvas({
   const [isSpacePressed, setIsSpacePressed] = useState(false)
   const [isPanning, setIsPanning] = useState(false)
   const panStartRef = useRef<{ mouseX: number; mouseY: number; panX: number; panY: number } | null>(null)
+  const [archiveFlight, setArchiveFlight] = useState<ArchiveFlight | null>(null)
+  const archiveFlightTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (archiveFlightTimerRef.current !== null) {
+        window.clearTimeout(archiveFlightTimerRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!onViewportChange) return
@@ -201,7 +218,7 @@ export function Canvas({
     }
 
     const handleMouseUp = (e: MouseEvent) => {
-      if (draggingId && canvasRef.current) {
+      if (draggingId) {
         const block = blocks.find((b) => b.id === draggingId)
         if (!block) {
           setDraggingId(null)
@@ -209,41 +226,63 @@ export function Canvas({
           return
         }
 
-        const canvasRect = canvasRef.current.getBoundingClientRect()
-
-        // 독 아이콘 bounds 와 블럭 bounds 의 겹침 여부로 판별. 블럭의 어느 부분이든 닿으면 OK.
-        const dockEl = typeof document !== "undefined" ? document.querySelector("[data-archive-dock]") : null
-        const dockRect = dockEl?.getBoundingClientRect()
-
-        // 블럭은 pan/scale transform 된 wrapper 안에 있으니 화면좌표 계산에 둘 다 보정.
-        const blockClient = {
-          left: canvasRect.left + block.x * DEFAULT_CANVAS_SCALE + pan.x,
-          right: canvasRect.left + (block.x + block.width) * DEFAULT_CANVAS_SCALE + pan.x,
-          top: canvasRect.top + block.y * DEFAULT_CANVAS_SCALE + pan.y,
-          bottom: canvasRect.top + (block.y + block.height) * DEFAULT_CANVAS_SCALE + pan.y,
-        }
-
-        const droppedOnDock = Boolean(
-          dockRect &&
-            !(
-              blockClient.right < dockRect.left - ARCHIVE_DROP_PADDING ||
-              blockClient.left > dockRect.right + ARCHIVE_DROP_PADDING ||
-              blockClient.bottom < dockRect.top - ARCHIVE_DROP_PADDING ||
-              blockClient.top > dockRect.bottom + ARCHIVE_DROP_PADDING
-            ),
-        )
-
-        if (droppedOnDock && !block.isCompleted && !block.isGuide) {
-          // 갈무리 — 드래그 시작 위치로 x/y 복원해 꺼낼 때 원래 자리에서 나타나도록.
-          const restoreX = dragStartPos?.x ?? block.x
-          const restoreY = dragStartPos?.y ?? block.y
-          onUpdateBlock(draggingId, { isCompleted: true, x: restoreX, y: restoreY })
-          setDraggingId(null)
-          setDragStartPos(null)
-          return
-        }
-
         if (!block.isCompleted && !block.isGuide) {
+          const canvasRect = canvasRef.current?.getBoundingClientRect()
+          const dockEl = typeof document !== "undefined" ? document.querySelector("[data-archive-dock]") : null
+          const dockRect = dockEl?.getBoundingClientRect()
+          const blockRect = {
+            left: (canvasRect?.left ?? 0) + block.x * DEFAULT_CANVAS_SCALE + pan.x,
+            right: (canvasRect?.left ?? 0) + (block.x + block.width) * DEFAULT_CANVAS_SCALE + pan.x,
+            top: (canvasRect?.top ?? 0) + block.y * DEFAULT_CANVAS_SCALE + pan.y,
+            bottom: (canvasRect?.top ?? 0) + (block.y + block.height) * DEFAULT_CANVAS_SCALE + pan.y,
+          }
+          const droppedOnArchiveDock = Boolean(
+            dockRect &&
+              !(
+                blockRect.right < dockRect.left - ARCHIVE_DROP_PADDING ||
+                blockRect.left > dockRect.right + ARCHIVE_DROP_PADDING ||
+                blockRect.bottom < dockRect.top - ARCHIVE_DROP_PADDING ||
+                blockRect.top > dockRect.bottom + ARCHIVE_DROP_PADDING
+              ),
+          )
+
+          if (droppedOnArchiveDock) {
+            const restoreX = dragStartPos?.x ?? block.x
+            const restoreY = dragStartPos?.y ?? block.y
+            const nextFlight: ArchiveFlight = {
+              id: draggingId,
+              targetX:
+                ((dockRect?.left ?? 0) + (dockRect?.width ?? 0) / 2 - (canvasRect?.left ?? 0) - pan.x) /
+                  DEFAULT_CANVAS_SCALE -
+                block.width / 2,
+              targetY:
+                ((dockRect?.top ?? 0) + (dockRect?.height ?? 0) / 2 - (canvasRect?.top ?? 0) - pan.y) /
+                  DEFAULT_CANVAS_SCALE -
+                block.height / 2,
+              restoreX,
+              restoreY,
+            }
+
+            if (archiveFlightTimerRef.current !== null) {
+              window.clearTimeout(archiveFlightTimerRef.current)
+            }
+
+            setArchiveFlight(nextFlight)
+            setDraggingId(null)
+            setDragStartPos(null)
+
+            archiveFlightTimerRef.current = window.setTimeout(() => {
+              onUpdateBlock(nextFlight.id, {
+                isCompleted: true,
+                x: nextFlight.restoreX,
+                y: nextFlight.restoreY,
+              })
+              setArchiveFlight((current) => (current?.id === nextFlight.id ? null : current))
+              archiveFlightTimerRef.current = null
+            }, ARCHIVE_FLIGHT_MS)
+            return
+          }
+
           // 연결은 Shift 누른 채 드롭한 경우에만. 그 외 드롭은 단순 위치 이동(쌓기 가능).
           if (e.shiftKey) {
             // Shift 드롭 = 토스 — 겹친 블럭과 연결 형성 + 원위치로 부드럽게 복귀.
@@ -533,11 +572,18 @@ export function Canvas({
             visibility={getBlockVisibility(block)}
             onMouseDown={(e) => handleMouseDown(e, block.id)}
             onUpdate={(updates, skipHistory) => onUpdateBlock(block.id, updates, skipHistory)}
-            onArchive={() => onArchiveBlock(block.id)}
             zones={zonesArray}
             isDarkMode={isDarkMode}
             isCopyMode={isCopyMode}
             isTossingBack={tossingBackId === block.id}
+            archiveFlight={
+              archiveFlight?.id === block.id
+                ? {
+                    targetX: archiveFlight.targetX,
+                    targetY: archiveFlight.targetY,
+                  }
+                : null
+            }
           />
         ))}
 

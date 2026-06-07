@@ -16,7 +16,7 @@ export const DICT = {
     // Header
     "header.createBlock": "새 블럭 만들기",
     "header.reflect": "정리하기",
-    "header.addFacet": "+ 결 추가",
+    "header.addFacet": "+ 결 관리",
     "header.aiAssist": "AI 보조",
     "header.darkMode": "다크 모드 전환",
     "header.lightMode": "라이트 모드 전환",
@@ -51,9 +51,7 @@ export const DICT = {
     "label.title": "제목",
     "label.description": "설명",
     "label.notes": "상세 메모",
-    "label.tag": "태그",
     "label.url": "링크",
-    "placeholder.tag": "예: PROJECT-A",
     "label.optional": "선택",
 
     // Urgency
@@ -120,9 +118,9 @@ export const DICT = {
 
     // Archive dock & dialog
     "archive.dock.label": "갈무리함",
-    "archive.dock.hint": "여기로 드래그해 갈무리",
+    "archive.dock.hint": "갈무리함 열기",
     "archive.dialog.title": "갈무리함",
-    "archive.dialog.description": "갈무리한 블럭들입니다. 타일을 클릭하면 다시 꺼낼 수 있어요.",
+    "archive.dialog.description": "갈무리한 블럭들입니다. 필요한 블럭은 꺼내고, 더 이상 필요 없으면 삭제할 수 있어요.",
     "archive.dialog.empty": "아직 갈무리된 블럭이 없어요.",
     "archive.dialog.count": "개 보관됨",
   },
@@ -130,7 +128,7 @@ export const DICT = {
     // Header
     "header.createBlock": "Create Block",
     "header.reflect": "Reflect",
-    "header.addFacet": "+ Add Facet",
+    "header.addFacet": "+ Manage Facets",
     "header.aiAssist": "AI Assist",
     "header.darkMode": "Switch to dark mode",
     "header.lightMode": "Switch to light mode",
@@ -165,9 +163,7 @@ export const DICT = {
     "label.title": "Title",
     "label.description": "Description",
     "label.notes": "Notes",
-    "label.tag": "Tag",
     "label.url": "Link",
-    "placeholder.tag": "e.g. PROJECT-A",
     "label.optional": "optional",
 
     // Urgency
@@ -234,9 +230,9 @@ export const DICT = {
 
     // Archive dock & dialog
     "archive.dock.label": "Archive",
-    "archive.dock.hint": "Drop here to archive",
+    "archive.dock.hint": "Open archive",
     "archive.dialog.title": "Archive",
-    "archive.dialog.description": "Archived blocks. Click a tile to bring it back.",
+    "archive.dialog.description": "Archived blocks. Restore what you need, or delete what you no longer need.",
     "archive.dialog.empty": "No archived blocks yet.",
     "archive.dialog.count": "archived",
   },

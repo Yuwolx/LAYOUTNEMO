@@ -6,7 +6,6 @@ import { Header } from "@/components/header"
 import { CreateBlockDialog } from "@/components/create-block-dialog"
 import { ReflectionDialog } from "@/components/reflection-dialog"
 import { AreaManagementDialog } from "@/components/area-management-dialog"
-import { TrashDialog } from "@/components/trash-dialog"
 import { CanvasSelectorDialog } from "@/components/canvas-selector-dialog"
 import { AboutDialog } from "@/components/about-dialog"
 import { ArchiveDock } from "@/components/archive-dock"
@@ -40,7 +39,7 @@ const initialBlocks: WorkBlock[] = [
     detailedNotes: `LAYOUTNEMO 는 할 일을 리스트나 보드에 넣지 않고, 캔버스 위에 펼쳐놓는 도구입니다.
 
 1) 블럭 만들기
-오른쪽 위 '새 블럭 만들기' 또는 Cmd/Ctrl + N. AI 보조가 켜져 있으면 한 줄만 적어도 제목·요약·결·상태·태그·링크까지 자동으로 정리해줍니다. 입력에 [태그] 나 https:// 가 있으면 알아서 추출해요. 꺼져 있으면 직접 입력하세요. 내용은 비워둬도 됩니다.
+오른쪽 위 '새 블럭 만들기' 또는 Cmd/Ctrl + N. AI 보조가 켜져 있으면 한 줄만 적어도 제목·요약·결·상태·링크까지 자동으로 정리해줍니다. 입력에 https:// 가 있으면 링크로 추출해요. 꺼져 있으면 직접 입력하세요. 내용은 비워둬도 됩니다.
 
 2) AI 자동 반영 (8초)
 AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생성됩니다. 카운트다운이 보이고, 어디든 클릭하거나 입력하면 즉시 멈춥니다. "취소" 글자도 누를 수 있어요.
@@ -48,44 +47,38 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
 3) 결(Facet)
 블럭이 속한 큰 맥락입니다. "기획", "개발" 같은 식으로 업무의 결을 나눠요. 상단의 결 버튼을 누르면 그 결의 블럭만 또렷해지고 나머지는 흐려집니다. 칸막이가 아니라 시선의 필터에 가깝습니다. 결 버튼은 드래그해서 순서를 바꿀 수 있어요.
 
-4) 태그 (선택)
-같은 결 안에서도 더 세밀한 그룹이 필요할 때 — 예: "기획" 결 안에 LAYOUT / SideProject 가 섞여 있을 때. 블럭 상세 또는 생성 시 태그를 입력하면 카드 위에 [태그] 로 표시됩니다. 정리하기에서 같은 태그 블럭을 가장 강하게 묶어요.
-
-5) 링크 (선택)
+4) 링크 (선택)
 블럭에 외부 URL 을 달아두면 카드 본문 아래 우측에 작은 링크 버튼이 보입니다. 클릭하면 새 탭으로 이동.
 
-6) 연결
+5) 연결
 연결은 두 가지 드래그 제스처가 명확히 구분됩니다.
 • 그냥 드래그: 원하는 자리에 블럭을 옮길 뿐, 연결은 만들지 않음. 블럭 위에 블럭을 쌓아도 연결이 생기지 않아요.
 • Shift + 드래그: 한 블럭을 다른 블럭 위에 떨어뜨리면 곡선으로 이어지고, 드래그한 블럭은 원래 자리로 부드럽게 돌아옵니다 (위치는 바꾸지 않고 연결만 만드는 토스 제스처).
 연결을 끊으려면 선을 클릭하세요.
 
-7) 상태
+6) 상태
 블럭의 그림자 색으로 머릿속 무게를 표현합니다. 크기는 바뀌지 않습니다.
 • 미정 (회색): 일단 적어뒀지만 할지 말지 아직 모르는 일
 • 여유 (파랑): 할 일은 맞지만 급하지 않은 일
 • 진행 (초록): 꾸준히 진행하거나 계속 관리 중인 일
 • 시급 (빨강): 바로 처리해야 하는 일
 
-8) 캔버스 이동
+7) 캔버스 이동
 스페이스바를 누른 채 마우스로 드래그하면 캔버스 전체가 따라옵니다 (피그마 방식).
 
-9) 갈무리
-지금 안 보고 싶은 블럭은 우하단 박스 아이콘으로 드래그해 치워두세요. 다시 꺼내면 원래 자리로 돌아옵니다.
+8) 갈무리
+지금 안 보고 싶은 블럭은 블럭 메뉴나 상세 화면의 '갈무리'로 치워두세요. 우하단 갈무리함에서 다시 꺼내면 원래 자리로 돌아옵니다.
 
-10) AI 보조 / 정리하기
-헤더의 'AI 보조' 토글로 켜고 끕니다. AI 가 켜져 있을 때 '정리하기' 버튼으로 캔버스 상태에 대한 제안을 받을 수 있습니다. 우선순위는 같은 태그 → 같은 결 → 내용 유사도 → 위치 순서. 한 번에 하나씩 보여주고, 수락한 변경만 적용됩니다.
+9) AI 보조 / 정리하기
+헤더의 'AI 보조' 토글로 켜고 끕니다. AI 가 켜져 있을 때 '정리하기' 버튼으로 캔버스 상태에 대한 제안을 받을 수 있습니다. 우선순위는 같은 결 → 내용 유사도 → 위치 순서. 한 번에 하나씩 보여주고, 수락한 변경만 적용됩니다.
 
-11) 캔버스 전환
+10) 캔버스 전환
 로고 옆 캔버스 이름을 누르거나 Cmd/Ctrl + K 로 여러 작업 공간을 오갈 수 있습니다. 각 캔버스는 독립적인 블럭과 결을 가집니다.
 
-12) 결 커스터마이징
+11) 결 커스터마이징
 '결 관리' 버튼에서 결을 추가/수정/삭제할 수 있습니다. 각 결은 고유의 색을 가져요.
 
-13) 휴지통
-삭제한 블럭은 최대 10개까지 휴지통에 보관됩니다. 헤더의 휴지통 아이콘에서 복구할 수 있어요.
-
-14) 마감일
+12) 마감일
 블럭 상세에서 마감일을 추가하면 카드 제목 아래에 표시됩니다.`,
   },
   {
@@ -117,7 +110,7 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
 
 [마우스]
 • 블럭 드래그: 위치 이동
-• 블럭 → 우하단 박스: 갈무리
+• 블럭 메뉴/상세: 갈무리
 • Shift + 한 블럭을 다른 블럭에 드롭: 연결 + 원위치 복귀 (토스)
 • 연결선 클릭: 연결 끊기
 
@@ -229,7 +222,9 @@ const migrateCanvas = (canvas: CanvasType): CanvasType => ({
     id: LEGACY_ZONE_ID_MAP[z.id] ?? z.id,
   })),
   blocks: canvas.blocks.map((b) => {
-    let migrated: WorkBlock = { ...b, zone: LEGACY_ZONE_ID_MAP[b.zone] ?? b.zone }
+    const source = { ...(b as WorkBlock & { tag?: string }) }
+    delete source.tag
+    let migrated: WorkBlock = { ...source, zone: LEGACY_ZONE_ID_MAP[source.zone] ?? source.zone }
     // 구버전에서 갈무리 처리된 블럭은 x/y 가 우하단 스택 좌표로, 크기는 340x56 으로
     // 변경되어 있다. originalState 에서 원래 크기/시급도를 복원하고,
     // x/y 는 과거 값 그대로 두되 width/height 만 원본으로 되돌린다.
@@ -286,7 +281,6 @@ export default function Page() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isReflectionDialogOpen, setIsReflectionDialogOpen] = useState(false)
   const [isAreaManagementOpen, setIsAreaManagementOpen] = useState(false)
-  const [isTrashDialogOpen, setIsTrashDialogOpen] = useState(false)
   const [isCanvasSelectorOpen, setIsCanvasSelectorOpen] = useState(false)
   const [isAboutOpen, setIsAboutOpen] = useState(false)
   const [isArchiveOpen, setIsArchiveOpen] = useState(false)
@@ -401,11 +395,6 @@ export default function Page() {
     }
   }, [canvases, currentCanvasId, isClient])
 
-  const deletedBlocks = blocks
-    .filter((b) => !b.isAIControl && b.isDeleted)
-    .sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0))
-    .slice(0, 10)
-
   // 갈무리(archive)된 블럭은 캔버스에 렌더링하지 않고 독/모달에서만 노출.
   const archivedBlocks = blocks.filter((b) => !b.isDeleted && b.isCompleted && !b.isGuide)
   const activeBlocks = blocks.filter((b) => !b.isDeleted)
@@ -469,28 +458,14 @@ export default function Page() {
     setIsCreateDialogOpen(false)
   }
 
-  const handleArchiveBlock = (id: string) => {
-    const newBlocks = blocks.map((block) =>
-      block.id === id ? { ...block, isDeleted: true, deletedAt: Date.now() } : block,
-    )
-    saveToHistory(newBlocks)
-  }
-
-  const handleRestoreBlock = (id: string) => {
-    const newBlocks = blocks.map((block) =>
-      block.id === id ? { ...block, isDeleted: false, deletedAt: undefined } : block,
-    )
-    saveToHistory(newBlocks)
-  }
-
-  const handlePermanentDelete = (id: string) => {
-    const newBlocks = blocks.filter((block) => block.id !== id)
-    saveToHistory(newBlocks)
-  }
-
   // 갈무리함에서 캔버스로 꺼내기 (isCompleted=false).
   const handleUnarchiveBlock = (id: string) => {
     const newBlocks = blocks.map((b) => (b.id === id ? { ...b, isCompleted: false } : b))
+    saveToHistory(newBlocks)
+  }
+
+  const handleDeleteArchivedBlock = (id: string) => {
+    const newBlocks = blocks.filter((block) => block.id !== id)
     saveToHistory(newBlocks)
   }
 
@@ -569,7 +544,6 @@ export default function Page() {
 
   const handleReset = () => {
     // reset 은 의도적으로 가이드/예시까지 포함한 "완전 초기화" 의미.
-    // 평상시 가이드 블럭을 삭제하고 싶으면 헤더의 휴지통에서 영구삭제하면 된다.
     if (confirm(t("confirm.reset"))) {
       try {
         localStorage.removeItem(STORAGE_KEY)
@@ -635,7 +609,6 @@ export default function Page() {
         setIsCreateDialogOpen(false)
         setIsReflectionDialogOpen(false)
         setIsAreaManagementOpen(false)
-        setIsTrashDialogOpen(false)
         setIsCanvasSelectorOpen(false)
       }
     }
@@ -670,8 +643,6 @@ export default function Page() {
         onToggleRelationships={() => setShowRelationships(!showRelationships)}
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-        trashCount={deletedBlocks.length}
-        onOpenTrash={() => setIsTrashDialogOpen(true)}
         onUndo={handleUndo}
         onRedo={handleRedo}
         canUndo={historyIndex > 0}
@@ -693,7 +664,6 @@ export default function Page() {
         onUpdateBlock={handleUpdateBlock}
         onBatchUpdateBlocks={handleBatchUpdateBlocks}
         onCopyBlock={handleCopyBlock}
-        onArchiveBlock={handleArchiveBlock}
         isDarkMode={isDarkMode}
         previewBlock={previewBlock} // 미리보기 블록 전달
         onViewportChange={handleCanvasViewportChange}
@@ -714,9 +684,7 @@ export default function Page() {
         open={isReflectionDialogOpen}
         onOpenChange={setIsReflectionDialogOpen}
         blocks={activeBlocks}
-        onUpdateBlocks={(updatedBlocks) => {
-          setBlocks([...updatedBlocks, ...deletedBlocks])
-        }}
+        onUpdateBlocks={setBlocks}
         isAIEnabled={isAIEnabled}
         zones={zones}
       />
@@ -726,14 +694,6 @@ export default function Page() {
         onOpenChange={setIsAreaManagementOpen}
         zones={zones}
         onUpdateZones={handleUpdateZones}
-      />
-
-      <TrashDialog
-        open={isTrashDialogOpen}
-        onOpenChange={setIsTrashDialogOpen}
-        deletedBlocks={deletedBlocks}
-        onRestore={handleRestoreBlock}
-        onPermanentDelete={handlePermanentDelete}
       />
 
       <CanvasSelectorDialog
@@ -751,7 +711,6 @@ export default function Page() {
 
       <ArchiveDock
         archivedCount={archivedBlocks.length}
-        isDragOver={false}
         isDarkMode={isDarkMode}
         onClick={() => setIsArchiveOpen(true)}
       />
@@ -762,7 +721,7 @@ export default function Page() {
         archivedBlocks={archivedBlocks}
         zones={zones}
         onRestore={handleUnarchiveBlock}
-        onDelete={handleArchiveBlock}
+        onDelete={handleDeleteArchivedBlock}
       />
     </div>
   )

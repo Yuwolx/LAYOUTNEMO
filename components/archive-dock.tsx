@@ -5,17 +5,15 @@ import { useT } from "@/lib/i18n/context"
 
 interface ArchiveDockProps {
   archivedCount: number
-  isDragOver: boolean
   isDarkMode: boolean
   onClick: () => void
 }
 
 /**
  * 우하단 고정 박스 아이콘.
- * - 블럭을 드래그해 hover 하면 `isDragOver` 가 true 로 들어와 하이라이트.
  * - 클릭하면 갈무리함 다이얼로그 오픈.
  */
-export function ArchiveDock({ archivedCount, isDragOver, isDarkMode, onClick }: ArchiveDockProps) {
+export function ArchiveDock({ archivedCount, isDarkMode, onClick }: ArchiveDockProps) {
   const t = useT()
   return (
     <button
@@ -30,11 +28,9 @@ export function ArchiveDock({ archivedCount, isDragOver, isDarkMode, onClick }: 
         flex items-center justify-center
         transition-all duration-200
         ${
-          isDragOver
-            ? "scale-110 bg-foreground text-background shadow-[0_10px_32px_rgba(0,0,0,0.25)]"
-            : isDarkMode
-              ? "bg-[#1c2032] text-zinc-200 border border-zinc-700 hover:bg-[#242a3e] hover:border-zinc-600 shadow-lg"
-              : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-md"
+          isDarkMode
+            ? "bg-[#1c2032] text-zinc-200 border border-zinc-700 hover:bg-[#242a3e] hover:border-zinc-600 shadow-lg"
+            : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-md"
         }
       `}
     >

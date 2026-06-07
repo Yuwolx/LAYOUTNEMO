@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { BlockDetailDialog } from "@/components/block-detail-dialog"
-import { MoreVertical, Trash2, Sparkles, Power, ExternalLink, Archive } from "lucide-react"
+import { MoreVertical, Sparkles, Power, ExternalLink, Archive } from "lucide-react"
 import type { WorkBlock } from "@/types"
 import { URGENCY_META } from "@/lib/constants/urgency"
 import { useLanguage, useT } from "@/lib/i18n/context"
@@ -17,11 +17,11 @@ interface WorkBlockCardProps {
   visibility: "normal" | "emphasized" | "dimmed"
   onMouseDown: (e: React.MouseEvent) => void
   onUpdate: (updates: Partial<WorkBlock>, skipHistory?: boolean) => void
-  onArchive: () => void
   zones: Array<{ id: string; label: string }>
   isDarkMode: boolean
   isCopyMode?: boolean
   isTossingBack?: boolean
+  archiveFlight?: { targetX: number; targetY: number } | null
 }
 
 const urgencyShadows = {
@@ -44,11 +44,11 @@ export function WorkBlockCard({
   visibility,
   onMouseDown,
   onUpdate,
-  onArchive,
   zones,
   isDarkMode,
   isCopyMode = false,
   isTossingBack = false,
+  archiveFlight = null,
 }: WorkBlockCardProps) {
   const { language } = useLanguage()
   const t = useT()
@@ -63,6 +63,13 @@ export function WorkBlockCard({
   const isGuide = block.isGuide || false
   const isAIControl = block.isAIControl || false
   const aiEnabled = block.aiEnabled !== undefined ? block.aiEnabled : false
+  const archiveFlightStyle = archiveFlight
+    ? ({
+        "--archive-x": `${archiveFlight.targetX - block.x}px`,
+        "--archive-y": `${archiveFlight.targetY - block.y}px`,
+        animation: "archiveFlyToDock 150ms cubic-bezier(0.16, 0.86, 0.22, 1) forwards",
+      } as React.CSSProperties)
+    : {}
 
   // 실제 렌더 높이를 측정해 stored block.height 와 동기화.
   // hit-test(연결선 끝점, 독 드롭, 겹침 감지) 가 stored height 를 신뢰하므로 거짓말하지 않게 한다.
@@ -126,7 +133,7 @@ export function WorkBlockCard({
       button?.click()
     }
 
-    onUpdate({ isCompleted: true, relatedTo: [] })
+    onUpdate({ isCompleted: true })
   }
 
   return (
@@ -134,11 +141,15 @@ export function WorkBlockCard({
       <div
         ref={cardRef}
         key={`${block.id}-${isCompleted ? "completed" : "active"}`}
-        className={`absolute group select-none ${isCopyMode ? "cursor-copy" : isCompleted ? "cursor-grab" : "cursor-move"}`}
+        className={`absolute group select-none ${
+          archiveFlight ? "pointer-events-none" : isCopyMode ? "cursor-copy" : isCompleted ? "cursor-grab" : "cursor-move"
+        }`}
         style={{
           left: block.x,
           top: block.y,
           width: block.width,
+          transformOrigin: "center center",
+          ...archiveFlightStyle,
           // 카드 위에서 드래그 시 텍스트가 선택되지 않도록 (모든 브라우저).
           userSelect: "none",
           WebkitUserSelect: "none",
@@ -147,11 +158,13 @@ export function WorkBlockCard({
           minHeight: isCompleted ? 56 : 64,
           // line-clamp-3 + 패딩 + 여유. 너무 커지지 않도록 상한.
           maxHeight: isCompleted ? 56 : 200,
-          // 평소엔 transition 없음(드래그 중 끊김 방지). Shift 토스 복귀 동안만 부드럽게 미끄러진다.
-          transition: isTossingBack
-            ? "left 420ms cubic-bezier(0.34, 1.35, 0.64, 1), top 420ms cubic-bezier(0.34, 1.35, 0.64, 1)"
-            : "none",
-          zIndex: isDragging ? 50 : visibility === "emphasized" ? 30 : isCompleted ? 5 : 10,
+          transition: archiveFlight
+            ? "none"
+            : isTossingBack
+              ? "left 420ms cubic-bezier(0.34, 1.35, 0.64, 1), top 420ms cubic-bezier(0.34, 1.35, 0.64, 1)"
+              : "none",
+          willChange: archiveFlight ? "transform, opacity" : isDragging || isTossingBack ? "transform" : "auto",
+          zIndex: archiveFlight ? 60 : isDragging ? 50 : visibility === "emphasized" ? 30 : isCompleted ? 5 : 10,
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -180,12 +193,6 @@ export function WorkBlockCard({
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                {/* 태그가 길어도 줄바꿈되지 않도록 자체 라인. 길이 초과 시 ellipsis. */}
-                {block.tag && !isCompleted && (
-                  <p className="text-[10px] font-medium text-card-foreground/60 truncate mb-0.5">
-                    [{block.tag}]
-                  </p>
-                )}
                 <h3
                   className={`font-normal leading-tight text-card-foreground break-words ${isCompleted ? "text-sm truncate mb-0" : "text-[13px] mb-0.5"}`}
                 >
@@ -231,16 +238,6 @@ export function WorkBlockCard({
                   <DropdownMenuItem onClick={handleCompleteBlock} className="text-muted-foreground font-light">
                     <Archive className="w-4 h-4 mr-2" />
                     {t("action.archive")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onArchive()
-                    }}
-                    className="text-muted-foreground font-light"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    {t("action.delete")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

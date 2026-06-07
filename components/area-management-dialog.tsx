@@ -73,6 +73,13 @@ export function AreaManagementDialog({ open, onOpenChange, zones, onUpdateZones 
                   <Input
                     value={editingLabel}
                     onChange={(e) => setEditingLabel(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveEdit()
+                      if (e.key === "Escape") {
+                        setEditingId(null)
+                        setEditingLabel("")
+                      }
+                    }}
                     className="flex-1"
                     autoFocus
                   />
@@ -107,6 +114,9 @@ export function AreaManagementDialog({ open, onOpenChange, zones, onUpdateZones 
           <Input
             value={newZoneLabel}
             onChange={(e) => setNewZoneLabel(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleAddZone()
+            }}
             placeholder={t("dialog.manageFacets.placeholder")}
             className="flex-1"
           />

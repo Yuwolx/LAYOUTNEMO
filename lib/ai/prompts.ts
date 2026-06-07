@@ -84,13 +84,6 @@ export const CREATE_BLOCK_PROMPT = `
    입력에 http:// 또는 https:// 로 시작하는 URL 이 있으면 그대로 추출.
    여러 개면 첫 번째 것만. 없으면 null.
 
-7. **태그(Tag) 추출**
-   입력에 명시적 프로젝트/제품/회사명이 있으면 짧은 식별자로 추출.
-   - "[LAYOUT] 디자인 검토" → tag: "LAYOUT"
-   - "ProjectX 마감 정리" → tag: "ProjectX"
-   - "회사 워크샵 준비" → 명시적 식별자 아님 → null
-   태그는 **20자 이하**, 공백 없는 한 단어 권장. 명확한 식별자가 없으면 null.
-
 ---
 
 ### 출력 형식 (JSON만, 다른 텍스트 절대 금지)
@@ -104,8 +97,7 @@ export const CREATE_BLOCK_PROMPT = `
   "zoneReason": "왜 이 영역을 선택했는지 간단 설명",
   "suggestedDueDate": "YYYY-MM-DD" 또는 null,
   "suggestedUrgency": "stable" | "thinking" | "lingering" | "urgent",
-  "suggestedUrl": "https://..." 또는 null,
-  "suggestedTag": "TAGNAME" 또는 null
+  "suggestedUrl": "https://..." 또는 null
 }
 
 ---
@@ -123,8 +115,7 @@ export const CREATE_BLOCK_PROMPT = `
   "zoneReason": "개인적인 크리스마스 일정 관련 업무입니다",
   "suggestedDueDate": "2025-12-23",
   "suggestedUrgency": "urgent",
-  "suggestedUrl": null,
-  "suggestedTag": null
+  "suggestedUrl": null
 }
 
 ---
@@ -168,17 +159,16 @@ export const TIDY_COMPREHENSIVE_PROMPT = `
 - 잠재 연결 후보 (유사도 높지만 미연결): {POTENTIAL_CONNECTIONS}
 
 ## 그룹핑 우선순위 (위에서 아래 순서대로 강함)
-1. **같은 태그** — 가장 강한 신호. 같은 [태그] 를 가진 블럭들은 한 클러스터로 묶이는 게 자연스럽다 (같은 프로젝트/제품/서비스).
-2. **같은 결(zone)** — 그 다음. 같은 결의 블럭들은 한 영역에 모이도록.
-3. **내용 유사도** — 제목/설명이 비슷한 블럭들은 가까이.
-4. **위치 근접** — 이미 가까이 놓인 관련 블럭은 유지/강화.
+1. **같은 결(zone)** — 같은 결의 블럭들은 한 영역에 모이도록.
+2. **내용 유사도** — 제목/설명이 비슷한 블럭들은 가까이.
+3. **위치 근접** — 이미 가까이 놓인 관련 블럭은 유지/강화.
 
-위 순서대로 가중치를 주어 클러스터/연결을 판단해라. 태그가 같은데 영역이 달라도 → 태그가 우선이라 같은 곳에 모이는 게 맞다.
+위 순서대로 가중치를 주어 클러스터/연결을 판단해라.
 
 ## 무엇을 제안하나
 다음 카테고리에서, **명확히 가치가 있는 것만**:
-1. **position** — 같은 태그 블럭이 흩어짐 / 같은 결 블럭이 너무 멀리 / 상태가 시급인 블럭이 시야 밖 / 겹침
-2. **connection** — 잠재 연결 후보 중 의미 관계가 자연스러운 페어 (같은 태그면 강력)
+1. **position** — 같은 결 블럭이 너무 멀리 / 상태가 시급인 블럭이 시야 밖 / 겹침
+2. **connection** — 잠재 연결 후보 중 의미 관계가 자연스러운 페어
 3. **zone** — 제목/설명이 현재 영역과 명백히 어긋남
 4. **urgency** — 내부 필드명. 사용자가 보는 개념은 "상태"이며, 기한 임박인데 상태가 시급이 아닌 경우 등
 

@@ -50,7 +50,7 @@ export const SEED_BLOCK_STRINGS: Record<
       ko: `LAYOUTNEMO 는 할 일을 리스트나 보드에 넣지 않고, 캔버스 위에 펼쳐놓는 도구입니다.
 
 1) 블럭 만들기
-오른쪽 위 '새 블럭 만들기' 또는 Cmd/Ctrl + N. AI 보조가 켜져 있으면 한 줄만 적어도 제목·요약·결·상태·태그·링크까지 자동으로 정리해줍니다. 입력에 [태그] 나 https:// 가 있으면 알아서 추출해요. 꺼져 있으면 직접 입력하세요. 내용은 비워둬도 됩니다.
+오른쪽 위 '새 블럭 만들기' 또는 Cmd/Ctrl + N. AI 보조가 켜져 있으면 한 줄만 적어도 제목·요약·결·상태·링크까지 자동으로 정리해줍니다. 입력에 https:// 가 있으면 링크로 추출해요. 꺼져 있으면 직접 입력하세요. 내용은 비워둬도 됩니다.
 
 2) AI 자동 반영 (8초)
 AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생성됩니다. 카운트다운이 보이고, 어디든 클릭하거나 입력하면 즉시 멈춥니다. "취소" 글자도 누를 수 있어요.
@@ -58,49 +58,43 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
 3) 결(Facet)
 블럭이 속한 큰 맥락입니다. "기획", "개발" 같은 식으로 업무의 결을 나눠요. 상단의 결 버튼을 누르면 그 결의 블럭만 또렷해지고 나머지는 흐려집니다. 칸막이가 아니라 시선의 필터에 가깝습니다. 결 버튼은 드래그해서 순서를 바꿀 수 있어요.
 
-4) 태그 (선택)
-같은 결 안에서도 더 세밀한 그룹이 필요할 때 — 예: "기획" 결 안에 LAYOUT / SideProject 가 섞여 있을 때. 블럭 상세 또는 생성 시 태그를 입력하면 카드 위에 [태그] 로 표시됩니다. 정리하기에서 같은 태그 블럭을 가장 강하게 묶어요.
-
-5) 링크 (선택)
+4) 링크 (선택)
 블럭에 외부 URL 을 달아두면 카드 본문 아래 우측에 작은 링크 버튼이 보입니다. 클릭하면 새 탭으로 이동.
 
-6) 연결
+5) 연결
 연결은 두 가지 드래그 제스처가 명확히 구분됩니다.
 • 그냥 드래그: 원하는 자리에 블럭을 옮길 뿐, 연결은 만들지 않음. 블럭 위에 블럭을 쌓아도 연결이 생기지 않아요.
 • Shift + 드래그: 한 블럭을 다른 블럭 위에 떨어뜨리면 곡선으로 이어지고, 드래그한 블럭은 원래 자리로 부드럽게 돌아옵니다 (위치는 바꾸지 않고 연결만 만드는 토스 제스처).
 연결을 끊으려면 선을 클릭하세요.
 
-7) 상태
+6) 상태
 블럭의 그림자 색으로 머릿속 무게를 표현합니다. 크기는 바뀌지 않습니다.
 • 미정 (회색): 일단 적어뒀지만 할지 말지 아직 모르는 일
 • 여유 (파랑): 할 일은 맞지만 급하지 않은 일
 • 진행 (초록): 꾸준히 진행하거나 계속 관리 중인 일
 • 시급 (빨강): 바로 처리해야 하는 일
 
-8) 캔버스 이동
+7) 캔버스 이동
 스페이스바를 누른 채 마우스로 드래그하면 캔버스 전체가 따라옵니다 (피그마 방식).
 
-9) 갈무리
-지금 안 보고 싶은 블럭은 우하단 박스 아이콘으로 드래그해 치워두세요. 다시 꺼내면 원래 자리로 돌아옵니다.
+8) 갈무리
+지금 안 보고 싶은 블럭은 블럭 메뉴나 상세 화면의 '갈무리'로 치워두세요. 우하단 갈무리함에서 다시 꺼내면 원래 자리로 돌아옵니다.
 
-10) AI 보조 / 정리하기
-헤더의 'AI 보조' 토글로 켜고 끕니다. AI 가 켜져 있을 때 '정리하기' 버튼으로 캔버스 상태에 대한 제안을 받을 수 있습니다. 우선순위는 같은 태그 → 같은 결 → 내용 유사도 → 위치 순서. 한 번에 하나씩 보여주고, 수락한 변경만 적용됩니다.
+9) AI 보조 / 정리하기
+헤더의 'AI 보조' 토글로 켜고 끕니다. AI 가 켜져 있을 때 '정리하기' 버튼으로 캔버스 상태에 대한 제안을 받을 수 있습니다. 우선순위는 같은 결 → 내용 유사도 → 위치 순서. 한 번에 하나씩 보여주고, 수락한 변경만 적용됩니다.
 
-11) 캔버스 전환
+10) 캔버스 전환
 로고 옆 캔버스 이름을 누르거나 Cmd/Ctrl + K 로 여러 작업 공간을 오갈 수 있습니다. 각 캔버스는 독립적인 블럭과 결을 가집니다.
 
-12) 결 커스터마이징
+11) 결 커스터마이징
 '결 관리' 버튼에서 결을 추가/수정/삭제할 수 있습니다. 각 결은 고유의 색을 가져요.
 
-13) 휴지통
-삭제한 블럭은 최대 10개까지 휴지통에 보관됩니다. 헤더의 휴지통 아이콘에서 복구할 수 있어요.
-
-14) 마감일
+12) 마감일
 블럭 상세에서 마감일을 추가하면 카드 제목 아래에 표시됩니다.`,
       en: `LAYOUTNEMO is a tool for spreading tasks across a canvas instead of stuffing them into lists or boards.
 
 1) Creating Blocks
-"Create Block" at the top right, or Cmd/Ctrl + N. With AI Assist on, one line is enough — title, summary, facet, state, tag and link are filled in automatically. If your input contains [TAG] or https://, they get extracted. With AI off, fill them in yourself. The description is optional.
+"Create Block" at the top right, or Cmd/Ctrl + N. With AI Assist on, one line is enough — title, summary, facet, state and link are filled in automatically. If your input contains https://, it gets extracted as a link. With AI off, fill things in yourself. The description is optional.
 
 2) Auto-apply (8s)
 After AI replies, an 8-second countdown starts. If you don't touch anything, the block is created automatically. Click or type anywhere to cancel — there's also a "Cancel" link.
@@ -108,44 +102,38 @@ After AI replies, an 8-second countdown starts. If you don't touch anything, the
 3) Facets
 A facet is the broad context a block belongs to — "Planning", "Development" etc. Click a facet button at the top and only blocks of that facet come into focus; the rest dim. Not a partition, more like a lens. Drag the facet buttons to reorder them.
 
-4) Tags (optional)
-For finer grouping inside a facet — e.g. "Planning" facet containing both LAYOUT and SideProject blocks. Set a tag in the create dialog or block detail; it appears as [TAG] above the title. Reflect groups same-tag blocks most strongly.
-
-5) Links (optional)
+4) Links (optional)
 Attach an external URL — a small link button appears below the body, opens in a new tab.
 
-6) Connections
+5) Connections
 Two distinct drag gestures:
 • Plain drag: just moves the block to where you drop it. No connection is created, even if you stack one block on another.
 • Shift + drag: drop one block onto another and a curve is drawn between them — the dragged block then glides back to its starting position. (A "toss" gesture: makes a connection without changing positions.)
 Click a line to disconnect.
 
-7) State
+6) State
 The shadow color reflects mental weight. Size doesn't change.
 • Undecided (gray): captured for now, not sure if you'll do it
 • Flexible (blue): real work, but not urgent
 • In progress (green): ongoing or steadily maintained
 • Urgent (red): needs immediate action
 
-8) Canvas Pan
+7) Canvas Pan
 Hold Spacebar and drag to pan the entire canvas (Figma-style).
 
-9) Archive
-Drag a block to the bottom-right box icon to set it aside. When restored, it returns to its original spot.
+8) Archive
+Use a block's menu or detail dialog to archive something you don't want to see right now. Restore it from the bottom-right archive when you need it again.
 
-10) AI Assist / Reflect
-Toggle "AI Assist" in the header. With AI on, "Reflect" gives suggestions. Priority: same tag → same facet → content similarity → position. One suggestion at a time; only what you accept is applied.
+9) AI Assist / Reflect
+Toggle "AI Assist" in the header. With AI on, "Reflect" gives suggestions. Priority: same facet → content similarity → position. One suggestion at a time; only what you accept is applied.
 
-11) Switching Canvases
+10) Switching Canvases
 Click the canvas name next to the logo, or use Cmd/Ctrl + K. Each canvas has its own blocks and facets.
 
-12) Customizing Facets
+11) Customizing Facets
 Use "Manage Facets" to add, rename, or remove facets. Each has its own color.
 
-13) Trash
-Deleted blocks are kept (up to 10). Restore from the trash icon in the header.
-
-14) Due Dates
+12) Due Dates
 Add a due date from the block details — it shows up under the title.`,
     },
   },
@@ -174,7 +162,7 @@ Add a due date from the block details — it shows up under the title.`,
 
 [마우스]
 • 블럭 드래그: 위치 이동
-• 블럭 → 우하단 박스: 갈무리
+• 블럭 메뉴/상세: 갈무리
 • Shift + 한 블럭을 다른 블럭에 드롭: 연결 + 원위치 복귀 (토스)
 • 연결선 클릭: 연결 끊기
 
@@ -199,7 +187,7 @@ Add a due date from the block details — it shows up under the title.`,
 
 [Mouse]
 • Drag a block: move it
-• Drag a block to the bottom-right box: archive
+• Block menu/details: archive
 • Shift + drop one block onto another: connect + bounce back (toss)
 • Click a connection line: disconnect
 

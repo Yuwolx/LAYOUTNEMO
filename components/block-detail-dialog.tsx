@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -15,7 +15,7 @@ interface BlockDetailDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   block: WorkBlock
-  onUpdate: (updates: Partial<WorkBlock>) => void
+  onUpdate: (updates: Partial<WorkBlock>, skipHistory?: boolean) => void
   zones: Array<{ id: string; label: string }>
 }
 
@@ -24,6 +24,25 @@ const URGENCY_COLOR_HEX: Record<Urgency, string> = {
   thinking: "rgb(212, 212, 216)",
   lingering: "rgb(134, 239, 172)",
   urgent: "rgb(252, 165, 165)",
+}
+
+type DraftValues = {
+  title: string
+  description: string
+  detailedNotes: string
+  dueDate: string
+  zone: string
+  urgency: Urgency
+  url: string
+}
+
+type DraftBaseline = {
+  titleDisplay: string
+  descriptionDisplay: string
+  notesDisplay: string
+  sourceTitle: string
+  sourceDescription: string
+  sourceNotes: string
 }
 
 export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }: BlockDetailDialogProps) {
@@ -39,52 +58,137 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
   const [detailedNotes, setDetailedNotes] = useState(displayNotes || "")
   const [dueDate, setDueDate] = useState(block.dueDate || "")
   const [zone, setZone] = useState(block.zone)
-  const [urgency, setUrgency] = useState<"stable" | "thinking" | "lingering" | "urgent">(block.urgency || "thinking")
+  const [urgency, setUrgency] = useState<Urgency>(block.urgency || "thinking")
   const [url, setUrl] = useState(block.url || "")
-  const [tag, setTag] = useState(block.tag || "")
+  const isCompleted = block.isCompleted || false
+  const isGuide = block.isGuide || false
+
+  const baselineRef = useRef<DraftBaseline>({
+    titleDisplay: displayTitle,
+    descriptionDisplay: displayDescription,
+    notesDisplay: displayNotes || "",
+    sourceTitle: block.title,
+    sourceDescription: block.description,
+    sourceNotes: block.detailedNotes || "",
+  })
+  const lastSavedDraftRef = useRef("")
+  const lastHistoryDraftRef = useRef("")
+
+  const buildUpdates = useCallback((values: DraftValues): Partial<WorkBlock> => {
+    const baseline = baselineRef.current
+    return {
+      title: values.title === baseline.titleDisplay ? baseline.sourceTitle : values.title,
+      description:
+        values.description === baseline.descriptionDisplay
+          ? baseline.sourceDescription
+          : values.description,
+      detailedNotes:
+        values.detailedNotes === baseline.notesDisplay
+          ? baseline.sourceNotes
+          : values.detailedNotes,
+      dueDate: values.dueDate || undefined,
+      zone: values.zone,
+      urgency: values.urgency,
+      url: values.url.trim() || undefined,
+    }
+  }, [])
+
+  const getCurrentDraftValues = useCallback(
+    (): DraftValues => ({
+      title,
+      description,
+      detailedNotes,
+      dueDate,
+      zone,
+      urgency,
+      url,
+    }),
+    [description, detailedNotes, dueDate, title, urgency, url, zone],
+  )
 
   useEffect(() => {
     if (open) {
-      setTitle(displayTitle)
-      setDescription(displayDescription)
-      setDetailedNotes(displayNotes || "")
-      setDueDate(block.dueDate || "")
-      setZone(block.zone)
-      setUrgency(block.urgency || "thinking")
-      setUrl(block.url || "")
-      setTag(block.tag || "")
-    }
-  }, [open, block, language, displayTitle, displayDescription, displayNotes])
+      const nextValues: DraftValues = {
+        title: displayTitle,
+        description: displayDescription,
+        detailedNotes: displayNotes || "",
+        dueDate: block.dueDate || "",
+        zone: block.zone,
+        urgency: block.urgency || "thinking",
+        url: block.url || "",
+      }
 
-  const handleSave = () => {
-    // 번역본을 그대로 두고 저장하면 원본(ko) 보존. 편집했으면 입력값 반영.
-    const finalTitle = title === displayTitle ? block.title : title
-    const finalDescription = description === displayDescription ? block.description : description
-    const finalNotes = detailedNotes === (displayNotes || "") ? (block.detailedNotes || "") : detailedNotes
-    onUpdate({
-      title: finalTitle,
-      description: finalDescription,
-      detailedNotes: finalNotes,
-      dueDate: dueDate || undefined,
-      zone,
-      urgency,
-      url: url.trim() || undefined,
-      tag: tag.trim() || undefined,
-    })
-    onOpenChange(false)
+      baselineRef.current = {
+        titleDisplay: nextValues.title,
+        descriptionDisplay: nextValues.description,
+        notesDisplay: nextValues.detailedNotes,
+        sourceTitle: block.title,
+        sourceDescription: block.description,
+        sourceNotes: block.detailedNotes || "",
+      }
+
+      setTitle(nextValues.title)
+      setDescription(nextValues.description)
+      setDetailedNotes(nextValues.detailedNotes)
+      setDueDate(nextValues.dueDate)
+      setZone(nextValues.zone)
+      setUrgency(nextValues.urgency)
+      setUrl(nextValues.url)
+
+      const serialized = JSON.stringify(buildUpdates(nextValues))
+      lastSavedDraftRef.current = serialized
+      lastHistoryDraftRef.current = serialized
+    }
+    // autosave 로 block prop 이 바뀌어도 입력 중인 폼은 다시 초기화하지 않는다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, block.id, language])
+
+  const commitDraft = useCallback(
+    (skipHistory = true, forceHistory = false) => {
+      if (!open || isGuide || isCompleted) return
+
+      const updates = buildUpdates(getCurrentDraftValues())
+      const serialized = JSON.stringify(updates)
+
+      if (forceHistory) {
+        if (serialized !== lastHistoryDraftRef.current) {
+          lastSavedDraftRef.current = serialized
+          lastHistoryDraftRef.current = serialized
+          onUpdate(updates, false)
+        }
+        return
+      }
+
+      if (serialized === lastSavedDraftRef.current) return
+      lastSavedDraftRef.current = serialized
+      onUpdate(updates, skipHistory)
+    },
+    [buildUpdates, getCurrentDraftValues, isCompleted, isGuide, onUpdate, open],
+  )
+
+  useEffect(() => {
+    if (!open || isGuide || isCompleted) return
+    const timer = window.setTimeout(() => commitDraft(true), 500)
+    return () => window.clearTimeout(timer)
+  }, [commitDraft, isCompleted, isGuide, open])
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) commitDraft(false, true)
+    onOpenChange(nextOpen)
   }
 
   const handleComplete = () => {
     // 갈무리 — 위치/크기/시급도 전부 원본 유지. 꺼냈을 때 원래 자리로 복귀되도록.
-    onUpdate({ isCompleted: true })
+    const updates = buildUpdates(getCurrentDraftValues())
+    const serialized = JSON.stringify({ ...updates, isCompleted: true })
+    lastSavedDraftRef.current = serialized
+    lastHistoryDraftRef.current = serialized
+    onUpdate({ ...updates, isCompleted: true })
     onOpenChange(false)
   }
 
-  const isCompleted = block.isCompleted || false
-  const isGuide = block.isGuide || false
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-[760px] lg:max-w-[860px] max-h-[86vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
           <DialogTitle className="text-2xl font-light">{isGuide ? (t("dialog.blockDetail.title") === "Block Details" ? "Guide" : "사용 설명서") : t("dialog.blockDetail.title")}</DialogTitle>
@@ -226,20 +330,6 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="block-tag" className="text-sm font-normal">
-                  {t("label.tag")} ({t("label.optional")})
-                </Label>
-                <Input
-                  id="block-tag"
-                  value={tag}
-                  onChange={(e) => setTag(e.target.value)}
-                  placeholder={t("placeholder.tag")}
-                  maxLength={20}
-                  className="font-light"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="block-url" className="text-sm font-normal">
                   {t("label.url")} ({t("label.optional")})
                 </Label>
@@ -257,8 +347,8 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
                 <Button onClick={handleComplete} variant="outline" className="flex-1 font-light bg-transparent">
                   {t("action.archive")}
                 </Button>
-                <Button onClick={handleSave} className="flex-1">
-                  {t("action.save")}
+                <Button onClick={() => handleDialogOpenChange(false)} className="flex-1">
+                  {t("action.close")}
                 </Button>
               </div>
             </>

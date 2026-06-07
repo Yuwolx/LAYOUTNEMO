@@ -123,16 +123,6 @@ export function mockCreateBlockOutput(input: CreateBlockAIInput): CreateBlockAIO
   const urlMatch = text.match(/https?:\/\/\S+/)
   const suggestedUrl = urlMatch ? urlMatch[0].replace(/[.,;)\]]+$/, "") : null
 
-  // 태그 추출 — [TAG] 패턴 우선, 없으면 null. 짧은 식별자만 인정 (한/영/숫자/하이픈, 20자 이하)
-  let suggestedTag: string | null = null
-  const tagMatch = text.match(/\[([^\]]{1,20})\]/)
-  if (tagMatch) {
-    const candidate = tagMatch[1].trim()
-    if (candidate && /^[A-Za-z0-9가-힣_-]+$/.test(candidate.replace(/\s+/g, ""))) {
-      suggestedTag = candidate
-    }
-  }
-
   return {
     title,
     summary,
@@ -141,6 +131,5 @@ export function mockCreateBlockOutput(input: CreateBlockAIInput): CreateBlockAIO
     suggestedDueDate,
     suggestedUrgency,
     suggestedUrl,
-    suggestedTag,
   }
 }
