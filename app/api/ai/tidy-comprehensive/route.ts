@@ -3,6 +3,7 @@ import { tidyComprehensiveResponseSchema, type AIErrorPayload } from "@/lib/ai/s
 import { TIDY_COMPREHENSIVE_PROMPT } from "@/lib/ai/prompts"
 import { URGENCY_META } from "@/lib/constants/urgency"
 import type { WorkBlock, Zone } from "@/types"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 const errorResponse = (code: AIErrorPayload["code"], message: string, status: number) =>
   NextResponse.json<{ error: AIErrorPayload }>({ error: { code, message } }, { status })
@@ -233,6 +234,15 @@ export async function POST(req: Request) {
         "AI response did not match the expected shape.",
         502,
       )
+    }
+
+    // 이벤트 기록 (로그인 유저만)
+    const supabase = await createSupabaseServerClient()
+    if (supabase) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        supabase.from("events").insert({ user_id: user.id, name: "ai_tidy_used", payload: {} })
+      }
     }
 
     return NextResponse.json({

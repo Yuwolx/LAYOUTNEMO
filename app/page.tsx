@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Canvas } from "@/components/canvas"
 import { Header } from "@/components/header"
 import { CreateBlockDialog } from "@/components/create-block-dialog"
@@ -13,6 +13,10 @@ import { ArchiveDialog } from "@/components/archive-dialog"
 import type { CanvasViewport, WorkBlock, Zone, Canvas as CanvasType } from "@/types"
 import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedCanvasName } from "@/lib/i18n/seed"
+import { useAuth } from "@/lib/auth/context"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { loadUserCanvases, saveCanvas, migrateLocalToSupabase } from "@/lib/supabase/db"
+import { captureEvent } from "@/lib/supabase/events"
 
 // 기본 결(Facet) 5종. 설계 문서 (ARCHITECTURE.md) 와 정합.
 // 참고: v1 은 이 배열을 첫 진입 시 seed 로 사용하고, 이후엔 사용자 편집 가능.
@@ -32,7 +36,7 @@ const initialBlocks: WorkBlock[] = [
     x: 120,
     y: 120,
     width: 280,
-    height: 140,
+    height: 168,
     zone: "daily",
     urgency: "stable",
     isGuide: true,
@@ -88,7 +92,7 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
     x: 120,
     y: 320,
     width: 280,
-    height: 140,
+    height: 168,
     zone: "daily",
     urgency: "stable",
     isGuide: true,
@@ -125,7 +129,7 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
     x: 650,
     y: 120,
     width: 280,
-    height: 96,
+    height: 116,
     zone: "planning",
     urgency: "urgent",
     dueDate: "2025-01-05",
@@ -137,7 +141,7 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
     x: 1050,
     y: 120,
     width: 280,
-    height: 96,
+    height: 116,
     zone: "development",
     urgency: "stable",
     relatedTo: ["example-1"],
@@ -149,7 +153,7 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
     x: 650,
     y: 320,
     width: 280,
-    height: 96,
+    height: 116,
     zone: "marketing",
     urgency: "thinking",
     dueDate: "2025-01-15",
@@ -161,7 +165,7 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
     x: 1050,
     y: 320,
     width: 280,
-    height: 96,
+    height: 116,
     zone: "design",
     urgency: "stable",
     relatedTo: ["example-2"],
@@ -173,7 +177,7 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
     x: 1450,
     y: 120,
     width: 280,
-    height: 96,
+    height: 116,
     zone: "planning",
     urgency: "lingering",
     dueDate: "2025-01-20",
@@ -272,6 +276,8 @@ const loadCurrentCanvasId = (): string => {
 export default function Page() {
   const { language } = useLanguage()
   const t = useT()
+  const { user } = useAuth()
+  const supabaseRef = useRef(createSupabaseBrowserClient())
   const [canvases, setCanvases] = useState<CanvasType[]>([getDefaultCanvas()])
   const [currentCanvasId, setCurrentCanvasId] = useState<string>("main")
   const [lastSaved, setLastSaved] = useState<Date>(new Date())
@@ -372,6 +378,88 @@ export default function Page() {
     }
   }, [])
 
+  // 로그인 시: Supabase 데이터 로드 or localStorage → Supabase 최초 마이그레이션
+  useEffect(() => {
+    if (!isClient || !user || !supabaseRef.current) return
+    const supabase = supabaseRef.current
+    const userId = user.id
+
+    ;(async () => {
+      try {
+        const remoteCanvases = await loadUserCanvases(supabase, userId)
+        const localCanvases = loadCanvases()
+
+        if (remoteCanvases.length === 0) {
+          // 최초 로그인 → localStorage 데이터를 Supabase로 이전
+          const migrated = await migrateLocalToSupabase(supabase, userId, localCanvases)
+          setCanvases(migrated)
+          setCurrentCanvasId(migrated[0]?.id ?? "main")
+          return
+        }
+
+        // 로그아웃 시점 — 이 이후의 로컬 변경만 "오프라인 작업"으로 간주
+        const lastSyncedAt = parseInt(localStorage.getItem("layout_last_synced_at") ?? "0", 10)
+
+        const remoteById = new Map(remoteCanvases.map((c) => [c.id, c]))
+        const localById = new Map(localCanvases.map((c) => [c.id, c]))
+        const allIds = new Set([...remoteById.keys(), ...localById.keys()])
+
+        const toUpload: CanvasType[] = []
+        const merged: CanvasType[] = []
+        const conflicted: CanvasType[] = []
+
+        allIds.forEach((id) => {
+          const remote = remoteById.get(id)
+          const local = localById.get(id)
+
+          if (remote && local) {
+            const localChangedOffline = local.updatedAt > lastSyncedAt
+            const remoteChangedSinceLogout = remote.updatedAt > lastSyncedAt
+
+            if (localChangedOffline && remoteChangedSinceLogout) {
+              // 양쪽 모두 로그아웃 이후 변경 → 충돌: remote 우선 + 충돌 목록에 기록
+              merged.push(remote)
+              conflicted.push(local)
+            } else if (localChangedOffline) {
+              // 로컬만 변경 (다른 기기 작업 없음) → 로컬 우선, Supabase 업로드
+              merged.push(local)
+              toUpload.push(local)
+            } else {
+              // remote가 최신이거나 둘 다 변경 없음
+              merged.push(remote)
+            }
+          } else if (remote) {
+            merged.push(remote)
+          } else if (local) {
+            merged.push(local)
+            toUpload.push(local)
+          }
+        })
+
+        if (toUpload.length > 0) {
+          await Promise.all(toUpload.map((c, i) => saveCanvas(supabase, userId, c, i)))
+        }
+
+        merged.sort((a, b) => a.createdAt - b.createdAt)
+        setCanvases(merged)
+        setCurrentCanvasId(merged[0]?.id ?? "main")
+        localStorage.removeItem("layout_last_synced_at")
+        captureEvent(supabase, userId, "session_start")
+
+        if (conflicted.length > 0) {
+          console.warn(
+            `[sync] ${conflicted.length}개 캔버스에서 충돌 발생. 다른 기기의 최신 버전을 사용합니다.`,
+            conflicted.map((c) => c.name),
+          )
+        }
+      } catch (err) {
+        console.error("Supabase load error:", err)
+        // 실패해도 로컬 데이터로 계속 동작
+      }
+    })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isClient])
+
   // 캔버스 전환 시 해당 캔버스의 현재 blocks 로 히스토리를 리셋한다.
   // (과거엔 전체 캔버스 스냅샷을 공유했으나, 현재는 캔버스 단위로 독립 유지)
   useEffect(() => {
@@ -383,9 +471,13 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentCanvasId, isClient])
 
+  // Supabase 저장 debounce 타이머
+  const supabaseSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     if (!isClient) return
 
+    // localStorage 즉시 저장
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(canvases))
       localStorage.setItem(CURRENT_CANVAS_KEY, currentCanvasId)
@@ -393,7 +485,19 @@ export default function Page() {
     } catch (error) {
       console.error("Failed to save to localStorage:", error)
     }
-  }, [canvases, currentCanvasId, isClient])
+
+    // Supabase 저장 (로그인 상태일 때만, 2초 debounce)
+    if (!user || !supabaseRef.current) return
+    const supabase = supabaseRef.current
+    const userId = user.id
+
+    if (supabaseSaveTimer.current) clearTimeout(supabaseSaveTimer.current)
+    supabaseSaveTimer.current = setTimeout(() => {
+      Promise.all(canvases.map((c, i) => saveCanvas(supabase, userId, c, i))).catch((err) =>
+        console.error("Supabase save error:", err),
+      )
+    }, 2000)
+  }, [canvases, currentCanvasId, isClient, user])
 
   // 갈무리(archive)된 블럭은 캔버스에 렌더링하지 않고 독/모달에서만 노출.
   const archivedBlocks = blocks.filter((b) => !b.isDeleted && b.isCompleted && !b.isGuide)
@@ -456,6 +560,9 @@ export default function Page() {
     const newBlocks = [...blocks, block]
     saveToHistory(newBlocks)
     setIsCreateDialogOpen(false)
+    if (user && supabaseRef.current) {
+      captureEvent(supabaseRef.current, user.id, "block_created", { urgency: block.urgency })
+    }
   }
 
   // 갈무리함에서 캔버스로 꺼내기 (isCompleted=false).
@@ -467,6 +574,9 @@ export default function Page() {
   const handleDeleteArchivedBlock = (id: string) => {
     const newBlocks = blocks.filter((block) => block.id !== id)
     saveToHistory(newBlocks)
+    if (user && supabaseRef.current) {
+      captureEvent(supabaseRef.current, user.id, "block_deleted")
+    }
   }
 
   const handleToggleAI = () => {
@@ -496,7 +606,7 @@ export default function Page() {
 
   const handleCreateCanvas = (name: string) => {
     const newCanvas: CanvasType = {
-      id: `canvas-${Date.now()}`,
+      id: crypto.randomUUID(),
       name,
       blocks: [blocks[0], blocks[1]],
       zones: initialZones,

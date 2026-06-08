@@ -74,6 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
     signOut: async () => {
       if (!supabase) return
+      // 로그아웃 시점 기록 — 재로그인 시 오프라인 변경 감지에 사용
+      localStorage.setItem("layout_last_synced_at", Date.now().toString())
       await supabase.auth.signOut()
     },
   }

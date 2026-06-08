@@ -32,7 +32,7 @@ export const DICT = {
     "header.lastSaved": "마지막 저장",
     "create.autoConfirm.hint": "초 후 자동 반영. 수정하려면 클릭/입력하세요.",
     "create.autoConfirm.cancel": "취소",
-    "auth.signIn": "구글로 로그인",
+    "auth.signIn": "로그인",
     "auth.signOut": "로그아웃",
 
     // Dialogs
@@ -146,7 +146,7 @@ export const DICT = {
     "header.lastSaved": "Last saved",
     "create.autoConfirm.hint": "s — auto-applies. Click or type to edit.",
     "create.autoConfirm.cancel": "Cancel",
-    "auth.signIn": "Sign in with Google",
+    "auth.signIn": "Login",
     "auth.signOut": "Sign out",
 
     // Dialogs

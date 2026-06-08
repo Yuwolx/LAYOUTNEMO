@@ -56,12 +56,12 @@ export function AuthButton({ isDarkMode }: AuthButtonProps) {
         }}
         className={`gap-2 text-sm ${
           isDarkMode
-            ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700"
+            ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
             : "bg-white hover:bg-gray-50"
         }`}
       >
         <GoogleGlyph />
-        <span>{t("auth.signIn")}</span>
+        {t("auth.signIn")}
       </Button>
     )
   }
@@ -77,7 +77,7 @@ export function AuthButton({ isDarkMode }: AuthButtonProps) {
         <button
           className={`flex items-center gap-2 px-2 py-1 rounded-full text-xs transition-all border ${
             isDarkMode
-              ? "bg-zinc-800 text-zinc-200 border-zinc-700 hover:bg-zinc-700"
+              ? "bg-zinc-700 text-zinc-100 border-zinc-500 hover:bg-zinc-600"
               : "bg-white text-gray-800 border-gray-200 hover:bg-gray-50"
           }`}
           aria-label={displayName}
@@ -95,6 +95,7 @@ export function AuthButton({ isDarkMode }: AuthButtonProps) {
               {initial}
             </span>
           )}
+          <span className="max-w-[96px] truncate">{displayName}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[200px]">

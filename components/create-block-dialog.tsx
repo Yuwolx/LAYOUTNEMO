@@ -136,13 +136,13 @@ export function CreateBlockDialog({
     if (onShowPreview) onShowPreview(null)
     const position = findSmartPosition()
     const newBlock: WorkBlock = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title,
       description: summary,
       x: position.x,
       y: position.y,
       width: 280,
-      height: 96,
+      height: 116,
       zone: selectedZone,
       urgency,
       dueDate: dueDate || undefined,
@@ -186,13 +186,13 @@ export function CreateBlockDialog({
     const position = manual ? findManualPosition() : suggestedPosition
 
     const newBlock: WorkBlock = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title,
       description: summary,
       x: position.x,
       y: position.y,
       width: 280,
-      height: 96,
+      height: 116,
       zone: selectedZone,
       urgency,
       dueDate: dueDate || undefined,
@@ -216,7 +216,7 @@ export function CreateBlockDialog({
         x: smartPosition.x,
         y: smartPosition.y,
         width: 200,
-        height: 96,
+        height: 116,
         zone: selectedZone,
         urgency,
         dueDate: dueDate || undefined,
