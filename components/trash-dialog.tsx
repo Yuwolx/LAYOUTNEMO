@@ -33,7 +33,7 @@ export function TrashDialog({ open, onOpenChange, deletedBlocks, onRestore, onPe
           ) : (
             deletedBlocks.map((block) => {
               const displayTitle = translateSeedBlockField(block, "title", language) ?? block.title
-              const displayDescription = translateSeedBlockField(block, "description", language) ?? block.description
+              const displayDescription = translateSeedBlockField(block, "detailedNotes", language) ?? block.detailedNotes ?? block.description
               return (
                 <div
                   key={block.id}

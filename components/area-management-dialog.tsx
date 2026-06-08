@@ -43,7 +43,7 @@ export function AreaManagementDialog({ open, onOpenChange, zones, onUpdateZones 
   const handleAddZone = () => {
     if (newZoneLabel.trim()) {
       const newZone: Zone = {
-        id: `zone-${Date.now()}`,
+        id: crypto.randomUUID(),
         label: newZoneLabel,
         color: "rgba(200, 200, 200, 0.1)",
       }

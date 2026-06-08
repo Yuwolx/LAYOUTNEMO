@@ -53,7 +53,7 @@ export function WorkBlockCard({
   const { language } = useLanguage()
   const t = useT()
   const displayTitle = translateSeedBlockField(block, "title", language) ?? block.title
-  const displayDescription = translateSeedBlockField(block, "description", language) ?? block.description
+  const displayNotes = translateSeedBlockField(block, "detailedNotes", language) ?? block.detailedNotes ?? block.description
   const [showDetail, setShowDetail] = useState(false)
   const startPosRef = useRef({ x: 0, y: 0 })
   const isMovingRef = useRef(false)
@@ -156,8 +156,8 @@ export function WorkBlockCard({
           // 활성 블럭은 내용에 맞춰 가변. 완료 블럭은 슬림 바 형태 유지.
           height: isCompleted ? 56 : "auto",
           minHeight: isCompleted ? 56 : 64,
-          // line-clamp-3 + 패딩 + 여유. 너무 커지지 않도록 상한.
-          maxHeight: isCompleted ? 56 : 200,
+          // line-clamp-5 + 패딩 + 여유. 너무 커지지 않도록 상한.
+          maxHeight: isCompleted ? 56 : 260,
           transition: archiveFlight
             ? "none"
             : isTossingBack
@@ -194,12 +194,12 @@ export function WorkBlockCard({
               )}
               <div className="flex-1 min-w-0">
                 <h3
-                  className={`font-normal leading-tight text-card-foreground break-words ${isCompleted ? "text-sm truncate mb-0" : "text-[13px] mb-0.5"}`}
+                  className={`font-normal leading-tight text-card-foreground break-words ${isCompleted ? "text-sm truncate mb-0" : "text-[14px] mb-0.5"}`}
                 >
                   {displayTitle}
                 </h3>
                 {!isCompleted && block.dueDate && (
-                  <p className="text-[10px] font-light tracking-wide text-card-foreground/70">
+                  <p className="text-[11px] font-light tracking-wide text-card-foreground/70">
                     {block.dueDate}
                   </p>
                 )}
@@ -244,11 +244,11 @@ export function WorkBlockCard({
             )}
           </div>
 
-          {!isCompleted && (
+          {!isCompleted && displayNotes && (
             <p
-              className={`text-[11px] leading-snug font-light line-clamp-3 ${isAIControl && !aiEnabled ? "text-muted-foreground/50" : "text-card-foreground/80"}`}
+              className={`text-[12px] leading-snug font-light line-clamp-5 whitespace-pre-wrap ${isAIControl && !aiEnabled ? "text-muted-foreground/50" : "text-card-foreground/80"}`}
             >
-              {displayDescription}
+              {displayNotes}
             </p>
           )}
 
@@ -261,7 +261,7 @@ export function WorkBlockCard({
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] text-card-foreground/60 hover:text-card-foreground hover:bg-foreground/5 transition-colors"
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] text-card-foreground/60 hover:text-card-foreground hover:bg-foreground/5 transition-colors"
                 title={block.url}
                 aria-label="외부 링크 열기"
               >

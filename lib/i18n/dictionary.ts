@@ -32,6 +32,8 @@ export const DICT = {
     "header.lastSaved": "마지막 저장",
     "create.autoConfirm.hint": "초 후 자동 반영. 수정하려면 클릭/입력하세요.",
     "create.autoConfirm.cancel": "취소",
+    "auth.signIn": "로그인",
+    "auth.signOut": "로그아웃",
 
     // Dialogs
     "dialog.createBlock.title": "새 블럭 만들기",
@@ -50,7 +52,7 @@ export const DICT = {
     "label.dueDate": "기한",
     "label.title": "제목",
     "label.description": "설명",
-    "label.notes": "상세 메모",
+    "label.notes": "메모",
     "label.url": "링크",
     "label.optional": "선택",
 
@@ -144,6 +146,8 @@ export const DICT = {
     "header.lastSaved": "Last saved",
     "create.autoConfirm.hint": "s — auto-applies. Click or type to edit.",
     "create.autoConfirm.cancel": "Cancel",
+    "auth.signIn": "Login",
+    "auth.signOut": "Sign out",
 
     // Dialogs
     "dialog.createBlock.title": "Create Block",

@@ -33,7 +33,7 @@ export const SEED_BLOCK_STRINGS: Record<
   string,
   {
     title: LocalizedString
-    description: LocalizedString
+    description?: LocalizedString
     detailedNotes?: LocalizedString
   }
 > = {
@@ -227,35 +227,35 @@ LAYOUTNEMO is an AI-assisted thinking space that lets you externalize the struct
   // 예시 블럭 5개
   "example-1": {
     title: { ko: "사용자 인터뷰 진행", en: "Conduct user interviews" },
-    description: {
+    detailedNotes: {
       ko: "5명의 잠재 고객과 인터뷰를 진행하고 니즈 파악 및 피드백 수집",
       en: "Interview 5 potential customers to capture their needs and gather feedback",
     },
   },
   "example-2": {
     title: { ko: "프로토타입 개발", en: "Build a prototype" },
-    description: {
+    detailedNotes: {
       ko: "핵심 기능에 대한 MVP 프로토타입 제작 및 테스트 준비",
       en: "Build an MVP prototype for the core feature and prepare for testing",
     },
   },
   "example-3": {
     title: { ko: "마케팅 채널 분석", en: "Marketing channel research" },
-    description: {
+    detailedNotes: {
       ko: "효과적인 마케팅 채널 조사 및 예산 배분 우선순위 선정",
       en: "Research effective marketing channels and decide budget allocation priorities",
     },
   },
   "example-4": {
     title: { ko: "디자인 시스템 구축", en: "Set up a design system" },
-    description: {
+    detailedNotes: {
       ko: "일관된 UI/UX를 위한 컴포넌트 라이브러리와 디자인 가이드라인 작성",
       en: "Build a component library and design guidelines for consistent UI/UX",
     },
   },
   "example-5": {
     title: { ko: "경쟁사 분석 보고서", en: "Competitor analysis report" },
-    description: {
+    detailedNotes: {
       ko: "주요 경쟁사 3곳의 전략, 가격, 포지셔닝 비교 분석",
       en: "Compare strategy, pricing, and positioning across the 3 main competitors",
     },

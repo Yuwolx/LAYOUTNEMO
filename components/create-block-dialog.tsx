@@ -136,13 +136,13 @@ export function CreateBlockDialog({
     if (onShowPreview) onShowPreview(null)
     const position = findSmartPosition()
     const newBlock: WorkBlock = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title,
-      description: summary,
+      detailedNotes: summary || undefined,
       x: position.x,
       y: position.y,
       width: 280,
-      height: 96,
+      height: 116,
       zone: selectedZone,
       urgency,
       dueDate: dueDate || undefined,
@@ -186,13 +186,13 @@ export function CreateBlockDialog({
     const position = manual ? findManualPosition() : suggestedPosition
 
     const newBlock: WorkBlock = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title,
-      description: summary,
+      detailedNotes: summary || undefined,
       x: position.x,
       y: position.y,
       width: 280,
-      height: 96,
+      height: 116,
       zone: selectedZone,
       urgency,
       dueDate: dueDate || undefined,
@@ -212,11 +212,11 @@ export function CreateBlockDialog({
       onShowPreview({
         id: "preview",
         title,
-        description: summary,
+        detailedNotes: summary || undefined,
         x: smartPosition.x,
         y: smartPosition.y,
         width: 200,
-        height: 96,
+        height: 116,
         zone: selectedZone,
         urgency,
         dueDate: dueDate || undefined,
@@ -247,7 +247,7 @@ export function CreateBlockDialog({
 
   const findSmartPosition = (): { x: number; y: number } => {
     const BLOCK_WIDTH = 280
-    const BLOCK_HEIGHT = 96
+    const BLOCK_HEIGHT = 130
     const SPACING = 40
     const MIN_X = 100
     const MIN_Y = 100
@@ -354,7 +354,7 @@ export function CreateBlockDialog({
 
   const findManualPosition = (): { x: number; y: number } => {
     const BLOCK_WIDTH = 280
-    const BLOCK_HEIGHT = 96
+    const BLOCK_HEIGHT = 130
     const VIEWPORT_PADDING = 48
     const viewport = visibleCanvasBounds ?? {
       x: 100,

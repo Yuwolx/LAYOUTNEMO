@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { CREATE_BLOCK_PROMPT } from "@/lib/ai/prompts"
 import type { CreateBlockAIInput } from "@/lib/ai/types"
 import { createBlockAIOutputSchema, type AIErrorPayload } from "@/lib/ai/schemas"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 const errorResponse = (code: AIErrorPayload["code"], message: string, status: number) =>
   NextResponse.json<{ error: AIErrorPayload }>({ error: { code, message } }, { status })
@@ -101,6 +102,15 @@ export async function POST(req: Request) {
     input.zones.find((z) => z.id === parsed.data.suggestedZone) ??
     input.zones.find((z) => z.label === parsed.data.suggestedZone) ??
     input.zones[0]
+
+  // 이벤트 기록 (로그인 유저만)
+  const supabase = await createSupabaseServerClient()
+  if (supabase) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      supabase.from("events").insert({ user_id: user.id, name: "ai_create_used", payload: {} })
+    }
+  }
 
   return NextResponse.json({
     ...parsed.data,

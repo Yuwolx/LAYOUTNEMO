@@ -3,7 +3,7 @@ export type Urgency = "stable" | "thinking" | "lingering" | "urgent"
 export interface WorkBlock {
   id: string
   title: string
-  description: string
+  description?: string
   x: number
   y: number
   width: number
