@@ -28,7 +28,7 @@ const URGENCY_COLOR_HEX: Record<Urgency, string> = {
 
 type DraftValues = {
   title: string
-  description: string
+  description: string | undefined
   detailedNotes: string
   dueDate: string
   zone: string
@@ -38,10 +38,10 @@ type DraftValues = {
 
 type DraftBaseline = {
   titleDisplay: string
-  descriptionDisplay: string
+  descriptionDisplay: string | undefined
   notesDisplay: string
   sourceTitle: string
-  sourceDescription: string
+  sourceDescription: string | undefined
   sourceNotes: string
 }
 
@@ -213,11 +213,6 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
                 <p className="text-base font-normal">{displayTitle}</p>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-normal text-muted-foreground">{t("label.description")}</Label>
-                <p className="text-sm text-muted-foreground leading-relaxed">{displayDescription}</p>
-              </div>
-
               {displayNotes && (
                 <div className="space-y-2">
                   <Label className="text-sm font-normal text-muted-foreground">{t("label.notes")}</Label>
@@ -244,13 +239,14 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-normal">
-                  {t("label.description")}
+                <Label htmlFor="detailed-notes-top" className="text-sm font-normal">
+                  {t("label.notes")}
                 </Label>
                 <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  id="detailed-notes-top"
+                  value={detailedNotes}
+                  onChange={(e) => setDetailedNotes(e.target.value)}
+                  placeholder={t("label.notes")}
                   className="min-h-[120px] resize-none text-base leading-relaxed"
                 />
               </div>
@@ -301,19 +297,6 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
                     )
                   })}
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="detailed-notes" className="text-sm font-normal">
-                  {t("label.notes")}
-                </Label>
-                <Textarea
-                  id="detailed-notes"
-                  value={detailedNotes}
-                  onChange={(e) => setDetailedNotes(e.target.value)}
-                  placeholder={t("label.notes")}
-                  className="min-h-[220px] resize-none text-base leading-relaxed"
-                />
               </div>
 
               <div className="space-y-2">

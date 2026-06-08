@@ -87,7 +87,7 @@ function rowToBlock(row: BlockRow): WorkBlock {
   return {
     id: row.id,
     title: row.title,
-    description: row.description ?? "",
+    description: row.description ?? undefined,
     x: row.x,
     y: row.y,
     width: row.width,

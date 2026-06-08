@@ -68,6 +68,7 @@ export function ReflectionDialog({
             id: b.id,
             title: b.title,
             description: b.description,
+            detailedNotes: b.detailedNotes,
             zone: b.zone,
             urgency: b.urgency || "thinking",
             x: b.x,

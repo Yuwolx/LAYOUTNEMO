@@ -53,9 +53,9 @@ function calculateBlockSimilarity(block1: WorkBlock, block2: WorkBlock): number 
   // 1. 영역(결) 동일
   if (block1.zone === block2.zone) similarity += 30
 
-  // 2. 제목 + 설명 키워드 공통
-  const text1 = `${block1.title} ${block1.description || ""}`.toLowerCase()
-  const text2 = `${block2.title} ${block2.description || ""}`.toLowerCase()
+  // 2. 제목 + 메모 키워드 공통
+  const text1 = `${block1.title} ${block1.detailedNotes || block1.description || ""}`.toLowerCase()
+  const text2 = `${block2.title} ${block2.detailedNotes || block2.description || ""}`.toLowerCase()
   const words1 = text1.split(/\s+/).filter((w) => w.length > 1)
   const words2 = new Set(text2.split(/\s+/))
   const commonCount = words1.filter((w) => words2.has(w)).length
@@ -127,7 +127,7 @@ export async function POST(req: Request) {
     const blockSummary = regularBlocks.map((b) => ({
       id: b.id,
       title: b.title,
-      description: b.description || "",
+      description: b.detailedNotes || b.description || "",
       zone: b.zone,
       urgency: b.urgency,
       dueDate: b.dueDate || null,

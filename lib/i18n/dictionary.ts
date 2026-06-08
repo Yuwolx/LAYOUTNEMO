@@ -52,7 +52,7 @@ export const DICT = {
     "label.dueDate": "기한",
     "label.title": "제목",
     "label.description": "설명",
-    "label.notes": "상세 메모",
+    "label.notes": "메모",
     "label.url": "링크",
     "label.optional": "선택",
 
