@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: MAX_AGE,
-    path: "/admin",
+    path: "/",
   })
 
   return NextResponse.json({ ok: true })
