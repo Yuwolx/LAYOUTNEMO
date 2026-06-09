@@ -58,6 +58,12 @@ type BlockRow = {
 // 변환 함수
 // ─────────────────────────────────────────────
 
+function throwIfSupabaseError(error: { message: string } | null, action: string): void {
+  if (error) {
+    throw new Error(`${action}: ${error.message}`)
+  }
+}
+
 function blockToRow(block: WorkBlock, canvasId: string, userId: string): BlockRow {
   return {
     id: block.id,
@@ -178,46 +184,53 @@ export async function saveCanvas(
   position: number,
 ): Promise<void> {
   // 1. canvas row
-  await supabase.from("canvases").upsert({
+  const { error: canvasError } = await supabase.from("canvases").upsert({
     id: canvas.id,
     user_id: userId,
     name: canvas.name,
     position,
     updated_at: new Date().toISOString(),
   })
+  throwIfSupabaseError(canvasError, "Failed to save canvas")
 
   // 2. zones — upsert 후 삭제된 결 제거
   const zoneRows = canvas.zones.map((z, i) => zoneToRow(z, canvas.id, userId, i))
   if (zoneRows.length > 0) {
-    await supabase.from("zones").upsert(zoneRows)
+    const { error } = await supabase.from("zones").upsert(zoneRows)
+    throwIfSupabaseError(error, "Failed to save zones")
   }
   // 이 캔버스에서 사라진 결 삭제
   const currentZoneIds = canvas.zones.map((z) => z.id)
   if (currentZoneIds.length > 0) {
-    await supabase
+    const { error } = await supabase
       .from("zones")
       .delete()
       .eq("canvas_id", canvas.id)
       .not("id", "in", `(${currentZoneIds.join(",")})`)
+    throwIfSupabaseError(error, "Failed to delete removed zones")
   } else {
-    await supabase.from("zones").delete().eq("canvas_id", canvas.id)
+    const { error } = await supabase.from("zones").delete().eq("canvas_id", canvas.id)
+    throwIfSupabaseError(error, "Failed to delete zones")
   }
 
   // 3. blocks — upsert (is_deleted 포함 전체 동기화)
   const blockRows = canvas.blocks.map((b) => blockToRow(b, canvas.id, userId))
   if (blockRows.length > 0) {
-    await supabase.from("blocks").upsert(blockRows)
+    const { error } = await supabase.from("blocks").upsert(blockRows)
+    throwIfSupabaseError(error, "Failed to save blocks")
   }
   // 이 캔버스에서 사라진 블럭 삭제
   const currentBlockIds = canvas.blocks.map((b) => b.id)
   if (currentBlockIds.length > 0) {
-    await supabase
+    const { error } = await supabase
       .from("blocks")
       .delete()
       .eq("canvas_id", canvas.id)
       .not("id", "in", `(${currentBlockIds.join(",")})`)
+    throwIfSupabaseError(error, "Failed to delete removed blocks")
   } else {
-    await supabase.from("blocks").delete().eq("canvas_id", canvas.id)
+    const { error } = await supabase.from("blocks").delete().eq("canvas_id", canvas.id)
+    throwIfSupabaseError(error, "Failed to delete blocks")
   }
 }
 
@@ -227,7 +240,8 @@ export async function saveCanvas(
 
 export async function deleteCanvas(supabase: SupabaseClient, canvasId: string): Promise<void> {
   // blocks, zones 는 cascade 삭제됨
-  await supabase.from("canvases").delete().eq("id", canvasId)
+  const { error } = await supabase.from("canvases").delete().eq("id", canvasId)
+  throwIfSupabaseError(error, "Failed to delete canvas")
 }
 
 // ─────────────────────────────────────────────

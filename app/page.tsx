@@ -15,7 +15,7 @@ import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedCanvasName } from "@/lib/i18n/seed"
 import { useAuth } from "@/lib/auth/context"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
-import { loadUserCanvases, saveCanvas, migrateLocalToSupabase } from "@/lib/supabase/db"
+import { deleteCanvas, loadUserCanvases, saveCanvas, migrateLocalToSupabase } from "@/lib/supabase/db"
 import { captureEvent } from "@/lib/supabase/events"
 
 // 기본 결(Facet) 5종. 설계 문서 (ARCHITECTURE.md) 와 정합.
@@ -278,6 +278,8 @@ export default function Page() {
   const t = useT()
   const { user } = useAuth()
   const supabaseRef = useRef(createSupabaseBrowserClient())
+  const remoteSyncReadyRef = useRef(false)
+  const hadStoredCanvasesAtBootRef = useRef(false)
   const [canvases, setCanvases] = useState<CanvasType[]>([getDefaultCanvas()])
   const [currentCanvasId, setCurrentCanvasId] = useState<string>("main")
   const [lastSaved, setLastSaved] = useState<Date>(new Date())
@@ -362,6 +364,7 @@ export default function Page() {
 
   useEffect(() => {
     setIsClient(true)
+    hadStoredCanvasesAtBootRef.current = Boolean(localStorage.getItem(STORAGE_KEY))
     const loadedCanvases = loadCanvases()
     const loadedCanvasId = loadCurrentCanvasId()
 
@@ -380,6 +383,7 @@ export default function Page() {
 
   // 로그인 시: Supabase 데이터 로드 or localStorage → Supabase 최초 마이그레이션
   useEffect(() => {
+    remoteSyncReadyRef.current = false
     if (!isClient || !user || !supabaseRef.current) return
     const supabase = supabaseRef.current
     const userId = user.id
@@ -387,13 +391,21 @@ export default function Page() {
     ;(async () => {
       try {
         const remoteCanvases = await loadUserCanvases(supabase, userId)
-        const localCanvases = loadCanvases()
+        const localCanvases = hadStoredCanvasesAtBootRef.current ? loadCanvases() : []
+        const remoteLooksBroken =
+          remoteCanvases.length > 0 &&
+          remoteCanvases.every((canvas) => canvas.zones.length === 0 && canvas.blocks.length === 0)
 
-        if (remoteCanvases.length === 0) {
+        if (remoteCanvases.length === 0 || remoteLooksBroken) {
           // 최초 로그인 → localStorage 데이터를 Supabase로 이전
-          const migrated = await migrateLocalToSupabase(supabase, userId, localCanvases)
+          if (remoteLooksBroken) {
+            await Promise.all(remoteCanvases.map((canvas) => deleteCanvas(supabase, canvas.id)))
+          }
+          const canvasesToMigrate = localCanvases.length > 0 ? localCanvases : [getDefaultCanvas()]
+          const migrated = await migrateLocalToSupabase(supabase, userId, canvasesToMigrate)
           setCanvases(migrated)
           setCurrentCanvasId(migrated[0]?.id ?? "main")
+          remoteSyncReadyRef.current = true
           return
         }
 
@@ -445,6 +457,7 @@ export default function Page() {
         setCurrentCanvasId(merged[0]?.id ?? "main")
         localStorage.removeItem("layout_last_synced_at")
         captureEvent(supabase, userId, "session_start")
+        remoteSyncReadyRef.current = true
 
         if (conflicted.length > 0) {
           console.warn(
@@ -488,6 +501,7 @@ export default function Page() {
 
     // Supabase 저장 (로그인 상태일 때만, 2초 debounce)
     if (!user || !supabaseRef.current) return
+    if (!remoteSyncReadyRef.current) return
     const supabase = supabaseRef.current
     const userId = user.id
 
@@ -596,6 +610,9 @@ export default function Page() {
   const handleDeleteCanvas = (id: string) => {
     if (canvases.length === 1) return
     setCanvases((prev) => prev.filter((c) => c.id !== id))
+    if (user && supabaseRef.current && remoteSyncReadyRef.current) {
+      deleteCanvas(supabaseRef.current, id).catch((err) => console.error("Supabase delete canvas error:", err))
+    }
     if (currentCanvasId === id) {
       const remainingCanvas = canvases.find((c) => c.id !== id)
       if (remainingCanvas) {
