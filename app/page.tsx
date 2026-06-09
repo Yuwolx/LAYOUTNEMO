@@ -410,7 +410,24 @@ export default function Page() {
         }
 
         // 로그아웃 시점 — 이 이후의 로컬 변경만 "오프라인 작업"으로 간주
-        const lastSyncedAt = parseInt(localStorage.getItem("layout_last_synced_at") ?? "0", 10)
+        const lastSyncedRaw = localStorage.getItem("layout_last_synced_at")
+        const lastSyncedAt = parseInt(lastSyncedRaw ?? "0", 10)
+        const shouldMergeOfflineChanges = Boolean(lastSyncedRaw) && Number.isFinite(lastSyncedAt) && lastSyncedAt > 0
+
+        if (!shouldMergeOfflineChanges) {
+          const orderedRemote = [...remoteCanvases].sort((a, b) => a.createdAt - b.createdAt)
+          const storedCanvasId = loadCurrentCanvasId()
+          const activeId = orderedRemote.some((canvas) => canvas.id === storedCanvasId)
+            ? storedCanvasId
+            : orderedRemote[0]?.id ?? "main"
+
+          setCanvases(orderedRemote)
+          setCurrentCanvasId(activeId)
+          localStorage.removeItem("layout_last_synced_at")
+          captureEvent(supabase, userId, "session_start")
+          remoteSyncReadyRef.current = true
+          return
+        }
 
         const remoteById = new Map(remoteCanvases.map((c) => [c.id, c]))
         const localById = new Map(localCanvases.map((c) => [c.id, c]))
