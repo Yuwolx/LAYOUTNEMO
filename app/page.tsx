@@ -392,9 +392,12 @@ export default function Page() {
       try {
         const remoteCanvases = await loadUserCanvases(supabase, userId)
         const localCanvases = hadStoredCanvasesAtBootRef.current ? loadCanvases() : []
+        // 모든 캔버스에 zones도 blocks도 없고, 로컬에 실제 데이터가 있을 때만 "깨진 것"으로 판단.
+        // 빈 캔버스를 일부러 만들었거나 네트워크 부분 실패 시 오탐 방지.
         const remoteLooksBroken =
           remoteCanvases.length > 0 &&
-          remoteCanvases.every((canvas) => canvas.zones.length === 0 && canvas.blocks.length === 0)
+          remoteCanvases.every((canvas) => canvas.zones.length === 0 && canvas.blocks.length === 0) &&
+          localCanvases.some((canvas) => canvas.zones.length > 0 || canvas.blocks.length > 0)
 
         if (remoteCanvases.length === 0 || remoteLooksBroken) {
           // 최초 로그인 → localStorage 데이터를 Supabase로 이전

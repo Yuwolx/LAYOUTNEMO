@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
-import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 type DailyCount = { date: string; count: number }
 type UserRow = { id: string; email: string | null; plan: string; created_at: string; block_count: number }
@@ -56,43 +55,14 @@ export default function AdminPage() {
   }
 
   async function fetchAll() {
-    const supabase = createSupabaseBrowserClient()
-    if (!supabase) return
+    const res = await fetch("/api/admin/stats")
+    if (!res.ok) return
+    const data = await res.json()
 
-    const today = new Date().toISOString().split("T")[0]
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-
-    const [
-      { count: totalUsers },
-      { count: todaySignups },
-      { count: totalBlocks },
-      { count: aiThisMonth },
-      { data: sessionsRaw },
-      { data: blocksRaw },
-      { data: aiRaw },
-      { data: userList },
-    ] = await Promise.all([
-      supabase.from("user_profiles").select("*", { count: "exact", head: true }),
-      supabase.from("user_profiles").select("*", { count: "exact", head: true }).gte("created_at", today),
-      supabase.from("blocks").select("*", { count: "exact", head: true }).eq("is_deleted", false),
-      supabase.from("events").select("*", { count: "exact", head: true })
-        .in("name", ["ai_create_used", "ai_tidy_used"]).gte("created_at", monthStart),
-      supabase.from("events").select("created_at, user_id").eq("name", "session_start").gte("created_at", thirtyDaysAgo),
-      supabase.from("events").select("created_at").eq("name", "block_created").gte("created_at", thirtyDaysAgo),
-      supabase.from("events").select("name").in("name", ["ai_create_used", "ai_tidy_used"]),
-      supabase.from("user_profiles").select("id, email, plan, created_at").order("created_at", { ascending: false }).limit(50),
-    ])
-
-    setStats({
-      totalUsers: totalUsers ?? 0,
-      todaySignups: todaySignups ?? 0,
-      totalBlocks: totalBlocks ?? 0,
-      aiThisMonth: aiThisMonth ?? 0,
-    })
+    setStats(data.stats)
 
     const dauMap = new Map<string, Set<string>>()
-    ;(sessionsRaw ?? []).forEach((e: { created_at: string; user_id: string }) => {
+    ;(data.sessionsRaw ?? []).forEach((e: { created_at: string; user_id: string }) => {
       const d = e.created_at.split("T")[0]
       if (!dauMap.has(d)) dauMap.set(d, new Set())
       dauMap.get(d)!.add(e.user_id)
@@ -100,30 +70,20 @@ export default function AdminPage() {
     setDauData(buildLast30Days(dauMap))
 
     const blockMap = new Map<string, number>()
-    ;(blocksRaw ?? []).forEach((e: { created_at: string }) => {
+    ;(data.blocksRaw ?? []).forEach((e: { created_at: string }) => {
       const d = e.created_at.split("T")[0]
       blockMap.set(d, (blockMap.get(d) ?? 0) + 1)
     })
     setBlockTrend(buildLast30DaysCount(blockMap))
 
     const aiCount: Record<string, number> = {}
-    ;(aiRaw ?? []).forEach((e: { name: string }) => { aiCount[e.name] = (aiCount[e.name] ?? 0) + 1 })
+    ;(data.aiRaw ?? []).forEach((e: { name: string }) => { aiCount[e.name] = (aiCount[e.name] ?? 0) + 1 })
     setAiData([
       { name: "AI 생성", count: aiCount["ai_create_used"] ?? 0 },
       { name: "정리하기", count: aiCount["ai_tidy_used"] ?? 0 },
     ])
 
-    if (userList) {
-      const ids = userList.map((u: { id: string }) => u.id)
-      const { data: blockCounts } = await supabase.from("blocks").select("user_id").in("user_id", ids).eq("is_deleted", false)
-      const countMap = new Map<string, number>()
-      ;(blockCounts ?? []).forEach((b: { user_id: string }) => {
-        countMap.set(b.user_id, (countMap.get(b.user_id) ?? 0) + 1)
-      })
-      setUsers(userList.map((u: { id: string; email: string | null; plan: string; created_at: string }) => ({
-        ...u, block_count: countMap.get(u.id) ?? 0,
-      })))
-    }
+    setUsers(data.users ?? [])
   }
 
   // 로딩

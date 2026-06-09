@@ -15,12 +15,18 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const code = url.searchParams.get("code")
-  const nextParam = url.searchParams.get("next") ?? "/"
+  const nextRaw = url.searchParams.get("next") ?? "/"
+  // open-redirect 방어: 반드시 같은 오리진의 경로만 허용
+  const nextParam = nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : "/"
 
   if (code) {
     const supabase = await createSupabaseServerClient()
     if (supabase) {
-      await supabase.auth.exchangeCodeForSession(code)
+      const { error } = await supabase.auth.exchangeCodeForSession(code)
+      if (error) {
+        console.error("OAuth code exchange failed:", error.message)
+        return NextResponse.redirect(new URL("/?auth_error=1", url.origin))
+      }
     }
   }
 
