@@ -169,8 +169,8 @@ create policy "own blocks" on public.blocks
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.user_profiles (id)
-  values (new.id)
+  insert into public.user_profiles (id, email)
+  values (new.id, new.email)
   on conflict (id) do nothing;
   return new;
 end;
