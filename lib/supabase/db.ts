@@ -244,6 +244,11 @@ export async function deleteCanvas(supabase: SupabaseClient, canvasId: string): 
   throwIfSupabaseError(error, "Failed to delete canvas")
 }
 
+export async function resetUserCanvases(supabase: SupabaseClient, userId: string): Promise<void> {
+  const { error } = await supabase.from("canvases").delete().eq("user_id", userId)
+  throwIfSupabaseError(error, "Failed to reset canvases")
+}
+
 // ─────────────────────────────────────────────
 // localStorage → Supabase 최초 마이그레이션
 //

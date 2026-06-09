@@ -15,7 +15,7 @@ import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedCanvasName } from "@/lib/i18n/seed"
 import { useAuth } from "@/lib/auth/context"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
-import { deleteCanvas, loadUserCanvases, saveCanvas, migrateLocalToSupabase } from "@/lib/supabase/db"
+import { deleteCanvas, loadUserCanvases, saveCanvas, migrateLocalToSupabase, resetUserCanvases } from "@/lib/supabase/db"
 import { captureEvent } from "@/lib/supabase/events"
 
 // 기본 결(Facet) 5종. 설계 문서 (ARCHITECTURE.md) 와 정합.
@@ -669,15 +669,33 @@ export default function Page() {
     saveToHistory(newBlocks)
   }
 
-  const handleReset = () => {
+  const handleReset = async () => {
     // reset 은 의도적으로 가이드/예시까지 포함한 "완전 초기화" 의미.
     if (confirm(t("confirm.reset"))) {
       try {
+        const defaultCanvas = getDefaultCanvas()
+
+        if (user && supabaseRef.current) {
+          remoteSyncReadyRef.current = false
+          await resetUserCanvases(supabaseRef.current, user.id)
+          const migrated = await migrateLocalToSupabase(supabaseRef.current, user.id, [defaultCanvas])
+          const activeCanvas = migrated[0] ?? defaultCanvas
+          setCanvases(migrated)
+          setCurrentCanvasId(activeCanvas.id)
+          setHistory([{ canvasId: activeCanvas.id, blocks: activeCanvas.blocks }])
+          setHistoryIndex(0)
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
+          localStorage.setItem(CURRENT_CANVAS_KEY, activeCanvas.id)
+          remoteSyncReadyRef.current = true
+          return
+        }
+
         localStorage.removeItem(STORAGE_KEY)
         localStorage.removeItem(CURRENT_CANVAS_KEY)
         window.location.reload()
       } catch (error) {
         console.error("Failed to reset:", error)
+        alert("초기화에 실패했어요. 브라우저 콘솔의 Failed to reset 오류를 확인해 주세요.")
       }
     }
   }
