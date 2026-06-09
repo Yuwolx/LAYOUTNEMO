@@ -535,13 +535,24 @@ export default function Page() {
   const activeBlocks = blocks.filter((b) => !b.isDeleted)
   const canvasBlocks = activeBlocks.filter((b) => !b.isCompleted)
 
+  const persistCanvasNow = (canvas: CanvasType) => {
+    if (!user || !supabaseRef.current || !remoteSyncReadyRef.current) return
+    const existingPosition = canvases.findIndex((c) => c.id === canvas.id)
+    const position = existingPosition >= 0 ? existingPosition : canvases.length
+    saveCanvas(supabaseRef.current, user.id, canvas, position).catch((err) =>
+      console.error("Supabase immediate save error:", err),
+    )
+  }
+
   const saveToHistory = (newBlocks: WorkBlock[]) => {
+    const nextCanvas = currentCanvas ? { ...currentCanvas, blocks: newBlocks, updatedAt: Date.now() } : null
     // 캔버스는 즉시 업데이트
     setCanvases((prev) =>
       prev.map((canvas) =>
-        canvas.id === currentCanvasId ? { ...canvas, blocks: newBlocks, updatedAt: Date.now() } : canvas,
+        canvas.id === currentCanvasId && nextCanvas ? nextCanvas : canvas,
       ),
     )
+    if (nextCanvas) persistCanvasNow(nextCanvas)
 
     // redo 분기 제거 + 새 스냅샷 추가 + 50개 제한
     const truncated = history.slice(0, historyIndex + 1)
@@ -639,16 +650,33 @@ export default function Page() {
   }
 
   const handleCreateCanvas = (name: string) => {
+    const sourceZones = zones.length > 0 ? zones : initialZones
+    const zoneIdMap = new Map<string, string>()
+    const newZones = sourceZones.map((zone) => {
+      const id = crypto.randomUUID()
+      zoneIdMap.set(zone.id, id)
+      return { ...zone, id }
+    })
+    const sourceGuideBlocks = blocks.filter((block) => block.isGuide).slice(0, 2)
+    const guideBlocks = (sourceGuideBlocks.length > 0 ? sourceGuideBlocks : initialBlocks.filter((block) => block.isGuide)).map(
+      (block) => ({
+        ...block,
+        id: crypto.randomUUID(),
+        zone: zoneIdMap.get(block.zone) ?? newZones[0]?.id ?? "",
+        relatedTo: [],
+      }),
+    )
     const newCanvas: CanvasType = {
       id: crypto.randomUUID(),
       name,
-      blocks: [blocks[0], blocks[1]],
-      zones: initialZones,
+      blocks: guideBlocks,
+      zones: newZones,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
     setCanvases((prev) => [...prev, newCanvas])
     setCurrentCanvasId(newCanvas.id)
+    persistCanvasNow(newCanvas)
   }
 
   const handleUpdateZones = (newZones: Zone[]) => {
@@ -676,7 +704,7 @@ export default function Page() {
 
     const newBlock: WorkBlock = {
       ...sourceBlock,
-      id: `block-${Date.now()}`,
+      id: crypto.randomUUID(),
       x: sourceBlock.x + 30,
       y: sourceBlock.y + 30,
       relatedTo: [],
