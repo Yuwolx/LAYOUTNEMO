@@ -549,13 +549,11 @@ export default function Page() {
 
   const saveToHistory = (newBlocks: WorkBlock[]) => {
     const nextCanvas = currentCanvas ? { ...currentCanvas, blocks: newBlocks, updatedAt: Date.now() } : null
-    // 캔버스는 즉시 업데이트
     setCanvases((prev) =>
       prev.map((canvas) =>
         canvas.id === currentCanvasId && nextCanvas ? nextCanvas : canvas,
       ),
     )
-    if (nextCanvas) persistCanvasNow(nextCanvas)
 
     // redo 분기 제거 + 새 스냅샷 추가 + 50개 제한
     const truncated = history.slice(0, historyIndex + 1)
