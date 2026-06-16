@@ -72,6 +72,12 @@ function calculateBlockSimilarity(block1: WorkBlock, block2: WorkBlock): number 
 }
 
 export async function POST(req: Request) {
+  const supabaseForAuth = await createSupabaseServerClient()
+  if (supabaseForAuth) {
+    const { data: { user } } = await supabaseForAuth.auth.getUser()
+    if (!user) return errorResponse("network_error", "Login required.", 401)
+  }
+
   let input: { blocks: WorkBlock[]; zones: Zone[]; language?: "ko" | "en" }
   try {
     input = await req.json()

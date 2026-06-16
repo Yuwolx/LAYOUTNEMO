@@ -8,6 +8,12 @@ const errorResponse = (code: AIErrorPayload["code"], message: string, status: nu
   NextResponse.json<{ error: AIErrorPayload }>({ error: { code, message } }, { status })
 
 export async function POST(req: Request) {
+  const supabaseForAuth = await createSupabaseServerClient()
+  if (supabaseForAuth) {
+    const { data: { user } } = await supabaseForAuth.auth.getUser()
+    if (!user) return errorResponse("network_error", "Login required.", 401)
+  }
+
   let input: CreateBlockAIInput
   try {
     input = await req.json()

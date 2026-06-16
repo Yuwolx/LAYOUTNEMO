@@ -18,6 +18,7 @@ interface CanvasSelectorDialogProps {
   onRenameCanvas: (id: string, newName: string) => void
   onDeleteCanvas: (id: string) => void
   onCreateCanvas: (name: string) => void
+  user: { id: string } | null
 }
 
 export function CanvasSelectorDialog({
@@ -29,6 +30,7 @@ export function CanvasSelectorDialog({
   onRenameCanvas,
   onDeleteCanvas,
   onCreateCanvas,
+  user,
 }: CanvasSelectorDialogProps) {
   const { language } = useLanguage()
   const t = useT()
@@ -124,20 +126,26 @@ export function CanvasSelectorDialog({
           ))}
         </div>
 
-        <div className="flex gap-2 mt-6 pt-4 border-t">
-          <Input
-            placeholder={newCanvasPlaceholder}
-            value={newCanvasName}
-            onChange={(e) => setNewCanvasName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleCreateCanvas()
-            }}
-          />
-          <Button onClick={handleCreateCanvas}>
-            <Plus className="w-4 h-4 mr-2" />
-            {createLabel}
-          </Button>
-        </div>
+        {user ? (
+          <div className="flex gap-2 mt-6 pt-4 border-t">
+            <Input
+              placeholder={newCanvasPlaceholder}
+              value={newCanvasName}
+              onChange={(e) => setNewCanvasName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleCreateCanvas()
+              }}
+            />
+            <Button onClick={handleCreateCanvas}>
+              <Plus className="w-4 h-4 mr-2" />
+              {createLabel}
+            </Button>
+          </div>
+        ) : (
+          <p className="mt-6 pt-4 border-t text-xs text-muted-foreground text-center">
+            로그인하면 여러 캔버스를 사용할 수 있어요
+          </p>
+        )}
       </DialogContent>
     </Dialog>
   )

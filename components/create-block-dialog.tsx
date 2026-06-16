@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Sparkles, Calendar, Loader2 } from "lucide-react"
+import { Sparkles, Calendar, Loader2, Lock, PenLine } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,7 +21,9 @@ interface CreateBlockDialogProps {
   isAIEnabled: boolean
   existingBlocks: WorkBlock[]
   visibleCanvasBounds?: CanvasViewport | null
-  onShowPreview?: (block: Partial<WorkBlock> | null) => void // 미리보기 블록 전달
+  onShowPreview?: (block: Partial<WorkBlock> | null) => void
+  user: { id: string } | null
+  onLogin: () => Promise<void>
 }
 
 type CreateStep = "input" | "preview" | "placement"
@@ -38,10 +40,13 @@ export function CreateBlockDialog({
   existingBlocks,
   visibleCanvasBounds,
   onShowPreview,
+  user,
+  onLogin,
 }: CreateBlockDialogProps) {
   const { language } = useLanguage()
   const t = useT()
   const [step, setStep] = useState<CreateStep>("input")
+  const [showManual, setShowManual] = useState(false)
   const [initialInput, setInitialInput] = useState("")
   const [title, setTitle] = useState("")
   const [summary, setSummary] = useState("")
@@ -241,7 +246,8 @@ export function CreateBlockDialog({
     setAiZoneReason("")
     setIsLoading(false)
     setUrl("")
-    setAutoConfirmAt(null) // 다이얼로그 닫힐 때 카운트다운 정리
+    setAutoConfirmAt(null)
+    setShowManual(false)
     onOpenChange(false)
   }
 
@@ -386,16 +392,54 @@ export function CreateBlockDialog({
   return (
     <Dialog open={open} onOpenChange={handleReset}>
       <DialogContent className="sm:max-w-[480px]">
-        {step === "input" && (
+        {step === "input" && !user && isAIEnabled && !showManual && (
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <h2 className="text-lg font-normal">새 블럭 만들기</h2>
+              <p className="text-sm text-muted-foreground">AI 생성은 로그인 후 사용할 수 있어요.</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={onLogin}
+                className="flex items-center gap-4 p-4 rounded-xl border border-border/60 hover:bg-muted/40 transition-colors text-left group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-4 h-4 text-indigo-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    AI로 생성
+                    <Lock className="w-3 h-3 text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">Google 로그인 후 AI가 자동으로 정리해요</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setShowManual(true)}
+                className="flex items-center gap-4 p-4 rounded-xl border border-border/60 hover:bg-muted/40 transition-colors text-left"
+              >
+                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                  <PenLine className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium">직접 입력</div>
+                  <p className="text-xs text-muted-foreground mt-0.5">제목과 내용을 직접 작성해요</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === "input" && (user || !isAIEnabled || showManual) && (
           <div className="space-y-6">
             <div className="space-y-2">
               <h2 className="text-lg font-normal">
-                {isAIEnabled ? "추가할 업무를 간단히 적어주세요." : "새 블럭 만들기"}
+                {isAIEnabled && user ? "추가할 업무를 간단히 적어주세요." : "새 블럭 만들기"}
               </h2>
-              {!isAIEnabled && <p className="text-sm text-muted-foreground">제목과 내용을 직접 입력하세요.</p>}
+              {(!isAIEnabled || !user) && <p className="text-sm text-muted-foreground">제목과 내용을 직접 입력하세요.</p>}
             </div>
 
-            {isAIEnabled ? (
+            {isAIEnabled && user ? (
               <>
                 <Input
                   value={initialInput}

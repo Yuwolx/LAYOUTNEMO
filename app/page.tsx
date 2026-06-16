@@ -276,7 +276,7 @@ const loadCurrentCanvasId = (): string => {
 export default function Page() {
   const { language } = useLanguage()
   const t = useT()
-  const { user } = useAuth()
+  const { user, signInWithGoogle } = useAuth()
   const supabaseRef = useRef(createSupabaseBrowserClient())
   const remoteSyncReadyRef = useRef(false)
   const hadStoredCanvasesAtBootRef = useRef(false)
@@ -868,7 +868,9 @@ export default function Page() {
         isAIEnabled={isAIEnabled}
         existingBlocks={activeBlocks}
         visibleCanvasBounds={canvasViewport}
-        onShowPreview={setPreviewBlock} // 미리보기 핸들러 전달
+        onShowPreview={setPreviewBlock}
+        user={user}
+        onLogin={signInWithGoogle}
       />
 
       <ReflectionDialog
@@ -896,6 +898,7 @@ export default function Page() {
         onRenameCanvas={handleRenameCanvas}
         onDeleteCanvas={handleDeleteCanvas}
         onCreateCanvas={handleCreateCanvas}
+        user={user}
       />
 
       <AboutDialog open={isAboutOpen} onOpenChange={setIsAboutOpen} />
