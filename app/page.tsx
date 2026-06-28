@@ -187,6 +187,9 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
 
 const STORAGE_KEY = "layout_canvases"
 const CURRENT_CANVAS_KEY = "layout_current_canvas"
+// localStorage 캔버스 데이터가 "누구 것"인지 표시. 다른 계정이 로그인했을 때
+// 이전 계정의 로컬 캐시를 자기 데이터로 잘못 병합/업로드하는 것을 막는 데 쓴다.
+const LOCAL_OWNER_KEY = "layout_local_owner"
 const GUIDE_BLOCK_TEMPLATES = new Map(initialBlocks.filter((block) => block.isGuide).map((block) => [block.id, block]))
 
 const getDefaultCanvas = (): CanvasType => ({
@@ -392,7 +395,12 @@ export default function Page() {
     ;(async () => {
       try {
         const remoteCanvases = await loadUserCanvases(supabase, userId)
-        const localCanvases = hadStoredCanvasesAtBootRef.current ? loadCanvases() : []
+        // 로컬 캐시가 지금 로그인한 계정 것이 아니면(다른 계정이 쓰던 것 / 게스트 데이터가 아닌 남의 계정)
+        // 절대 병합/마이그레이션 대상으로 쓰지 않는다 — 안 그러면 이전 계정의 캔버스가
+        // 지금 로그인한 계정으로 그대로 복제되어 들어간다.
+        const storedOwner = localStorage.getItem(LOCAL_OWNER_KEY)
+        const localBelongsHere = storedOwner === null || storedOwner === userId
+        const localCanvases = hadStoredCanvasesAtBootRef.current && localBelongsHere ? loadCanvases() : []
         // 모든 캔버스에 zones도 blocks도 없고, 로컬에 실제 데이터가 있을 때만 "깨진 것"으로 판단.
         // 빈 캔버스를 일부러 만들었거나 네트워크 부분 실패 시 오탐 방지.
         const remoteLooksBroken =
@@ -519,6 +527,12 @@ export default function Page() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(canvases))
       localStorage.setItem(CURRENT_CANVAS_KEY, currentCanvasId)
+      // 동기화가 끝나 이 canvases가 실제로 이 계정 것이라고 확정된 뒤에만 소유자 표시.
+      // 로그아웃 상태에서는 절대 건드리지 않음 — 마지막 로그인 계정 표시가 남아있어야
+      // 같은 계정 재로그인 시 오프라인 변경 병합이 정상 동작한다.
+      if (user && remoteSyncReadyRef.current) {
+        localStorage.setItem(LOCAL_OWNER_KEY, user.id)
+      }
       setLastSaved(new Date())
     } catch (error) {
       console.error("Failed to save to localStorage:", error)
