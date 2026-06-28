@@ -166,11 +166,13 @@ create policy "own blocks" on public.blocks
 -- 6. 신규 유저 자동 프로필 생성 트리거
 --    Google 로그인 완료 → auth.users insert → user_profiles 자동 생성
 -- ──────────────────────────────────────────────────────────
+-- email 컬럼은 이 시점에 아직 없음(20260608000002에서 추가).
+-- 거기서 이 함수를 email 포함 버전으로 다시 정의하므로, 여기서는 id만 넣는다.
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.user_profiles (id, email)
-  values (new.id, new.email)
+  insert into public.user_profiles (id)
+  values (new.id)
   on conflict (id) do nothing;
   return new;
 end;
