@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/auth/context"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { deleteCanvas, loadUserCanvases, saveCanvas, migrateLocalToSupabase, resetUserCanvases } from "@/lib/supabase/db"
 import { captureEvent } from "@/lib/supabase/events"
+import { toast } from "sonner"
 
 // 기본 결(Facet) 5종. 설계 문서 (ARCHITECTURE.md) 와 정합.
 // 참고: v1 은 이 배열을 첫 진입 시 seed 로 사용하고, 이후엔 사용자 편집 가능.
@@ -487,7 +488,11 @@ export default function Page() {
         }
       } catch (err) {
         console.error("Supabase load error:", err)
-        // 실패해도 로컬 데이터로 계속 동작
+        // remoteSyncReadyRef 는 false로 유지 — 불완전한 상태를 덮어쓰지 않도록 저장을 막는다.
+        // 다만 사용자는 알아야 한다: 로컬 저장은 계속되지만 클라우드 동기화는 멈춘 상태.
+        toast.error("클라우드 동기화에 실패했어요. 이 기기에는 저장되지만 다른 기기에는 반영되지 않아요.", {
+          duration: 8000,
+        })
       }
     })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
