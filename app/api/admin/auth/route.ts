@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
+import { getAdminSessionToken } from "@/lib/admin/session"
 
 const COOKIE = "admin_session"
 const MAX_AGE = 60 * 60 * 8 // 8시간
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
   }
 
   const cookieStore = await cookies()
-  cookieStore.set(COOKIE, process.env.ADMIN_PASSWORD!, {
+  cookieStore.set(COOKIE, getAdminSessionToken(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
 export async function GET() {
   const cookieStore = await cookies()
   const token = cookieStore.get(COOKIE)?.value
-  const valid = token === process.env.ADMIN_PASSWORD
+  const valid = Boolean(token) && token === getAdminSessionToken()
   return NextResponse.json({ valid })
 }
 
