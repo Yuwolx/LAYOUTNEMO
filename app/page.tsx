@@ -399,7 +399,7 @@ export default function Page() {
         // 절대 병합/마이그레이션 대상으로 쓰지 않는다 — 안 그러면 이전 계정의 캔버스가
         // 지금 로그인한 계정으로 그대로 복제되어 들어간다.
         const storedOwner = localStorage.getItem(LOCAL_OWNER_KEY)
-        const localBelongsHere = storedOwner === null || storedOwner === userId
+        const localBelongsHere = storedOwner === userId || (storedOwner === null && remoteCanvases.length === 0)
         const localCanvases = hadStoredCanvasesAtBootRef.current && localBelongsHere ? loadCanvases() : []
         // 모든 캔버스에 zones도 blocks도 없고, 로컬에 실제 데이터가 있을 때만 "깨진 것"으로 판단.
         // 빈 캔버스를 일부러 만들었거나 네트워크 부분 실패 시 오탐 방지.
@@ -496,9 +496,11 @@ export default function Page() {
         }
       } catch (err) {
         console.error("Supabase load error:", err)
+        const message = err instanceof Error ? err.message : "Unknown sync error"
         // remoteSyncReadyRef 는 false로 유지 — 불완전한 상태를 덮어쓰지 않도록 저장을 막는다.
         // 다만 사용자는 알아야 한다: 로컬 저장은 계속되지만 클라우드 동기화는 멈춘 상태.
         toast.error("클라우드 동기화에 실패했어요. 이 기기에는 저장되지만 다른 기기에는 반영되지 않아요.", {
+          description: message,
           duration: 8000,
         })
       }
