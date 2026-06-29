@@ -521,9 +521,15 @@ export default function Page() {
 
   // Supabase 저장 debounce 타이머
   const supabaseSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const syncSaveErrorShownRef = useRef(false)
 
   useEffect(() => {
     if (!isClient) return
+
+    if (supabaseSaveTimer.current) {
+      clearTimeout(supabaseSaveTimer.current)
+      supabaseSaveTimer.current = null
+    }
 
     // localStorage 즉시 저장
     try {
@@ -546,12 +552,29 @@ export default function Page() {
     const supabase = supabaseRef.current
     const userId = user.id
 
-    if (supabaseSaveTimer.current) clearTimeout(supabaseSaveTimer.current)
     supabaseSaveTimer.current = setTimeout(() => {
-      Promise.all(canvases.map((c, i) => saveCanvas(supabase, userId, c, i))).catch((err) =>
-        console.error("Supabase save error:", err),
-      )
+      Promise.all(canvases.map((c, i) => saveCanvas(supabase, userId, c, i)))
+        .then(() => {
+          syncSaveErrorShownRef.current = false
+        })
+        .catch((err) => {
+          console.error("Supabase save error:", err)
+          if (!syncSaveErrorShownRef.current) {
+            syncSaveErrorShownRef.current = true
+            toast.error("클라우드 저장에 실패했어요. 이 기기에는 저장되지만 다른 기기에는 아직 반영되지 않았어요.", {
+              description: err instanceof Error ? err.message : String(err),
+              duration: 8000,
+            })
+          }
+        })
     }, 2000)
+
+    return () => {
+      if (supabaseSaveTimer.current) {
+        clearTimeout(supabaseSaveTimer.current)
+        supabaseSaveTimer.current = null
+      }
+    }
   }, [canvases, currentCanvasId, isClient, user])
 
   // 갈무리(archive)된 블럭은 캔버스에 렌더링하지 않고 독/모달에서만 노출.
