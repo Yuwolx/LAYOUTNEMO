@@ -15,6 +15,7 @@ interface ArchiveDialogProps {
   zones: Zone[]
   onRestore: (id: string) => void
   onDelete: (id: string) => void
+  onClearAll: () => void
 }
 
 /**
@@ -30,6 +31,7 @@ export function ArchiveDialog({
   zones,
   onRestore,
   onDelete,
+  onClearAll,
 }: ArchiveDialogProps) {
   const { language } = useLanguage()
   const t = useT()
@@ -45,16 +47,29 @@ export function ArchiveDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl font-light">
-            <Package className="w-5 h-5" />
-            {t("archive.dialog.title")}
+          <div className="flex items-start justify-between gap-3">
+            <DialogTitle className="flex items-center gap-2 text-xl font-light">
+              <Package className="w-5 h-5" />
+              {t("archive.dialog.title")}
+              {archivedBlocks.length > 0 && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  {archivedBlocks.length}
+                  {language === "ko" ? t("archive.dialog.count") : ` ${t("archive.dialog.count")}`}
+                </span>
+              )}
+            </DialogTitle>
             {archivedBlocks.length > 0 && (
-              <span className="text-sm font-normal text-muted-foreground">
-                {archivedBlocks.length}
-                {language === "ko" ? t("archive.dialog.count") : ` ${t("archive.dialog.count")}`}
-              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onClearAll}
+                className="h-8 shrink-0 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                {language === "ko" ? "비우기" : "Clear"}
+              </Button>
             )}
-          </DialogTitle>
+          </div>
           <DialogDescription className="text-sm leading-relaxed font-light pt-1">
             {t("archive.dialog.description")}
           </DialogDescription>

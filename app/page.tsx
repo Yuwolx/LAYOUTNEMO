@@ -643,6 +643,18 @@ export default function Page() {
     }
   }
 
+  const handleClearArchivedBlocks = () => {
+    if (archivedBlocks.length === 0) return
+    if (!confirm("갈무리함을 모두 비울까요? 이 작업은 되돌릴 수 없어요.")) return
+
+    const archivedIds = new Set(archivedBlocks.map((block) => block.id))
+    const newBlocks = blocks.filter((block) => !archivedIds.has(block.id))
+    saveToHistory(newBlocks)
+    if (user && supabaseRef.current) {
+      captureEvent(supabaseRef.current, user.id, "block_deleted", { count: archivedIds.size })
+    }
+  }
+
   const handleToggleAI = () => {
     setIsAIEnabled(!isAIEnabled)
   }
@@ -937,6 +949,7 @@ export default function Page() {
         zones={zones}
         onRestore={handleUnarchiveBlock}
         onDelete={handleDeleteArchivedBlock}
+        onClearAll={handleClearArchivedBlocks}
       />
     </div>
   )
