@@ -213,30 +213,26 @@ export async function saveCanvas(
     throwIfSupabaseError(error, "Failed to delete zones")
   }
 
-  // 3. blocks — upsert (is_deleted 포함 전체 동기화)
+  // 3. blocks — upsert (is_deleted 포함)
+  // 삭제는 saveCanvas의 스냅샷 pruning에 맡기지 않는다.
+  // 오래된 탭/기기의 저장이 다른 기기에서 새로 만든 블록을 지울 수 있기 때문이다.
   const blockRows = canvas.blocks.map((b) => blockToRow(b, canvas.id, userId))
   if (blockRows.length > 0) {
     const { error } = await supabase.from("blocks").upsert(blockRows)
     throwIfSupabaseError(error, "Failed to save blocks")
-  }
-  // 이 캔버스에서 사라진 블럭 삭제
-  const currentBlockIds = canvas.blocks.map((b) => b.id)
-  if (currentBlockIds.length > 0) {
-    const { error } = await supabase
-      .from("blocks")
-      .delete()
-      .eq("canvas_id", canvas.id)
-      .not("id", "in", `(${currentBlockIds.join(",")})`)
-    throwIfSupabaseError(error, "Failed to delete removed blocks")
-  } else {
-    const { error } = await supabase.from("blocks").delete().eq("canvas_id", canvas.id)
-    throwIfSupabaseError(error, "Failed to delete blocks")
   }
 }
 
 // ─────────────────────────────────────────────
 // 캔버스 삭제
 // ─────────────────────────────────────────────
+
+export async function deleteBlocks(supabase: SupabaseClient, blockIds: string[]): Promise<void> {
+  if (blockIds.length === 0) return
+
+  const { error } = await supabase.from("blocks").delete().in("id", blockIds)
+  throwIfSupabaseError(error, "Failed to delete blocks")
+}
 
 export async function deleteCanvas(supabase: SupabaseClient, canvasId: string): Promise<void> {
   // blocks, zones 는 cascade 삭제됨

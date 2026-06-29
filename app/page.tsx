@@ -15,7 +15,7 @@ import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedCanvasName } from "@/lib/i18n/seed"
 import { useAuth } from "@/lib/auth/context"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
-import { deleteCanvas, loadUserCanvases, saveCanvas, migrateLocalToSupabase, resetUserCanvases } from "@/lib/supabase/db"
+import { deleteBlocks, deleteCanvas, loadUserCanvases, saveCanvas, migrateLocalToSupabase, resetUserCanvases } from "@/lib/supabase/db"
 import { captureEvent } from "@/lib/supabase/events"
 import { toast } from "sonner"
 
@@ -638,7 +638,13 @@ export default function Page() {
   const handleDeleteArchivedBlock = (id: string) => {
     const newBlocks = blocks.filter((block) => block.id !== id)
     saveToHistory(newBlocks)
-    if (user && supabaseRef.current) {
+    if (user && supabaseRef.current && remoteSyncReadyRef.current) {
+      deleteBlocks(supabaseRef.current, [id]).catch((err) => {
+        console.error("Supabase delete block error:", err)
+        toast.error("블럭 삭제를 클라우드에 반영하지 못했어요.", {
+          description: err instanceof Error ? err.message : String(err),
+        })
+      })
       captureEvent(supabaseRef.current, user.id, "block_deleted")
     }
   }
@@ -650,7 +656,13 @@ export default function Page() {
     const archivedIds = new Set(archivedBlocks.map((block) => block.id))
     const newBlocks = blocks.filter((block) => !archivedIds.has(block.id))
     saveToHistory(newBlocks)
-    if (user && supabaseRef.current) {
+    if (user && supabaseRef.current && remoteSyncReadyRef.current) {
+      deleteBlocks(supabaseRef.current, [...archivedIds]).catch((err) => {
+        console.error("Supabase delete archived blocks error:", err)
+        toast.error("갈무리함 비우기를 클라우드에 반영하지 못했어요.", {
+          description: err instanceof Error ? err.message : String(err),
+        })
+      })
       captureEvent(supabaseRef.current, user.id, "block_deleted", { count: archivedIds.size })
     }
   }
