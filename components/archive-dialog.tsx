@@ -47,7 +47,7 @@ export function ArchiveDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-3 pr-10">
             <DialogTitle className="flex items-center gap-2 text-xl font-light">
               <Package className="w-5 h-5" />
               {t("archive.dialog.title")}
