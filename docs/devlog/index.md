@@ -24,6 +24,7 @@ LAYOUTNEMO를 만들면서 마주친 문제, 선택, 삽질, 배운 것을 기�
 
 | 날짜 | 제목 | 상태 |
 |------|------|------|
+| 2026-06-29 | [멀티 디바이스 동기화에서 블럭이 사라지는 문제를 줄이기]({{ site.baseurl }}/docs/devlog/2026-06-29-sync-pruning-fix/) | ✅ 공개 |
 | 2026-06-09 | [로그인·DB 코드, 지금 점검하고 가기]({{ site.baseurl }}/docs/devlog/2026-06-09-auth-db-code-review/) | ✅ 공개 |
 | 2026-06-09 | [v2 배포 직후 패치 — 설정 실수, 보안 구멍, 이중 저장]({{ site.baseurl }}/docs/devlog/2026-06-09-v2-first-patch/) | ✅ 공개 |
 | 2026-06-08 | [v2 완성 — 로그인, 동기화, 관리자 대시보드, 그리고 메모]({{ site.baseurl }}/docs/devlog/2026-06-08-v2-complete/) | ✅ 공개 |
