@@ -3,6 +3,7 @@ layout: post
 title: "v2 배포 직후 패치 — 설정 실수, 보안 구멍, 이중 저장"
 parent: Devlog
 nav_order: 10
+tags: [v2, 보안, 동기화]
 ---
 
 # v2 배포 직후 패치

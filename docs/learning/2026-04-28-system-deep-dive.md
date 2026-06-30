@@ -3,6 +3,7 @@ layout: post
 title: "2026-04-28 — LAYOUTNEMO 시스템 처음부터 끝까지 (PM 학습용)"
 parent: Learning
 nav_order: 4
+tags: [아키텍처, 학습정리]
 ---
 
 # LAYOUTNEMO 시스템 처음부터 끝까지

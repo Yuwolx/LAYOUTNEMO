@@ -3,6 +3,7 @@ layout: post
 title: "로그인·DB 코드, 지금 점검하고 가기"
 parent: Devlog
 nav_order: 11
+tags: [인증, 보안, 코드리뷰]
 ---
 
 # 로그인 · DB 코드, 지금 점검하고 가기

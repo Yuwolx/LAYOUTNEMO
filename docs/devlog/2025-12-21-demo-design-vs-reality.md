@@ -3,6 +3,7 @@ layout: post
 title: "데모 회고 2편 — 기획 vs 구현의 갭"
 parent: Devlog
 nav_order: 2
+tags: [회고, 기획, 시급도]
 ---
 
 # 데모 회고 2편 — 기획 vs 구현의 갭

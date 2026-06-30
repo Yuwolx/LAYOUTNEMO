@@ -3,6 +3,7 @@ layout: post
 title: "2026-04-24 — 프런트 UX/코드 패턴 3가지"
 parent: Learning
 nav_order: 2
+tags: [프런트엔드, UX, i18n]
 ---
 
 # 2026-04-24 — 프런트 UX/코드 패턴 3가지

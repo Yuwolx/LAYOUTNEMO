@@ -3,6 +3,7 @@ layout: post
 title: "기술 부채 재방문 — 4주 뒤 다시 보는 청소 결과"
 parent: Devlog
 nav_order: 8
+tags: [리팩터링, 성능, 캔버스]
 ---
 
 # 기술 부채 재방문

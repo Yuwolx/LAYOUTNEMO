@@ -3,6 +3,7 @@ layout: post
 title: "새 블럭은 지금 보는 곳에 — viewport-aware 배치와 시급도 재정의"
 parent: Devlog
 nav_order: 7
+tags: [캔버스, UX, 시급도]
 ---
 
 # 새 블럭은 지금 보는 곳에

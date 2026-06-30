@@ -3,6 +3,7 @@ layout: post
 title: "데모 회고 3편 — 4일의 타임라인"
 parent: Devlog
 nav_order: 3
+tags: [회고, 데모]
 ---
 
 # 데모 회고 3편 — 4일의 타임라인

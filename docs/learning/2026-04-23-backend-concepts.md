@@ -3,6 +3,7 @@ layout: post
 title: "2026-04-23 — 백엔드 아키텍처 기본 개념"
 parent: Learning
 nav_order: 1
+tags: [백엔드, supabase, 동기화]
 ---
 
 # 2026-04-23 — 백엔드 아키텍처 기본 개념

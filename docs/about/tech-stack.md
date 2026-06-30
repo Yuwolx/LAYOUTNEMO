@@ -25,10 +25,11 @@ nav_order: 4
   - Vercel AI Gateway는 결제 카드 요구 이슈로 미사용 (개발 중 전환)
 
 ### Storage
-- **localStorage** — 현재 `master` 기준 유일한 저장소
+- **localStorage** — 로컬 우선(local-first) 기본 저장소
+- **Supabase Postgres** — 로그인 시 여러 기기 간 동기화 (v2부터 `master`/제품 반영)
 
 ### Auth
-- **Supabase Auth + Google OAuth** — v2 브랜치에서 실험 중, 현재 제품에는 미포함
+- **Supabase Auth + Google OAuth** — v2부터 제품에 반영, 관리자 대시보드 포함
 
 ---
 
@@ -112,6 +113,7 @@ nav_order: 4
 - **히스토리**: 블럭 변경 기준 최대 50개까지 Undo 가능
 - **마이그레이션**: 오래된 결 id, 구 갈무리 상태, 저장된 가이드 블럭 문구를 로드 시 보정
 - **드래그 히스토리**: 드래그 중에는 화면만 갱신하고 mouseup 시 최종 좌표 하나만 Undo 스택에 기록
+- **클라우드 동기화(v2)**: 로그인하면 위 로컬 상태가 Supabase Postgres 에 동기화되어 여러 기기에서 이어 쓸 수 있음 (LWW 충돌 처리)
 
 ### 데이터 타입 (핵심만)
 

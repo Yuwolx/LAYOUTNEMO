@@ -3,6 +3,7 @@ layout: post
 title: "하루 만에 18개 이슈 치우기 — 바이브 코딩 잔해 정리 & 갈무리 UX"
 parent: Devlog
 nav_order: 5
+tags: [리팩터링, 타입안정성, i18n, UX]
 ---
 
 # 하루 만에 18개 이슈 치우기

@@ -3,6 +3,7 @@ layout: post
 title: "멀티 디바이스 동기화에서 블럭이 사라지는 문제를 줄이기"
 parent: Devlog
 nav_order: 12
+tags: [동기화, 버그픽스]
 ---
 
 # 멀티 디바이스 동기화에서 블럭이 사라지는 문제를 줄이기

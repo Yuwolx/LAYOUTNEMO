@@ -3,6 +3,7 @@ layout: post
 title: "캔버스를 손에 쥐다 — 스페이스바 팬, 연결 토스, 사이즈 다이어트"
 parent: Devlog
 nav_order: 6
+tags: [캔버스, UX, SVG]
 ---
 
 # 캔버스를 손에 쥐다

@@ -3,6 +3,7 @@ layout: post
 title: "2026-04-26 — SVG 발광체, 캔버스 팬 좌표, ResizeObserver 함정"
 parent: Learning
 nav_order: 3
+tags: [프런트엔드, SVG, 캔버스]
 ---
 
 # 2026-04-26 — SVG 발광체, 캔버스 팬 좌표, ResizeObserver 함정
