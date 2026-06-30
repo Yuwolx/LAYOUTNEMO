@@ -7,6 +7,9 @@
   <a href="https://layoutnemo.com" target="_blank">
     <img src="https://img.shields.io/badge/live-layoutnemo.com-0b0b0b?style=flat-square" />
   </a>
+  <a href="https://yuwolx.github.io/LAYOUTNEMO/" target="_blank">
+    <img src="https://img.shields.io/badge/blog-yuwolx.github.io%2FLAYOUTNEMO-0b0b0b?style=flat-square&logo=jekyll&logoColor=white" />
+  </a>
   <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js" />
   <img src="https://img.shields.io/badge/React-19.2-61dafb?style=flat-square&logo=react" />
   <img src="https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript" />
@@ -47,12 +50,14 @@ LAYOUTNEMO 는 이 문제를 **도구의 기능 부족**이 아니라 **구조�
 ### 🎨 Urgency (시급도)
 블럭이 머릿속에서 차지하는 무게. 오직 **색상**으로만 표현되며, 4 단계로 나뉩니다.
 
-| 시급도 | 색상 | 의미 |
-|--------|------|------|
-| **Stable** — 안정 | ⚪ 회색 | 천천히 진행해도 되는 일 |
-| **Thinking** — 생각 중 | 🔵 파란색 | 아직 구체화되지 않은 아이디어 |
-| **Lingering** — 머물러 있음 | 🟡 노란색 | 미루고 있지만 언젠가 해야 할 일 |
-| **Urgent** — 시급 | 🟠 주황색 | 즉시 처리가 필요한 일 |
+| 시급도 (내부 키) | 라벨 | 색상 | 의미 |
+|--------|------|------|------|
+| **thinking** | 미정 | ⚪ 회색 | 일단 적어뒀지만 할지 말지 아직 모르는 일 |
+| **stable** | 여유 | 🔵 파란색 | 할 일은 맞지만 급하지 않은 일 |
+| **lingering** | 진행 | 🟢 초록색 | 꾸준히 진행하거나 계속 관리 중인 일 |
+| **urgent** | 시급 | 🔴 빨간색 | 즉시 처리가 필요한 일 |
+
+> 라벨·색상·의미의 단일 소스(Single Source of Truth)는 [`lib/constants/urgency.ts`](./lib/constants/urgency.ts) 입니다.
 
 ---
 
@@ -85,11 +90,12 @@ AI 버튼을 끄면 모든 비-AI 기능은 정상 작동합니다.
 - **Frontend** — Next.js 16 (App Router), React 19.2, TypeScript 5
 - **Styling** — Tailwind CSS v4, shadcn/ui, lucide-react
 - **AI** — OpenAI `gpt-4o-mini` (직접 호출)
-- **Storage** — localStorage (기본)
+- **Auth** — Supabase Auth (Google OAuth)
+- **Storage** — localStorage (로컬 우선) + Supabase Postgres (로그인 시 멀티 기기 동기화)
 - **Deploy** — Vercel (GitHub `master` push → 자동 배포)
 - **Domain** — [layoutnemo.com](https://layoutnemo.com) (Namecheap)
 
-현재 v1 은 **100% 로컬 기반**이며, v2 (서버 기반 멀티 기기 동기화) 는 설계 완료 후 대기 중입니다.
+**로컬 우선(local-first)** 설계로 로그인 없이 즉시 사용할 수 있고, 로그인하면 Supabase 를 통해 여러 기기 간 동기화됩니다. 멀티 기기 동기화·인증·관리자 대시보드를 포함한 v2 가 현재 운영 중입니다.
 
 ---
 
@@ -118,7 +124,9 @@ npm run dev
 ```
 app/
 ├── api/ai/                  # AI API Routes (create-block, tidy-comprehensive)
-├── layout.tsx
+├── api/admin/               # 관리자 대시보드 API (통계, 인증)
+├── auth/callback/           # Supabase OAuth 콜백
+├── layout.tsx               # Auth / i18n 프로바이더
 └── page.tsx                 # 메인 페이지 (중앙 상태 관리)
 components/
 ├── ui/                      # shadcn/ui
@@ -128,7 +136,13 @@ components/
 └── header.tsx
 lib/
 ├── ai/                      # AI 클라이언트, 프롬프트, 타입
+├── auth/                    # Supabase Auth 컨텍스트 (Google OAuth)
+├── supabase/                # DB 레이어 (client / server / db / events)
+├── i18n/                    # 한국어·영어 사전 및 번역 헬퍼
+├── constants/urgency.ts     # 시급도 단일 소스
 └── utils.ts
+supabase/
+└── migrations/              # DB 스키마 마이그레이션
 types/
 └── index.ts                 # 전역 TypeScript 타입
 ```
@@ -138,7 +152,8 @@ types/
 ## 📚 Documentation
 
 - [LOCAL_SETUP.md](./LOCAL_SETUP.md) — 로컬 실행 & 환경 변수 가이드
-- 블로그 ([gh-pages 브랜치](https://github.com/Yuwolx/LAYOUTNEMO/tree/gh-pages)) — 서비스 소개, 개발 일기, 학습 노트
+- **블로그 → <https://yuwolx.github.io/LAYOUTNEMO/>** — 서비스 소개(About), 개발 일기(Devlog), 학습 노트(Learning), 로드맵
+  - 소스: [`gh-pages` 브랜치](https://github.com/Yuwolx/LAYOUTNEMO/tree/gh-pages) (Jekyll)
 
 ---
 
