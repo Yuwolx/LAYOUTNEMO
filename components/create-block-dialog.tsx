@@ -118,6 +118,10 @@ export function CreateBlockDialog({
           language === "en"
             ? "Network error. Filled in with keyword guesses."
             : "네트워크 오류 — 키워드로 대신 추론했어요.",
+        quota_exceeded:
+          language === "en"
+            ? "Monthly AI limit reached. Filled in with keyword guesses instead."
+            : "이번 달 AI 한도를 다 썼어요 — 키워드로 대신 추론했어요.",
       }
       toast.warning(messages[code] ?? messages.network_error)
 

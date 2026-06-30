@@ -3,15 +3,18 @@ import { CREATE_BLOCK_PROMPT } from "@/lib/ai/prompts"
 import type { CreateBlockAIInput } from "@/lib/ai/types"
 import { createBlockAIOutputSchema, type AIErrorPayload } from "@/lib/ai/schemas"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { reserveAICredit, refundAICredit } from "@/lib/ai/quota"
 
 const errorResponse = (code: AIErrorPayload["code"], message: string, status: number) =>
   NextResponse.json<{ error: AIErrorPayload }>({ error: { code, message } }, { status })
 
 export async function POST(req: Request) {
-  const supabaseForAuth = await createSupabaseServerClient()
-  if (supabaseForAuth) {
-    const { data: { user } } = await supabaseForAuth.auth.getUser()
+  const supabase = await createSupabaseServerClient()
+  let userId: string | null = null
+  if (supabase) {
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) return errorResponse("network_error", "Login required.", 401)
+    userId = user.id
   }
 
   let input: CreateBlockAIInput
@@ -27,6 +30,15 @@ export async function POST(req: Request) {
       "missing_api_key",
       "OPENAI_API_KEY is not configured on the server.",
       503,
+    )
+  }
+
+  // 월 사용량 한도 확인 + 크레딧 1 예약 (로그인 유저 한정). 호출 실패 시 아래에서 환불.
+  if (!(await reserveAICredit(supabase, userId, "create"))) {
+    return errorResponse(
+      "quota_exceeded",
+      "이번 달 AI 블럭 생성 한도를 모두 사용했어요. 다음 달에 다시 충전돼요.",
+      429,
     )
   }
 
@@ -71,12 +83,14 @@ export async function POST(req: Request) {
     })
   } catch (err) {
     console.error("OpenAI fetch failed:", err)
+    await refundAICredit(supabase, userId, "create")
     return errorResponse("upstream_error", "Could not reach OpenAI.", 502)
   }
 
   if (!response.ok) {
     const text = await response.text().catch(() => "")
     console.error("OpenAI API Error:", response.status, text)
+    await refundAICredit(supabase, userId, "create")
     return errorResponse(
       "upstream_error",
       `OpenAI returned ${response.status}.`,
@@ -90,12 +104,14 @@ export async function POST(req: Request) {
     raw = JSON.parse(data.choices?.[0]?.message?.content ?? "")
   } catch (err) {
     console.error("AI response not valid JSON:", err)
+    await refundAICredit(supabase, userId, "create")
     return errorResponse("invalid_response", "AI response was not valid JSON.", 502)
   }
 
   const parsed = createBlockAIOutputSchema.safeParse(raw)
   if (!parsed.success) {
     console.error("AI response failed schema validation:", parsed.error.format())
+    await refundAICredit(supabase, userId, "create")
     return errorResponse(
       "invalid_response",
       "AI response did not match the expected shape.",
@@ -110,12 +126,8 @@ export async function POST(req: Request) {
     input.zones[0]
 
   // 이벤트 기록 (로그인 유저만)
-  const supabase = await createSupabaseServerClient()
-  if (supabase) {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      supabase.from("events").insert({ user_id: user.id, name: "ai_create_used", payload: {} })
-    }
+  if (supabase && userId) {
+    supabase.from("events").insert({ user_id: userId, name: "ai_create_used", payload: {} })
   }
 
   return NextResponse.json({

@@ -66,6 +66,7 @@ export type AIErrorCode =
   | "upstream_error"    // OpenAI 호출 실패
   | "invalid_response"  // JSON 파싱/스키마 검증 실패
   | "network_error"     // 클라이언트 fetch 실패
+  | "quota_exceeded"    // 이번 달 AI 사용 한도 초과
 
 export interface AIErrorPayload {
   code: AIErrorCode

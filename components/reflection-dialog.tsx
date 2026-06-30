@@ -106,6 +106,10 @@ export function ReflectionDialog({
             language === "en"
               ? "Network error."
               : "네트워크 오류가 났어요.",
+          quota_exceeded:
+            language === "en"
+              ? "You've used up this month's Reflect limit. It refills next month."
+              : "이번 달 정리하기 한도를 다 썼어요. 다음 달에 다시 충전돼요.",
         }
         toast.error(messages[code])
         setResult({
