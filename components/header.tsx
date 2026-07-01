@@ -7,6 +7,7 @@ import type { Zone } from "@/types"
 import { useLanguage } from "@/lib/i18n/context"
 import { translateSeedZoneLabel } from "@/lib/i18n/seed"
 import { AuthButton } from "@/components/auth-button"
+import { AI_LIMITS } from "@/lib/ai/quota"
 
 interface HeaderProps {
   onCreateBlock: () => void
@@ -31,6 +32,7 @@ interface HeaderProps {
   onReset: () => void
   onOpenAbout: () => void
   onReorderZones?: (orderedZoneIds: string[]) => void
+  aiUsage?: { create: number; tidy: number; plan: string } | null
 }
 
 export function Header({
@@ -56,6 +58,7 @@ export function Header({
   onReset,
   onOpenAbout,
   onReorderZones,
+  aiUsage,
 }: HeaderProps) {
   // 결 탭 드래그 정렬 상태.
   // dragZoneId: 지금 잡고 있는 zone
@@ -257,6 +260,19 @@ export function Header({
               <Wand2 className="w-3.5 h-3.5" />
               <span>AI</span>
             </button>
+
+            {aiUsage && aiUsage.plan === "free" && (
+              <span
+                className={`text-[11px] tabular-nums ${isDarkMode ? "text-zinc-500" : "text-gray-400"}`}
+                title={
+                  language === "en"
+                    ? `This month — create ${aiUsage.create}/${AI_LIMITS.create}, reflect ${aiUsage.tidy}/${AI_LIMITS.tidy}`
+                    : `이번 달 · 생성 ${aiUsage.create}/${AI_LIMITS.create} · 정리하기 ${aiUsage.tidy}/${AI_LIMITS.tidy}`
+                }
+              >
+                {aiUsage.create}/{AI_LIMITS.create}
+              </span>
+            )}
 
             <Button
               variant="outline"

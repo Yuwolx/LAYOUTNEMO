@@ -17,7 +17,8 @@ import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedCanvasName } from "@/lib/i18n/seed"
 import { useAuth } from "@/lib/auth/context"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
-import { deleteBlocks, deleteZones, deleteCanvas, loadUserCanvases, saveCanvas, migrateLocalToSupabase, resetUserCanvases } from "@/lib/supabase/db"
+import { deleteBlocks, deleteZones, deleteCanvas, loadUserCanvases, saveCanvas, migrateLocalToSupabase, resetUserCanvases, getUserProfile } from "@/lib/supabase/db"
+import { AI_LIMITS } from "@/lib/ai/quota"
 import { captureEvent } from "@/lib/supabase/events"
 import { toast } from "sonner"
 
@@ -301,6 +302,7 @@ export default function Page() {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [focusRequest, setFocusRequest] = useState<{ blockId: string; nonce: number } | null>(null)
+  const [aiUsage, setAiUsage] = useState<{ create: number; tidy: number; plan: string } | null>(null)
   const [isArchiveOpen, setIsArchiveOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   // AI 보조 토글. localStorage 영속화 — 새로고침해도 유지.
@@ -551,6 +553,27 @@ export default function Page() {
       }
     }
   }, [canvases, currentCanvasId, isClient, user])
+
+  // AI 사용량(쿼터) 헤더 표시용. 로그인 시 + AI 다이얼로그가 닫힐 때마다 최신화.
+  useEffect(() => {
+    if (!user || !supabaseRef.current) {
+      setAiUsage(null)
+      return
+    }
+    if (isCreateDialogOpen || isReflectionDialogOpen) return
+    let cancelled = false
+    getUserProfile(supabaseRef.current, user.id)
+      .then((p) => {
+        if (cancelled || !p) return
+        setAiUsage({ create: p.ai_create_used ?? 0, tidy: p.ai_tidy_used ?? 0, plan: p.plan ?? "free" })
+      })
+      .catch(() => {
+        /* 프로필 조회 실패는 표시만 못 할 뿐이라 조용히 무시 */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user, isCreateDialogOpen, isReflectionDialogOpen])
 
   // 갈무리(archive)된 블럭은 캔버스에 렌더링하지 않고 독/모달에서만 노출.
   const archivedBlocks = blocks.filter((b) => !b.isDeleted && b.isCompleted && !b.isGuide)
@@ -950,6 +973,7 @@ export default function Page() {
         lastSaved={lastSaved}
         onReset={handleReset}
         onOpenAbout={() => setIsAboutOpen(true)}
+        aiUsage={aiUsage}
       />
 
       <Canvas
