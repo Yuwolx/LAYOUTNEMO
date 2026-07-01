@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Pencil, Trash2, Plus } from "lucide-react"
+import { Pencil, Trash2, Plus, Download } from "lucide-react"
 import type { Canvas } from "@/types"
 import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedCanvasName } from "@/lib/i18n/seed"
@@ -18,6 +18,7 @@ interface CanvasSelectorDialogProps {
   onRenameCanvas: (id: string, newName: string) => void
   onDeleteCanvas: (id: string) => void
   onCreateCanvas: (name: string) => void
+  onExport: () => void
   user: { id: string } | null
 }
 
@@ -30,6 +31,7 @@ export function CanvasSelectorDialog({
   onRenameCanvas,
   onDeleteCanvas,
   onCreateCanvas,
+  onExport,
   user,
 }: CanvasSelectorDialogProps) {
   const { language } = useLanguage()
@@ -58,6 +60,16 @@ export function CanvasSelectorDialog({
       onCreateCanvas(newCanvasName.trim())
       setNewCanvasName("")
     }
+  }
+
+  const handleDeleteCanvas = (canvas: Canvas) => {
+    const name = translateSeedCanvasName(canvas, language)
+    const message =
+      language === "en"
+        ? `Delete the canvas "${name}"? All of its blocks and facets will be removed.`
+        : `'${name}' 캔버스를 삭제할까요? 이 캔버스의 블럭과 결이 모두 사라집니다.`
+    if (!window.confirm(message)) return
+    onDeleteCanvas(canvas.id)
   }
 
   return (
@@ -113,7 +125,7 @@ export function CanvasSelectorDialog({
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => onDeleteCanvas(canvas.id)}
+                        onClick={() => handleDeleteCanvas(canvas)}
                         className="h-8 w-8 text-red-500 hover:text-red-600"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -146,6 +158,16 @@ export function CanvasSelectorDialog({
             로그인하면 여러 캔버스를 사용할 수 있어요
           </p>
         )}
+
+        <div className="mt-3 flex justify-center">
+          <button
+            onClick={onExport}
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Download className="h-3.5 w-3.5" />
+            {language === "en" ? "Export all as JSON (backup)" : "전체 백업 내보내기 (.json)"}
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   )

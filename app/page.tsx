@@ -733,6 +733,27 @@ export default function Page() {
     persistCanvasNow(newCanvas)
   }
 
+  // 전체 캔버스를 JSON 파일로 내보내기 (로컬 백업 / 이식용). 로그인 없이도 동작.
+  const handleExportAll = () => {
+    const payload = {
+      app: "LAYOUTNEMO",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      currentCanvasId,
+      canvases,
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `layoutnemo-backup-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+    toast.success(language === "en" ? "Backup downloaded." : "백업 파일을 내려받았어요.")
+  }
+
   const handleUpdateZones = (newZones: Zone[]) => {
     // 사라진 결을 감지해 명시적으로만 삭제한다. (saveCanvas 는 결을 지우지 않으므로,
     // 여기서 지우지 않으면 클라우드에 유령 결이 남는다.)
@@ -967,6 +988,7 @@ export default function Page() {
         onRenameCanvas={handleRenameCanvas}
         onDeleteCanvas={handleDeleteCanvas}
         onCreateCanvas={handleCreateCanvas}
+        onExport={handleExportAll}
         user={user}
       />
 
