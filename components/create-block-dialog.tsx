@@ -67,6 +67,13 @@ export function CreateBlockDialog({
   const handleInitialSubmit = async () => {
     if (!initialInput.trim()) return
 
+    if (initialInput.length > 4000) {
+      toast.error(
+        language === "en" ? "Input is too long (max 4000 chars)." : "입력이 너무 길어요 (최대 4000자).",
+      )
+      return
+    }
+
     if (!isAIEnabled) {
       setSummary(initialInput)
       if (!selectedZone) {
@@ -457,6 +464,7 @@ export function CreateBlockDialog({
                   onChange={(e) => setInitialInput(e.target.value)}
                   placeholder="예: 디자인 시안 검토 요청 정리"
                   className="text-base h-11"
+                  maxLength={4000}
                   disabled={isLoading}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && initialInput.trim() && !isLoading) {

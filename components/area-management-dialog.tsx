@@ -37,6 +37,13 @@ export function AreaManagementDialog({ open, onOpenChange, zones, onUpdateZones 
   }
 
   const handleDelete = (id: string) => {
+    const zone = zones.find((z) => z.id === id)
+    const label = zone ? translateSeedZoneLabel(zone, language) : id
+    const message =
+      language === "en"
+        ? `Delete the facet "${label}"? Blocks in it will keep their content but lose this facet.`
+        : `'${label}' 결을 삭제할까요? 이 결의 블럭은 내용은 남지만 결이 없는 상태가 됩니다.`
+    if (!window.confirm(message)) return
     onUpdateZones(zones.filter((z) => z.id !== id))
   }
 

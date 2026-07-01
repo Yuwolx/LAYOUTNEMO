@@ -24,6 +24,11 @@ export async function POST(req: Request) {
     return errorResponse("invalid_response", "Request body is not valid JSON.", 400)
   }
 
+  // 입력 길이 상한 — 거대한 붙여넣기로 토큰 비용이 폭주하는 것을 막는다(클라이언트에도 maxLength 있음).
+  if (typeof input.userInput !== "string" || input.userInput.length > 4000) {
+    return errorResponse("invalid_response", "Input is too long (max 4000 chars).", 400)
+  }
+
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
     return errorResponse(
