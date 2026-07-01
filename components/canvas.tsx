@@ -392,6 +392,8 @@ export function Canvas({
 
     const linesToRender: JSX.Element[] = []
     const processedPairs = new Set<string>()
+    // id → block 조회 맵. 아래 중첩 루프에서 blocks.find(O(n)) 대신 O(1) 조회로 O(n²) 를 O(n) 으로.
+    const byId = new Map(blocks.map((b) => [b.id, b]))
 
     const baseOpacity = 0.6
 
@@ -404,7 +406,7 @@ export function Canvas({
         if (processedPairs.has(pairKey)) return
         processedPairs.add(pairKey)
 
-        const relatedBlock = blocks.find((b) => b.id === relatedId)
+        const relatedBlock = byId.get(relatedId)
         if (!relatedBlock || relatedBlock.isCompleted) return
 
         const bothInSelectedZone = selectedZone && block.zone === selectedZone && relatedBlock.zone === selectedZone
