@@ -8,6 +8,7 @@ import { ReflectionDialog } from "@/components/reflection-dialog"
 import { AreaManagementDialog } from "@/components/area-management-dialog"
 import { CanvasSelectorDialog } from "@/components/canvas-selector-dialog"
 import { AboutDialog } from "@/components/about-dialog"
+import { WelcomeDialog } from "@/components/welcome-dialog"
 import { ArchiveDock } from "@/components/archive-dock"
 import { ArchiveDialog } from "@/components/archive-dialog"
 import type { CanvasViewport, WorkBlock, Zone, Canvas as CanvasType } from "@/types"
@@ -49,7 +50,7 @@ const initialBlocks: WorkBlock[] = [
 2) AI 자동 반영 (8초)
 AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생성됩니다. 카운트다운이 보이고, 어디든 클릭하거나 입력하면 즉시 멈춥니다. "취소" 글자도 누를 수 있어요.
 
-3) 결(Facet)
+3) 결
 블럭이 속한 큰 맥락입니다. "기획", "개발" 같은 식으로 업무의 결을 나눠요. 상단의 결 버튼을 누르면 그 결의 블럭만 또렷해지고 나머지는 흐려집니다. 칸막이가 아니라 시선의 필터에 가깝습니다. 결 버튼은 드래그해서 순서를 바꿀 수 있어요.
 
 4) 링크 (선택)
@@ -190,6 +191,7 @@ const CURRENT_CANVAS_KEY = "layout_current_canvas"
 // localStorage 캔버스 데이터가 "누구 것"인지 표시. 다른 계정이 로그인했을 때
 // 이전 계정의 로컬 캐시를 자기 데이터로 잘못 병합/업로드하는 것을 막는 데 쓴다.
 const LOCAL_OWNER_KEY = "layout_local_owner"
+const ONBOARDED_KEY = "layout_onboarded"
 const GUIDE_BLOCK_TEMPLATES = new Map(initialBlocks.filter((block) => block.isGuide).map((block) => [block.id, block]))
 
 const getDefaultCanvas = (): CanvasType => ({
@@ -295,6 +297,7 @@ export default function Page() {
   const [isAreaManagementOpen, setIsAreaManagementOpen] = useState(false)
   const [isCanvasSelectorOpen, setIsCanvasSelectorOpen] = useState(false)
   const [isAboutOpen, setIsAboutOpen] = useState(false)
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(false)
   const [isArchiveOpen, setIsArchiveOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   // AI 보조 토글. localStorage 영속화 — 새로고침해도 유지.
@@ -368,7 +371,14 @@ export default function Page() {
 
   useEffect(() => {
     setIsClient(true)
-    hadStoredCanvasesAtBootRef.current = Boolean(localStorage.getItem(STORAGE_KEY))
+    const hadStoredCanvases = Boolean(localStorage.getItem(STORAGE_KEY))
+    hadStoredCanvasesAtBootRef.current = hadStoredCanvases
+    // 첫 방문(저장된 캔버스도, 온보딩 완료 표시도 없음)일 때 환영 모달 1회 노출.
+    // URL 에 ?welcome 가 있으면 (온보딩 다시 보기) 언제든 강제로 노출.
+    const forceWelcome = new URLSearchParams(window.location.search).has("welcome")
+    if (forceWelcome || (!hadStoredCanvases && !localStorage.getItem(ONBOARDED_KEY))) {
+      setIsWelcomeOpen(true)
+    }
     const loadedCanvases = loadCanvases()
     const loadedCanvasId = loadCurrentCanvasId()
 
@@ -970,6 +980,15 @@ export default function Page() {
       />
 
       <AboutDialog open={isAboutOpen} onOpenChange={setIsAboutOpen} />
+
+      <WelcomeDialog
+        open={isWelcomeOpen}
+        onOpenChange={(open) => {
+          setIsWelcomeOpen(open)
+          // 닫는 순간 온보딩 완료로 표시 → 다음 방문부터 뜨지 않음.
+          if (!open) localStorage.setItem(ONBOARDED_KEY, "1")
+        }}
+      />
 
       <ArchiveDock
         archivedCount={archivedBlocks.length}
