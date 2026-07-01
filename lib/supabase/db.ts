@@ -193,24 +193,14 @@ export async function saveCanvas(
   })
   throwIfSupabaseError(canvasError, "Failed to save canvas")
 
-  // 2. zones — upsert 후 삭제된 결 제거
+  // 2. zones — upsert 만 한다.
+  //    blocks 와 같은 이유로 스냅샷 pruning(현재 스냅샷에 없는 결 삭제)을 하지 않는다.
+  //    오래된 탭/기기의 저장이 다른 기기에서 방금 만든 결을 지울 수 있기 때문이다.
+  //    실제 삭제는 사용자가 결을 지울 때 deleteZones() 로만 일어난다.
   const zoneRows = canvas.zones.map((z, i) => zoneToRow(z, canvas.id, userId, i))
   if (zoneRows.length > 0) {
     const { error } = await supabase.from("zones").upsert(zoneRows)
     throwIfSupabaseError(error, "Failed to save zones")
-  }
-  // 이 캔버스에서 사라진 결 삭제
-  const currentZoneIds = canvas.zones.map((z) => z.id)
-  if (currentZoneIds.length > 0) {
-    const { error } = await supabase
-      .from("zones")
-      .delete()
-      .eq("canvas_id", canvas.id)
-      .not("id", "in", `(${currentZoneIds.join(",")})`)
-    throwIfSupabaseError(error, "Failed to delete removed zones")
-  } else {
-    const { error } = await supabase.from("zones").delete().eq("canvas_id", canvas.id)
-    throwIfSupabaseError(error, "Failed to delete zones")
   }
 
   // 3. blocks — upsert (is_deleted 포함)
@@ -232,6 +222,15 @@ export async function deleteBlocks(supabase: SupabaseClient, blockIds: string[])
 
   const { error } = await supabase.from("blocks").delete().in("id", blockIds)
   throwIfSupabaseError(error, "Failed to delete blocks")
+}
+
+// 사용자가 결을 삭제할 때만 명시적으로 호출. saveCanvas 는 결을 지우지 않는다.
+// blocks.zone_id 는 on delete set null 이라 해당 결의 블럭은 삭제되지 않고 결만 사라진다.
+export async function deleteZones(supabase: SupabaseClient, zoneIds: string[]): Promise<void> {
+  if (zoneIds.length === 0) return
+
+  const { error } = await supabase.from("zones").delete().in("id", zoneIds)
+  throwIfSupabaseError(error, "Failed to delete zones")
 }
 
 export async function deleteCanvas(supabase: SupabaseClient, canvasId: string): Promise<void> {

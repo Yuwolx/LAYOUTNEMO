@@ -16,7 +16,7 @@ import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedCanvasName } from "@/lib/i18n/seed"
 import { useAuth } from "@/lib/auth/context"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
-import { deleteBlocks, deleteCanvas, loadUserCanvases, saveCanvas, migrateLocalToSupabase, resetUserCanvases } from "@/lib/supabase/db"
+import { deleteBlocks, deleteZones, deleteCanvas, loadUserCanvases, saveCanvas, migrateLocalToSupabase, resetUserCanvases } from "@/lib/supabase/db"
 import { captureEvent } from "@/lib/supabase/events"
 import { toast } from "sonner"
 
@@ -669,7 +669,14 @@ export default function Page() {
   }
 
   const handleDeleteArchivedBlock = (id: string) => {
-    const newBlocks = blocks.filter((block) => block.id !== id)
+    // 삭제 대상을 제거하고, 살아남은 블럭의 relatedTo 에서 죽은 참조도 함께 정리한다.
+    const newBlocks = blocks
+      .filter((block) => block.id !== id)
+      .map((block) =>
+        block.relatedTo?.includes(id)
+          ? { ...block, relatedTo: block.relatedTo.filter((rid) => rid !== id) }
+          : block,
+      )
     saveToHistory(newBlocks)
     if (user && supabaseRef.current && remoteSyncReadyRef.current) {
       deleteBlocks(supabaseRef.current, [id]).catch((err) => {
@@ -687,7 +694,13 @@ export default function Page() {
     if (!confirm("갈무리함을 모두 비울까요? 이 작업은 되돌릴 수 없어요.")) return
 
     const archivedIds = new Set(archivedBlocks.map((block) => block.id))
-    const newBlocks = blocks.filter((block) => !archivedIds.has(block.id))
+    const newBlocks = blocks
+      .filter((block) => !archivedIds.has(block.id))
+      .map((block) =>
+        block.relatedTo?.some((rid) => archivedIds.has(rid))
+          ? { ...block, relatedTo: block.relatedTo.filter((rid) => !archivedIds.has(rid)) }
+          : block,
+      )
     saveToHistory(newBlocks)
     if (user && supabaseRef.current && remoteSyncReadyRef.current) {
       deleteBlocks(supabaseRef.current, [...archivedIds]).catch((err) => {
@@ -759,11 +772,27 @@ export default function Page() {
   }
 
   const handleUpdateZones = (newZones: Zone[]) => {
+    // 사라진 결을 감지해 명시적으로만 삭제한다. (saveCanvas 는 결을 지우지 않으므로,
+    // 여기서 지우지 않으면 클라우드에 유령 결이 남는다.)
+    const newIds = new Set(newZones.map((z) => z.id))
+    const removedIds = (currentCanvas?.zones ?? [])
+      .map((z) => z.id)
+      .filter((id) => !newIds.has(id))
+
     setCanvases((prev) =>
       prev.map((canvas) =>
         canvas.id === currentCanvasId ? { ...canvas, zones: newZones, updatedAt: Date.now() } : canvas,
       ),
     )
+
+    if (removedIds.length > 0 && user && supabaseRef.current && remoteSyncReadyRef.current) {
+      deleteZones(supabaseRef.current, removedIds).catch((err) => {
+        console.error("Supabase delete zones error:", err)
+        toast.error("결 삭제를 클라우드에 반영하지 못했어요.", {
+          description: err instanceof Error ? err.message : String(err),
+        })
+      })
+    }
   }
 
   // 헤더 결 탭 드래그 정렬: 새 순서의 zone id 배열을 받아 그 순서대로 zones 재구성.
