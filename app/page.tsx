@@ -431,79 +431,41 @@ export default function Page() {
           return
         }
 
-        // 로그아웃 시점 — 이 이후의 로컬 변경만 "오프라인 작업"으로 간주
+        // 클라우드 우선 병합.
+        // 로그인하면 언제나 "클라우드"를 기준으로 삼는다 — 로컬이 클라우드를 조용히 덮어쓰지 않도록.
+        // 다만 로그아웃 이후 이 기기에서 바꾼 내용이 있으면, 덮어쓰기 전에 백업해두고 사용자에게 알린다.
+        // (백업은 항상 최신 1개만 유지. 필요하면 layout_offline_backup 키에서 복구 가능.)
         const lastSyncedRaw = localStorage.getItem("layout_last_synced_at")
         const lastSyncedAt = parseInt(lastSyncedRaw ?? "0", 10)
-        const shouldMergeOfflineChanges = Boolean(lastSyncedRaw) && Number.isFinite(lastSyncedAt) && lastSyncedAt > 0
+        const hadOfflineEdits =
+          Boolean(lastSyncedRaw) &&
+          Number.isFinite(lastSyncedAt) &&
+          lastSyncedAt > 0 &&
+          localCanvases.some((canvas) => canvas.updatedAt > lastSyncedAt)
 
-        if (!shouldMergeOfflineChanges) {
-          const orderedRemote = [...remoteCanvases].sort((a, b) => a.createdAt - b.createdAt)
-          const storedCanvasId = loadCurrentCanvasId()
-          const activeId = orderedRemote.some((canvas) => canvas.id === storedCanvasId)
-            ? storedCanvasId
-            : orderedRemote[0]?.id ?? "main"
-
-          setCanvases(orderedRemote)
-          setCurrentCanvasId(activeId)
-          localStorage.removeItem("layout_last_synced_at")
-          captureEvent(supabase, userId, "session_start")
-          remoteSyncReadyRef.current = true
-          return
-        }
-
-        const remoteById = new Map(remoteCanvases.map((c) => [c.id, c]))
-        const localById = new Map(localCanvases.map((c) => [c.id, c]))
-        const allIds = new Set([...remoteById.keys(), ...localById.keys()])
-
-        const toUpload: CanvasType[] = []
-        const merged: CanvasType[] = []
-        const conflicted: CanvasType[] = []
-
-        allIds.forEach((id) => {
-          const remote = remoteById.get(id)
-          const local = localById.get(id)
-
-          if (remote && local) {
-            const localChangedOffline = local.updatedAt > lastSyncedAt
-            const remoteChangedSinceLogout = remote.updatedAt > lastSyncedAt
-
-            if (localChangedOffline && remoteChangedSinceLogout) {
-              // 양쪽 모두 로그아웃 이후 변경 → 충돌: remote 우선 + 충돌 목록에 기록
-              merged.push(remote)
-              conflicted.push(local)
-            } else if (localChangedOffline) {
-              // 로컬만 변경 (다른 기기 작업 없음) → 로컬 우선, Supabase 업로드
-              merged.push(local)
-              toUpload.push(local)
-            } else {
-              // remote가 최신이거나 둘 다 변경 없음
-              merged.push(remote)
-            }
-          } else if (remote) {
-            merged.push(remote)
-          } else if (local) {
-            merged.push(local)
-            toUpload.push(local)
+        if (hadOfflineEdits) {
+          try {
+            localStorage.setItem("layout_offline_backup", JSON.stringify(localCanvases))
+          } catch (backupErr) {
+            console.error("offline backup failed:", backupErr)
           }
-        })
-
-        if (toUpload.length > 0) {
-          await Promise.all(toUpload.map((c, i) => saveCanvas(supabase, userId, c, i)))
+          toast.message("클라우드 내용을 불러왔어요", {
+            description: "로그아웃 중 이 기기에서 바꾼 내용은 덮어쓰기 전에 따로 백업해뒀어요.",
+            duration: 8000,
+          })
         }
 
-        merged.sort((a, b) => a.createdAt - b.createdAt)
-        setCanvases(merged)
-        setCurrentCanvasId(merged[0]?.id ?? "main")
+        const orderedRemote = [...remoteCanvases].sort((a, b) => a.createdAt - b.createdAt)
+        const storedCanvasId = loadCurrentCanvasId()
+        const activeId = orderedRemote.some((canvas) => canvas.id === storedCanvasId)
+          ? storedCanvasId
+          : orderedRemote[0]?.id ?? "main"
+
+        setCanvases(orderedRemote)
+        setCurrentCanvasId(activeId)
         localStorage.removeItem("layout_last_synced_at")
         captureEvent(supabase, userId, "session_start")
         remoteSyncReadyRef.current = true
-
-        if (conflicted.length > 0) {
-          console.warn(
-            `[sync] ${conflicted.length}개 캔버스에서 충돌 발생. 다른 기기의 최신 버전을 사용합니다.`,
-            conflicted.map((c) => c.name),
-          )
-        }
       } catch (err) {
         console.error("Supabase load error:", err)
         const message = err instanceof Error ? err.message : "Unknown sync error"
