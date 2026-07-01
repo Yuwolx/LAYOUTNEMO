@@ -125,9 +125,15 @@ export async function POST(req: Request) {
     input.zones.find((z) => z.label === parsed.data.suggestedZone) ??
     input.zones[0]
 
-  // 이벤트 기록 (로그인 유저만)
+  // 이벤트 기록 (로그인 유저만).
+  // supabase-js 쿼리빌더는 await/then 해야 실제 요청이 나간다. 서버리스에서 응답 반환 후
+  // 프로미스가 잘리는 것도 막기 위해 await 로 완료를 보장한다. (실패해도 본 응답엔 영향 X)
   if (supabase && userId) {
-    supabase.from("events").insert({ user_id: userId, name: "ai_create_used", payload: {} })
+    try {
+      await supabase.from("events").insert({ user_id: userId, name: "ai_create_used", payload: {} })
+    } catch (e) {
+      console.error("ai_create_used event insert failed:", e)
+    }
   }
 
   return NextResponse.json({

@@ -257,9 +257,14 @@ export async function POST(req: Request) {
       )
     }
 
-    // 이벤트 기록 (로그인 유저만)
+    // 이벤트 기록 (로그인 유저만). await 해야 실제 요청이 나가고 서버리스에서 유실되지 않는다.
+    // 자체 try/catch 로 감싸 이벤트 실패가 바깥 catch(=AI 실패 처리)를 트리거하지 않도록 한다.
     if (supabase && userId) {
-      supabase.from("events").insert({ user_id: userId, name: "ai_tidy_used", payload: {} })
+      try {
+        await supabase.from("events").insert({ user_id: userId, name: "ai_tidy_used", payload: {} })
+      } catch (e) {
+        console.error("ai_tidy_used event insert failed:", e)
+      }
     }
 
     return NextResponse.json({

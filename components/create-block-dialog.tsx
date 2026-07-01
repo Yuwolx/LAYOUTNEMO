@@ -441,6 +441,13 @@ export function CreateBlockDialog({
                 {isAIEnabled && user ? "추가할 업무를 간단히 적어주세요." : "새 블럭 만들기"}
               </h2>
               {(!isAIEnabled || !user) && <p className="text-sm text-muted-foreground">제목과 내용을 직접 입력하세요.</p>}
+              {isAIEnabled && user && (
+                <p className="text-sm text-muted-foreground">
+                  {language === "en"
+                    ? "One line is enough — AI sorts out the title, summary, facet, urgency, due date and link."
+                    : "한 줄만 적어도 돼요. 제목·요약·결·상태·기한·링크까지 AI가 정리해 줍니다."}
+                </p>
+              )}
             </div>
 
             {isAIEnabled && user ? (

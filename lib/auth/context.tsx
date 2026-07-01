@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react"
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
 import type { Session, User } from "@supabase/supabase-js"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
@@ -30,6 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  // 프로필 보장을 유저당 1회만 시도하도록 추적.
+  const ensuredProfileRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!supabase) {
@@ -38,17 +40,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     let mounted = true
 
+    // 방어적 프로필 보장: 정상적으로는 handle_new_user 트리거가 만들지만,
+    // 트리거가 실패했거나 구 계정이라 행이 없으면 이후 캔버스/블럭 저장이 RLS 로 조용히 막힌다.
+    // 본인 행만 INSERT ... ON CONFLICT DO NOTHING (RLS: auth.uid() = id) 으로 존재만 보장.
+    const ensureProfile = async (u: User) => {
+      if (!supabase || ensuredProfileRef.current === u.id) return
+      ensuredProfileRef.current = u.id
+      const { error } = await supabase
+        .from("user_profiles")
+        .upsert({ id: u.id, email: u.email ?? null }, { onConflict: "id", ignoreDuplicates: true })
+      if (error) {
+        ensuredProfileRef.current = null // 실패 시 다음 이벤트에서 재시도
+        console.error("ensureProfile failed:", error.message)
+      }
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return
       setSession(data.session)
-      setUser(data.session?.user ?? null)
+      const u = data.session?.user ?? null
+      setUser(u)
       setIsLoading(false)
+      if (u) void ensureProfile(u)
     })
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (!mounted) return
       setSession(newSession)
-      setUser(newSession?.user ?? null)
+      const u = newSession?.user ?? null
+      setUser(u)
+      if (u) void ensureProfile(u)
+      else ensuredProfileRef.current = null // 로그아웃 시 리셋
     })
 
     return () => {
