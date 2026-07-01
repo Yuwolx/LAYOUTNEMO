@@ -9,6 +9,7 @@ import { AreaManagementDialog } from "@/components/area-management-dialog"
 import { CanvasSelectorDialog } from "@/components/canvas-selector-dialog"
 import { AboutDialog } from "@/components/about-dialog"
 import { WelcomeDialog } from "@/components/welcome-dialog"
+import { BlockSearchDialog } from "@/components/block-search-dialog"
 import { ArchiveDock } from "@/components/archive-dock"
 import { ArchiveDialog } from "@/components/archive-dialog"
 import type { CanvasViewport, WorkBlock, Zone, Canvas as CanvasType } from "@/types"
@@ -298,6 +299,8 @@ export default function Page() {
   const [isCanvasSelectorOpen, setIsCanvasSelectorOpen] = useState(false)
   const [isAboutOpen, setIsAboutOpen] = useState(false)
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [focusRequest, setFocusRequest] = useState<{ blockId: string; nonce: number } | null>(null)
   const [isArchiveOpen, setIsArchiveOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   // AI 보조 토글. localStorage 영속화 — 새로고침해도 유지.
@@ -754,6 +757,11 @@ export default function Page() {
     toast.success(language === "en" ? "Backup downloaded." : "백업 파일을 내려받았어요.")
   }
 
+  // 블럭 검색 결과 선택 → 캔버스를 그 블럭으로 이동 (nonce 로 같은 블럭 재이동도 트리거).
+  const handleJumpToBlock = (blockId: string) => {
+    setFocusRequest({ blockId, nonce: Date.now() })
+  }
+
   const handleUpdateZones = (newZones: Zone[]) => {
     // 사라진 결을 감지해 명시적으로만 삭제한다. (saveCanvas 는 결을 지우지 않으므로,
     // 여기서 지우지 않으면 클라우드에 유령 결이 남는다.)
@@ -886,11 +894,18 @@ export default function Page() {
         return
       }
 
+      if (modifier && e.key === "f") {
+        e.preventDefault()
+        setIsSearchOpen(true)
+        return
+      }
+
       if (e.key === "Escape") {
         setIsCreateDialogOpen(false)
         setIsReflectionDialogOpen(false)
         setIsAreaManagementOpen(false)
         setIsCanvasSelectorOpen(false)
+        setIsSearchOpen(false)
       }
     }
 
@@ -948,6 +963,7 @@ export default function Page() {
         isDarkMode={isDarkMode}
         previewBlock={previewBlock} // 미리보기 블록 전달
         onViewportChange={handleCanvasViewportChange}
+        focusRequest={focusRequest}
       />
 
       <CreateBlockDialog
@@ -990,6 +1006,14 @@ export default function Page() {
         onCreateCanvas={handleCreateCanvas}
         onExport={handleExportAll}
         user={user}
+      />
+
+      <BlockSearchDialog
+        open={isSearchOpen}
+        onOpenChange={setIsSearchOpen}
+        blocks={canvasBlocks}
+        zones={zones}
+        onJump={handleJumpToBlock}
       />
 
       <AboutDialog open={isAboutOpen} onOpenChange={setIsAboutOpen} />

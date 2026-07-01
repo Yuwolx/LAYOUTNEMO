@@ -17,6 +17,8 @@ interface CanvasProps {
   isDarkMode: boolean
   previewBlock?: Partial<WorkBlock> | null // Add preview block prop
   onViewportChange?: (viewport: CanvasViewport) => void
+  /** 블럭 검색에서 "이동" 시 해당 블럭을 화면 중앙으로 팬. nonce 가 바뀔 때마다 재이동. */
+  focusRequest?: { blockId: string; nonce: number } | null
 }
 
 // 우하단 갈무리함 drop 감지 여유. 아이콘 가장자리 주변까지 자연스럽게 받아준다.
@@ -44,6 +46,7 @@ export function Canvas({
   isDarkMode,
   previewBlock, // Receive preview block
   onViewportChange,
+  focusRequest,
 }: CanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -68,6 +71,20 @@ export function Canvas({
       }
     }
   }, [])
+
+  // 블럭 검색 → "이동": 대상 블럭을 화면 중앙으로 오도록 팬을 맞춘다.
+  // (screen = origin + pan + world*scale, transformOrigin 0 0 기준이므로 pan = viewportCenter - blockCenter*scale)
+  useEffect(() => {
+    if (!focusRequest || !canvasRef.current) return
+    const target = blocks.find((b) => b.id === focusRequest.blockId)
+    if (!target) return
+    const rect = canvasRef.current.getBoundingClientRect()
+    const blockCenterX = (target.x + target.width / 2) * DEFAULT_CANVAS_SCALE
+    const blockCenterY = (target.y + target.height / 2) * DEFAULT_CANVAS_SCALE
+    setPan({ x: rect.width / 2 - blockCenterX, y: rect.height / 2 - blockCenterY })
+    // nonce 가 바뀔 때만 실행 (같은 블럭 재검색도 다시 이동). blocks 는 그 시점 최신값.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRequest?.nonce])
 
   useEffect(() => {
     if (!onViewportChange) return
