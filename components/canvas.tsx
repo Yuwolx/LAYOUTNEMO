@@ -74,8 +74,15 @@ export function Canvas({
   // 멀티 선택: 선택된 블럭 id 집합 + 진행 중인 마퀴(박스 선택) 사각형(화면 좌표, 캔버스 기준).
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [marquee, setMarquee] = useState<{ startX: number; startY: number; curX: number; curY: number } | null>(null)
+  // 터치 선택 모드 — 켜지면 탭으로 블럭 선택 토글, 빈 곳 드래그로 마퀴 (Ctrl 대체).
+  const [touchSelectMode, setTouchSelectMode] = useState(false)
+  // 연결 모드 — ⋮ 메뉴 '연결' 시 소스 블럭 id 를 담고, 다음에 탭한 블럭과 이어준다 (Shift 드롭 대체).
+  const [connectingId, setConnectingId] = useState<string | null>(null)
   // 그룹 드래그(선택 블럭 같이 이동) 진행 중일 때, 시작 시점의 각 블럭 좌표.
   const groupDragRef = useRef<{ starts: Map<string, { x: number; y: number }> } | null>(null)
+  // 진행 중인 포인터(마우스/터치/펜) id. 멀티터치에서 두 번째 손가락이 드래그를 방해하지 않게,
+  // 그리고 한 번에 하나의 인터랙션만 돌도록 가드로 쓴다.
+  const activePointerIdRef = useRef<number | null>(null)
 
   useEffect(() => {
     return () => {
@@ -169,7 +176,8 @@ export function Canvas({
   useEffect(() => {
     if (!isPanning) return
 
-    const handleMove = (e: MouseEvent) => {
+    const handleMove = (e: PointerEvent) => {
+      if (e.pointerId !== activePointerIdRef.current) return
       const start = panStartRef.current
       if (!start) return
       setPan({
@@ -177,28 +185,34 @@ export function Canvas({
         y: start.panY + (e.clientY - start.mouseY),
       })
     }
-    const handleUp = () => {
+    const handleUp = (e: PointerEvent) => {
+      if (e.pointerId !== activePointerIdRef.current) return
       setIsPanning(false)
       panStartRef.current = null
+      activePointerIdRef.current = null
     }
 
-    window.addEventListener("mousemove", handleMove)
-    window.addEventListener("mouseup", handleUp)
+    window.addEventListener("pointermove", handleMove)
+    window.addEventListener("pointerup", handleUp)
+    window.addEventListener("pointercancel", handleUp)
     return () => {
-      window.removeEventListener("mousemove", handleMove)
-      window.removeEventListener("mouseup", handleUp)
+      window.removeEventListener("pointermove", handleMove)
+      window.removeEventListener("pointerup", handleUp)
+      window.removeEventListener("pointercancel", handleUp)
     }
   }, [isPanning])
 
-  // Ctrl/Cmd + 드래그 마퀴 선택.
+  // Ctrl/Cmd + 드래그(또는 터치 선택 모드) 마퀴 선택.
   useEffect(() => {
     if (!marquee) return
-    const handleMove = (e: MouseEvent) => {
+    const handleMove = (e: PointerEvent) => {
+      if (e.pointerId !== activePointerIdRef.current) return
       const rect = canvasRef.current?.getBoundingClientRect()
       if (!rect) return
       setMarquee((m) => (m ? { ...m, curX: e.clientX - rect.left, curY: e.clientY - rect.top } : m))
     }
-    const handleUp = () => {
+    const handleUp = (e: PointerEvent) => {
+      if (e.pointerId !== activePointerIdRef.current) return
       const x0 = Math.min(marquee.startX, marquee.curX)
       const x1 = Math.max(marquee.startX, marquee.curX)
       const y0 = Math.min(marquee.startY, marquee.curY)
@@ -224,12 +238,15 @@ export function Canvas({
         setSelectedIds(new Set(hits))
       }
       setMarquee(null)
+      activePointerIdRef.current = null
     }
-    window.addEventListener("mousemove", handleMove)
-    window.addEventListener("mouseup", handleUp)
+    window.addEventListener("pointermove", handleMove)
+    window.addEventListener("pointerup", handleUp)
+    window.addEventListener("pointercancel", handleUp)
     return () => {
-      window.removeEventListener("mousemove", handleMove)
-      window.removeEventListener("mouseup", handleUp)
+      window.removeEventListener("pointermove", handleMove)
+      window.removeEventListener("pointerup", handleUp)
+      window.removeEventListener("pointercancel", handleUp)
     }
   }, [marquee, pan.x, pan.y, blocks])
 
@@ -251,40 +268,79 @@ export function Canvas({
     return () => window.removeEventListener("keydown", handler)
   }, [selectedIds, onBatchUpdateBlocks])
 
-  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+  const handleCanvasPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return
+    if (activePointerIdRef.current !== null) return // 이미 다른 포인터가 인터랙션 중
 
-    // 스페이스 팬은 대상(블럭/빈곳) 상관없이 최우선.
+    // 연결 모드 중 빈 곳을 누르면 취소.
+    if (connectingId && !(e.target as HTMLElement).closest?.("[data-block-card]")) {
+      setConnectingId(null)
+      return
+    }
+
+    // 스페이스 팬(마우스)은 대상(블럭/빈곳) 상관없이 최우선.
     if (isSpacePressed) {
       e.preventDefault()
       panStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, panX: pan.x, panY: pan.y }
+      activePointerIdRef.current = e.pointerId
       setIsPanning(true)
       return
     }
 
-    // 아래(마퀴 선택 / 선택 해제)는 블럭이 아닌 빈 캔버스에서 시작할 때만.
+    // 아래(마퀴/팬/선택 해제)는 블럭이 아닌 빈 캔버스에서 시작할 때만.
     if ((e.target as HTMLElement).closest?.("[data-block-card]")) return
 
-    // Ctrl/Cmd + 드래그 → 마퀴(박스) 선택 시작.
-    if (e.ctrlKey || e.metaKey) {
+    // Ctrl/Cmd + 드래그 → 마퀴(박스) 선택 (마우스). 터치 선택 모드는 아래 touchMarqueeMode.
+    if (e.ctrlKey || e.metaKey || (e.pointerType === "touch" && touchSelectMode)) {
       const rect = canvasRef.current?.getBoundingClientRect()
       if (!rect) return
       e.preventDefault()
       const sx = e.clientX - rect.left
       const sy = e.clientY - rect.top
+      activePointerIdRef.current = e.pointerId
       setMarquee({ startX: sx, startY: sy, curX: sx, curY: sy })
       return
     }
 
-    // 빈 곳 평범한 클릭 → 선택 해제.
+    // 터치: 빈 곳 한 손가락 드래그 → 팬. (선택은 유지 — 팬으로 훑어보다 잃지 않도록)
+    if (e.pointerType === "touch") {
+      panStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, panX: pan.x, panY: pan.y }
+      activePointerIdRef.current = e.pointerId
+      setIsPanning(true)
+      return
+    }
+
+    // 마우스: 빈 곳 클릭 → 선택 해제.
     if (selectedIds.size > 0) setSelectedIds(new Set())
   }
 
-  const handleMouseDown = (e: React.MouseEvent, blockId: string) => {
+  const handlePointerDown = (e: React.PointerEvent, blockId: string) => {
     if (isSpacePressed) return // 스페이스 누른 상태면 블럭이 아니라 캔버스 팬을 우선.
+    if (activePointerIdRef.current !== null) return // 이미 다른 포인터가 인터랙션 중
 
-    // Ctrl/Cmd + 클릭 → 선택 토글 (드래그하지 않음).
-    if (e.ctrlKey || e.metaKey) {
+    // 연결 모드: 다른 블럭을 탭하면 두 블럭을 이어주고 모드 종료 (같은 블럭이면 취소).
+    if (connectingId) {
+      e.preventDefault()
+      if (blockId !== connectingId) {
+        const source = blocks.find((b) => b.id === connectingId)
+        const target = blocks.find((b) => b.id === blockId)
+        if (source && target) {
+          const sRel = new Set(source.relatedTo || [])
+          sRel.add(blockId)
+          const tRel = new Set(target.relatedTo || [])
+          tRel.add(connectingId)
+          onBatchUpdateBlocks([
+            { id: connectingId, updates: { relatedTo: Array.from(sRel) } },
+            { id: blockId, updates: { relatedTo: Array.from(tRel) } },
+          ])
+        }
+      }
+      setConnectingId(null)
+      return
+    }
+
+    // 선택 토글: 마우스 Ctrl/Cmd 클릭 또는 터치 선택 모드 탭 (드래그하지 않음).
+    if (e.ctrlKey || e.metaKey || (e.pointerType === "touch" && touchSelectMode)) {
       e.preventDefault()
       setSelectedIds((prev) => {
         const next = new Set(prev)
@@ -321,6 +377,7 @@ export function Canvas({
       }
     }
 
+    activePointerIdRef.current = e.pointerId
     setDraggingId(blockId)
     // 블럭은 transform 된 wrapper 안에 그려지므로 화면상 위치는 block.x * scale + pan.x.
     // offset 을 화면좌표 기준으로 잡고, move 시점에 다시 pan/scale 을 빼서 world 좌표로 환원.
@@ -338,7 +395,8 @@ export function Canvas({
           (Math.abs(block.x - dragStartPos.x) > 0.5 || Math.abs(block.y - dragStartPos.y) > 0.5),
       )
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: PointerEvent) => {
+      if (e.pointerId !== activePointerIdRef.current) return
       if (draggingId) {
         const newX = (e.clientX - offset.x - pan.x) / DEFAULT_CANVAS_SCALE
         const newY = (e.clientY - offset.y - pan.y) / DEFAULT_CANVAS_SCALE
@@ -359,7 +417,9 @@ export function Canvas({
       }
     }
 
-    const handleMouseUp = (e: MouseEvent) => {
+    const handleMouseUp = (e: PointerEvent) => {
+      if (e.pointerId !== activePointerIdRef.current) return
+      activePointerIdRef.current = null
       if (draggingId) {
         // 그룹 드래그 — 아카이브/연결 로직 없이 최종 위치만 한 번 히스토리에 커밋.
         if (groupDragRef.current) {
@@ -505,13 +565,15 @@ export function Canvas({
     }
 
     if (draggingId) {
-      window.addEventListener("mousemove", handleMouseMove)
-      window.addEventListener("mouseup", handleMouseUp)
+      window.addEventListener("pointermove", handleMouseMove)
+      window.addEventListener("pointerup", handleMouseUp)
+      window.addEventListener("pointercancel", handleMouseUp)
     }
 
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove)
-      window.removeEventListener("mouseup", handleMouseUp)
+      window.removeEventListener("pointermove", handleMouseMove)
+      window.removeEventListener("pointerup", handleMouseUp)
+      window.removeEventListener("pointercancel", handleMouseUp)
     }
   }, [draggingId, offset, pan, dragStartPos, onUpdateBlock, onBatchUpdateBlocks, blocks])
 
@@ -636,7 +698,7 @@ export function Canvas({
             style={{ pointerEvents: "auto", animation: "lineFadeIn 220ms ease-out" }}
           >
             {/* hit-area: 클릭 잘 잡히도록 두꺼운 투명 라인 */}
-            <path d={d} stroke="transparent" strokeWidth="24" fill="none" strokeLinecap="round" />
+            <path d={d} stroke="transparent" strokeWidth="30" fill="none" strokeLinecap="round" />
             {/* 본선 — 블럭의 box-shadow 와 같은 결의 부드러운 외곽광. svg filter 로 처리. */}
             <path
               d={d}
@@ -679,7 +741,7 @@ export function Canvas({
   return (
     <div
       ref={canvasRef}
-      onMouseDown={handleCanvasMouseDown}
+      onPointerDown={handleCanvasPointerDown}
       className={`fixed inset-0 top-[104px] overflow-hidden transition-colors duration-700 ${
         isDarkMode ? (selectedZone ? "bg-zinc-800" : "bg-zinc-900") : selectedZone ? "bg-[#f5f5f4]" : "bg-[#fafaf9]"
       }`}
@@ -691,6 +753,8 @@ export function Canvas({
         backgroundSize: `${48 * DEFAULT_CANVAS_SCALE}px ${48 * DEFAULT_CANVAS_SCALE}px`,
         backgroundPosition: `${pan.x}px ${pan.y}px`,
         cursor: isPanning ? "grabbing" : isSpacePressed ? "grab" : isCopyMode ? "copy" : "default",
+        // 터치가 브라우저 스크롤/줌으로 새지 않고 캔버스 팬/드래그에 쓰이도록.
+        touchAction: "none",
       }}
     >
       <div
@@ -745,15 +809,17 @@ export function Canvas({
             block={block}
             isDragging={draggingId === block.id}
             visibility={getBlockVisibility(block)}
-            onMouseDown={(e) => handleMouseDown(e, block.id)}
+            onPointerDown={(e) => handlePointerDown(e, block.id)}
             onUpdate={(updates, skipHistory) => onUpdateBlock(block.id, updates, skipHistory)}
             zones={zonesArray}
             isDarkMode={isDarkMode}
             isCopyMode={isCopyMode}
             isTossingBack={tossingBackId === block.id}
-            isSelected={selectedIds.has(block.id)}
+            isSelected={selectedIds.has(block.id) || block.id === connectingId}
             dimmed={selectedIds.size > 0 && !selectedIds.has(block.id)}
             onTogglePin={onTogglePin ? () => onTogglePin(block.id) : undefined}
+            onCopy={() => onCopyBlock(block.id)}
+            onStartConnect={() => setConnectingId(block.id)}
             archiveFlight={
               archiveFlight?.id === block.id
                 ? {
@@ -846,6 +912,44 @@ export function Canvas({
               title="고정 해제"
             >
               <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 터치 전용: 선택 모드 토글 (마우스는 Ctrl 로 대체됨). hover 없는 기기에서만 노출 */}
+      <button
+        onClick={() => {
+          setTouchSelectMode((v) => {
+            if (v) setSelectedIds(new Set()) // 끌 때 선택 해제
+            return !v
+          })
+        }}
+        className={`absolute bottom-5 left-5 z-[75] hidden rounded-full border px-4 py-2.5 text-xs font-medium shadow-md transition-colors [@media(hover:none)]:block ${
+          touchSelectMode
+            ? "border-violet-600 bg-violet-600 text-white"
+            : isDarkMode
+              ? "border-zinc-700 bg-zinc-800 text-zinc-200"
+              : "border-gray-200 bg-white text-gray-700"
+        }`}
+      >
+        {touchSelectMode ? "선택 모드 ✕" : "선택 모드"}
+      </button>
+
+      {/* 연결 모드 안내 */}
+      {connectingId && (
+        <div className="absolute bottom-5 left-1/2 z-[80] -translate-x-1/2">
+          <div
+            className={`flex items-center gap-3 rounded-full border px-4 py-2 text-xs shadow-md ${
+              isDarkMode ? "border-zinc-700 bg-zinc-800 text-zinc-100" : "border-gray-200 bg-white text-gray-800"
+            }`}
+          >
+            <span>연결할 블럭을 탭하세요</span>
+            <button
+              onClick={() => setConnectingId(null)}
+              className="rounded-full px-2 py-0.5 font-medium text-violet-500 hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              취소
             </button>
           </div>
         </div>

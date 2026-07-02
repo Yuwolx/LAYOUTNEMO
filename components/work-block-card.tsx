@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { BlockDetailDialog } from "@/components/block-detail-dialog"
-import { MoreVertical, Sparkles, Power, ExternalLink, Archive, Pin } from "lucide-react"
+import { MoreVertical, Sparkles, Power, ExternalLink, Archive, Pin, Link2, Copy } from "lucide-react"
 import type { WorkBlock } from "@/types"
 import { URGENCY_META } from "@/lib/constants/urgency"
 import { useLanguage, useT } from "@/lib/i18n/context"
@@ -15,7 +15,7 @@ interface WorkBlockCardProps {
   block: WorkBlock
   isDragging: boolean
   visibility: "normal" | "emphasized" | "dimmed"
-  onMouseDown: (e: React.MouseEvent) => void
+  onPointerDown: (e: React.PointerEvent) => void
   onUpdate: (updates: Partial<WorkBlock>, skipHistory?: boolean) => void
   zones: Array<{ id: string; label: string }>
   isDarkMode: boolean
@@ -25,6 +25,8 @@ interface WorkBlockCardProps {
   isSelected?: boolean
   dimmed?: boolean
   onTogglePin?: () => void
+  onCopy?: () => void
+  onStartConnect?: () => void
 }
 
 const urgencyShadows = {
@@ -45,7 +47,7 @@ export function WorkBlockCard({
   block,
   isDragging,
   visibility,
-  onMouseDown,
+  onPointerDown,
   onUpdate,
   zones,
   isDarkMode,
@@ -55,6 +57,8 @@ export function WorkBlockCard({
   isSelected = false,
   dimmed = false,
   onTogglePin,
+  onCopy,
+  onStartConnect,
 }: WorkBlockCardProps) {
   const { language } = useLanguage()
   const t = useT()
@@ -103,13 +107,13 @@ export function WorkBlockCard({
     return () => ro.disconnect()
   }, [isCompleted])
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent) => {
     startPosRef.current = { x: e.clientX, y: e.clientY }
     isMovingRef.current = false
-    onMouseDown(e)
+    onPointerDown(e)
   }
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handlePointerMove = (e: React.PointerEvent) => {
     const dx = Math.abs(e.clientX - startPosRef.current.x)
     const dy = Math.abs(e.clientY - startPosRef.current.y)
     if (dx > 5 || dy > 5) {
@@ -164,6 +168,10 @@ export function WorkBlockCard({
           // 카드 위에서 드래그 시 텍스트가 선택되지 않도록 (모든 브라우저).
           userSelect: "none",
           WebkitUserSelect: "none",
+          // iOS 롱프레스 시 뜨는 텍스트/링크 콜아웃 메뉴가 드래그를 방해하지 않도록.
+          WebkitTouchCallout: "none",
+          // 터치 드래그가 브라우저 스크롤로 새지 않도록.
+          touchAction: "none",
           // 활성 블럭은 내용에 맞춰 가변. 완료 블럭은 슬림 바 형태 유지.
           height: isCompleted ? 56 : "auto",
           minHeight: isCompleted ? 56 : 64,
@@ -183,8 +191,8 @@ export function WorkBlockCard({
               : undefined,
           zIndex: archiveFlight ? 60 : isDragging ? 50 : isSelected ? 40 : visibility === "emphasized" ? 30 : isCompleted ? 5 : 10,
         }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
         onClick={handleClick}
       >
         <div
@@ -231,8 +239,9 @@ export function WorkBlockCard({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 -mt-1 -mr-1"
+                    className="opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity h-7 w-7 -mt-1 -mr-1"
                     onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
                     <MoreVertical className="w-4 h-4" />
                   </Button>
@@ -247,8 +256,9 @@ export function WorkBlockCard({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 -mt-1 -mr-1"
+                    className="opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity h-7 w-7 -mt-1 -mr-1"
                     onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
                     <MoreVertical className="w-4 h-4" />
                   </Button>
@@ -269,6 +279,26 @@ export function WorkBlockCard({
                       : language === "en"
                         ? "Pin to top"
                         : "대표로 고정"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onStartConnect?.()
+                    }}
+                    className="text-muted-foreground font-light"
+                  >
+                    <Link2 className="w-4 h-4 mr-2" />
+                    {language === "en" ? "Connect…" : "연결"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onCopy?.()
+                    }}
+                    className="text-muted-foreground font-light"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    {language === "en" ? "Duplicate" : "복사"}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleCompleteBlock} className="text-muted-foreground font-light">
                     <Archive className="w-4 h-4 mr-2" />
@@ -295,7 +325,7 @@ export function WorkBlockCard({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] text-card-foreground/60 hover:text-card-foreground hover:bg-foreground/5 transition-colors"
                 title={block.url}
                 aria-label="외부 링크 열기"
