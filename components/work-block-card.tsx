@@ -22,6 +22,8 @@ interface WorkBlockCardProps {
   isCopyMode?: boolean
   isTossingBack?: boolean
   archiveFlight?: { targetX: number; targetY: number } | null
+  isSelected?: boolean
+  dimmed?: boolean
 }
 
 const urgencyShadows = {
@@ -49,6 +51,8 @@ export function WorkBlockCard({
   isCopyMode = false,
   isTossingBack = false,
   archiveFlight = null,
+  isSelected = false,
+  dimmed = false,
 }: WorkBlockCardProps) {
   const { language } = useLanguage()
   const t = useT()
@@ -140,6 +144,7 @@ export function WorkBlockCard({
     <>
       <div
         ref={cardRef}
+        data-block-card
         key={`${block.id}-${isCompleted ? "completed" : "active"}`}
         className={`absolute group select-none ${
           archiveFlight ? "pointer-events-none" : isCopyMode ? "cursor-copy" : isCompleted ? "cursor-grab" : "cursor-move"
@@ -164,7 +169,13 @@ export function WorkBlockCard({
               ? "left 420ms cubic-bezier(0.34, 1.35, 0.64, 1), top 420ms cubic-bezier(0.34, 1.35, 0.64, 1)"
               : "none",
           willChange: archiveFlight ? "transform, opacity" : isDragging || isTossingBack ? "transform" : "auto",
-          zIndex: archiveFlight ? 60 : isDragging ? 50 : visibility === "emphasized" ? 30 : isCompleted ? 5 : 10,
+          // 선택 시 보라 글로우 — drop-shadow 라 카드 시급도 그림자(inner box-shadow)와 안 겹치고,
+          // 둥근 실루엣을 따라 부드러운 후광이 진다.
+          filter:
+            isSelected && !archiveFlight
+              ? "drop-shadow(0 0 3px rgba(139,92,246,0.55)) drop-shadow(0 0 10px rgba(139,92,246,0.32))"
+              : undefined,
+          zIndex: archiveFlight ? 60 : isDragging ? 50 : isSelected ? 40 : visibility === "emphasized" ? 30 : isCompleted ? 5 : 10,
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -182,8 +193,10 @@ export function WorkBlockCard({
           ${isCompleted ? "shadow-sm hover:opacity-60 p-3 rounded-lg" : "p-3"}
           ${isAIControl && aiEnabled ? "ring-2 ring-blue-400/30" : ""}
           ${isAIControl && !aiEnabled ? "opacity-60" : ""}
-          transition-all duration-400
+          ${isSelected ? "ring-1 ring-violet-400/70 ring-offset-2 ring-offset-background" : ""}
+          transition-all duration-400 ease-out
         `}
+          style={{ opacity: dimmed ? 0.4 : undefined }}
         >
           <div className="flex items-start justify-between mb-1.5">
             <div className="flex-1 pr-2 flex items-center gap-2">

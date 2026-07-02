@@ -633,12 +633,16 @@ export default function Page() {
     }
   }
 
-  const handleBatchUpdateBlocks = (updates: Array<{ id: string; updates: Partial<WorkBlock> }>) => {
+  const handleBatchUpdateBlocks = (
+    updates: Array<{ id: string; updates: Partial<WorkBlock> }>,
+    skipHistory = false,
+  ) => {
     const newBlocks = blocks.map((block) => {
       const update = updates.find((u) => u.id === block.id)
       return update ? { ...block, ...update.updates } : block
     })
-    saveToHistory(newBlocks)
+    if (skipHistory) setBlocks(newBlocks)
+    else saveToHistory(newBlocks)
   }
 
   const handleCreateBlock = (block: WorkBlock) => {

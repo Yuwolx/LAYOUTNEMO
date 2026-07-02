@@ -5,6 +5,7 @@ import type { JSX } from "react"
 import { useRef, useState, useEffect } from "react"
 import { WorkBlockCard } from "@/components/work-block-card"
 import type { CanvasViewport, WorkBlock, Zone } from "@/types"
+import { URGENCY_KEYS, URGENCY_META } from "@/lib/constants/urgency"
 
 interface CanvasProps {
   blocks: WorkBlock[]
@@ -12,7 +13,7 @@ interface CanvasProps {
   selectedZone: string | null
   showRelationships: boolean
   onUpdateBlock: (id: string, updates: Partial<WorkBlock>, skipHistory?: boolean) => void
-  onBatchUpdateBlocks: (updates: Array<{ id: string; updates: Partial<WorkBlock> }>) => void
+  onBatchUpdateBlocks: (updates: Array<{ id: string; updates: Partial<WorkBlock> }>, skipHistory?: boolean) => void
   onCopyBlock: (sourceBlockId: string) => void
   isDarkMode: boolean
   previewBlock?: Partial<WorkBlock> | null // Add preview block prop
@@ -26,6 +27,14 @@ const ARCHIVE_DROP_PADDING = 40
 const ARCHIVE_FLIGHT_MS = 150
 // 브라우저 Cmd/Ctrl - 한 단계와 비슷한 초기 캔버스 배율.
 const DEFAULT_CANVAS_SCALE = 0.9
+
+// 시급도 색(블럭 그림자와 같은 계열) — 일괄 툴바의 색 점에 사용.
+const URGENCY_RGB: Record<string, string> = {
+  thinking: "212, 212, 216",
+  stable: "147, 197, 253",
+  lingering: "134, 239, 172",
+  urgent: "252, 165, 165",
+}
 
 type ArchiveFlight = {
   id: string
@@ -63,6 +72,11 @@ export function Canvas({
   const panStartRef = useRef<{ mouseX: number; mouseY: number; panX: number; panY: number } | null>(null)
   const [archiveFlight, setArchiveFlight] = useState<ArchiveFlight | null>(null)
   const archiveFlightTimerRef = useRef<number | null>(null)
+  // 멀티 선택: 선택된 블럭 id 집합 + 진행 중인 마퀴(박스 선택) 사각형(화면 좌표, 캔버스 기준).
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [marquee, setMarquee] = useState<{ startX: number; startY: number; curX: number; curY: number } | null>(null)
+  // 그룹 드래그(선택 블럭 같이 이동) 진행 중일 때, 시작 시점의 각 블럭 좌표.
+  const groupDragRef = useRef<{ starts: Map<string, { x: number; y: number }> } | null>(null)
 
   useEffect(() => {
     return () => {
@@ -174,21 +188,110 @@ export function Canvas({
     }
   }, [isPanning])
 
-  const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (!isSpacePressed) return
-    if (e.button !== 0) return
-    e.preventDefault()
-    panStartRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-      panX: pan.x,
-      panY: pan.y,
+  // Ctrl/Cmd + 드래그 마퀴 선택.
+  useEffect(() => {
+    if (!marquee) return
+    const handleMove = (e: MouseEvent) => {
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setMarquee((m) => (m ? { ...m, curX: e.clientX - rect.left, curY: e.clientY - rect.top } : m))
     }
-    setIsPanning(true)
+    const handleUp = () => {
+      const x0 = Math.min(marquee.startX, marquee.curX)
+      const x1 = Math.max(marquee.startX, marquee.curX)
+      const y0 = Math.min(marquee.startY, marquee.curY)
+      const y1 = Math.max(marquee.startY, marquee.curY)
+      // 클릭 수준의 작은 드래그는 무시.
+      if (x1 - x0 >= 4 || y1 - y0 >= 4) {
+        // 화면(캔버스 기준) → 월드 좌표 (transformOrigin 0 0: screen = pan + world*scale)
+        const wx0 = (x0 - pan.x) / DEFAULT_CANVAS_SCALE
+        const wx1 = (x1 - pan.x) / DEFAULT_CANVAS_SCALE
+        const wy0 = (y0 - pan.y) / DEFAULT_CANVAS_SCALE
+        const wy1 = (y1 - pan.y) / DEFAULT_CANVAS_SCALE
+        const hits = blocks
+          .filter(
+            (b) =>
+              !b.isCompleted &&
+              !b.isGuide &&
+              b.x < wx1 &&
+              b.x + b.width > wx0 &&
+              b.y < wy1 &&
+              b.y + b.height > wy0,
+          )
+          .map((b) => b.id)
+        setSelectedIds(new Set(hits))
+      }
+      setMarquee(null)
+    }
+    window.addEventListener("mousemove", handleMove)
+    window.addEventListener("mouseup", handleUp)
+    return () => {
+      window.removeEventListener("mousemove", handleMove)
+      window.removeEventListener("mouseup", handleUp)
+    }
+  }, [marquee, pan.x, pan.y, blocks])
+
+  // 선택 상태 키보드: Esc 해제 / Delete·Backspace 로 선택 블럭 일괄 갈무리.
+  useEffect(() => {
+    if (selectedIds.size === 0) return
+    const handler = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return
+      if (e.key === "Escape") {
+        setSelectedIds(new Set())
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault()
+        onBatchUpdateBlocks(Array.from(selectedIds).map((id) => ({ id, updates: { isCompleted: true } })))
+        setSelectedIds(new Set())
+      }
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [selectedIds, onBatchUpdateBlocks])
+
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return
+
+    // 스페이스 팬은 대상(블럭/빈곳) 상관없이 최우선.
+    if (isSpacePressed) {
+      e.preventDefault()
+      panStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, panX: pan.x, panY: pan.y }
+      setIsPanning(true)
+      return
+    }
+
+    // 아래(마퀴 선택 / 선택 해제)는 블럭이 아닌 빈 캔버스에서 시작할 때만.
+    if ((e.target as HTMLElement).closest?.("[data-block-card]")) return
+
+    // Ctrl/Cmd + 드래그 → 마퀴(박스) 선택 시작.
+    if (e.ctrlKey || e.metaKey) {
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (!rect) return
+      e.preventDefault()
+      const sx = e.clientX - rect.left
+      const sy = e.clientY - rect.top
+      setMarquee({ startX: sx, startY: sy, curX: sx, curY: sy })
+      return
+    }
+
+    // 빈 곳 평범한 클릭 → 선택 해제.
+    if (selectedIds.size > 0) setSelectedIds(new Set())
   }
 
   const handleMouseDown = (e: React.MouseEvent, blockId: string) => {
     if (isSpacePressed) return // 스페이스 누른 상태면 블럭이 아니라 캔버스 팬을 우선.
+
+    // Ctrl/Cmd + 클릭 → 선택 토글 (드래그하지 않음).
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault()
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        if (next.has(blockId)) next.delete(blockId)
+        else next.add(blockId)
+        return next
+      })
+      return
+    }
 
     const block = blocks.find((b) => b.id === blockId)
     if (!block) return
@@ -199,6 +302,21 @@ export function Canvas({
     if (e.altKey && !e.metaKey && !e.ctrlKey) {
       onCopyBlock(blockId)
       return
+    }
+
+    // 선택된 블럭(2개 이상)을 드래그하면 선택 전체가 같이 이동한다 (그룹 드래그).
+    if (selectedIds.size > 1 && selectedIds.has(blockId)) {
+      const starts = new Map<string, { x: number; y: number }>()
+      blocks.forEach((b) => {
+        if (selectedIds.has(b.id) && !b.isCompleted && !b.isGuide) starts.set(b.id, { x: b.x, y: b.y })
+      })
+      groupDragRef.current = { starts }
+    } else {
+      groupDragRef.current = null
+      // 선택에 없는 블럭을 평범하게 누르면 기존 선택을 해제한다 (단일 드래그 흐름 유지).
+      if (selectedIds.size > 0 && !selectedIds.has(blockId)) {
+        setSelectedIds(new Set())
+      }
     }
 
     setDraggingId(blockId)
@@ -223,19 +341,42 @@ export function Canvas({
         const newX = (e.clientX - offset.x - pan.x) / DEFAULT_CANVAS_SCALE
         const newY = (e.clientY - offset.y - pan.y) / DEFAULT_CANVAS_SCALE
 
-        onUpdateBlock(
-          draggingId,
-          {
-            x: newX,
-            y: newY,
-          },
-          true,
-        )
+        const group = groupDragRef.current
+        if (group && dragStartPos) {
+          // 앵커 블럭이 움직인 만큼 선택 전체를 같이 이동 (드래그 중엔 히스토리 없이).
+          const dx = newX - dragStartPos.x
+          const dy = newY - dragStartPos.y
+          const updates = Array.from(group.starts.entries()).map(([id, s]) => ({
+            id,
+            updates: { x: s.x + dx, y: s.y + dy },
+          }))
+          onBatchUpdateBlocks(updates, true)
+        } else {
+          onUpdateBlock(draggingId, { x: newX, y: newY }, true)
+        }
       }
     }
 
     const handleMouseUp = (e: MouseEvent) => {
       if (draggingId) {
+        // 그룹 드래그 — 아카이브/연결 로직 없이 최종 위치만 한 번 히스토리에 커밋.
+        if (groupDragRef.current) {
+          const anchor = blocks.find((b) => b.id === draggingId)
+          if (anchor && hasMovedFromStart(anchor)) {
+            const finalUpdates = Array.from(groupDragRef.current.starts.keys())
+              .map((id) => {
+                const b = blocks.find((x) => x.id === id)
+                return b ? { id, updates: { x: b.x, y: b.y } } : null
+              })
+              .filter((u): u is { id: string; updates: { x: number; y: number } } => u !== null)
+            onBatchUpdateBlocks(finalUpdates, false)
+          }
+          groupDragRef.current = null
+          setDraggingId(null)
+          setDragStartPos(null)
+          return
+        }
+
         const block = blocks.find((b) => b.id === draggingId)
         if (!block) {
           setDraggingId(null)
@@ -520,6 +661,17 @@ export function Canvas({
   const activeBlocks = blocks.filter((b) => !b.isCompleted)
   const zonesArray = zones.map((z) => ({ id: z.id, label: z.label }))
 
+  // 선택 일괄 동작.
+  const applyUrgencyToSelection = (urgency: WorkBlock["urgency"]) => {
+    if (selectedIds.size === 0) return
+    onBatchUpdateBlocks(Array.from(selectedIds).map((id) => ({ id, updates: { urgency } })))
+  }
+  const archiveSelection = () => {
+    if (selectedIds.size === 0) return
+    onBatchUpdateBlocks(Array.from(selectedIds).map((id) => ({ id, updates: { isCompleted: true } })))
+    setSelectedIds(new Set())
+  }
+
   return (
     <div
       ref={canvasRef}
@@ -595,6 +747,8 @@ export function Canvas({
             isDarkMode={isDarkMode}
             isCopyMode={isCopyMode}
             isTossingBack={tossingBackId === block.id}
+            isSelected={selectedIds.has(block.id)}
+            dimmed={selectedIds.size > 0 && !selectedIds.has(block.id)}
             archiveFlight={
               archiveFlight?.id === block.id
                 ? {
@@ -636,6 +790,60 @@ export function Canvas({
       </div>
 
       </div>
+
+      {/* Ctrl+드래그 마퀴(박스 선택) 사각형 */}
+      {marquee && (
+        <div
+          className="pointer-events-none absolute z-[80] rounded-sm border border-violet-500 bg-violet-500/10"
+          style={{
+            left: Math.min(marquee.startX, marquee.curX),
+            top: Math.min(marquee.startY, marquee.curY),
+            width: Math.abs(marquee.curX - marquee.startX),
+            height: Math.abs(marquee.curY - marquee.startY),
+          }}
+        />
+      )}
+
+      {/* 선택 일괄 툴바 */}
+      {selectedIds.size > 0 && (
+        <div className="absolute left-1/2 top-4 z-[90] -translate-x-1/2">
+          <div
+            className={`flex items-center gap-2 rounded-full border px-3 py-2 shadow-lg ${
+              isDarkMode ? "bg-zinc-800 border-zinc-700 text-zinc-200" : "bg-white border-gray-200 text-gray-800"
+            }`}
+          >
+            <span className="text-xs font-medium tabular-nums">{selectedIds.size}개 선택</span>
+            <span className={`h-4 w-px ${isDarkMode ? "bg-zinc-700" : "bg-gray-200"}`} />
+            <div className="flex items-center gap-1">
+              {URGENCY_KEYS.map((key) => (
+                <button
+                  key={key}
+                  onClick={() => applyUrgencyToSelection(key)}
+                  title={URGENCY_META[key].label}
+                  aria-label={URGENCY_META[key].label}
+                  className="h-5 w-5 rounded-full border border-black/10 transition-transform hover:scale-110"
+                  style={{ backgroundColor: `rgb(${URGENCY_RGB[key]})` }}
+                />
+              ))}
+            </div>
+            <span className={`h-4 w-px ${isDarkMode ? "bg-zinc-700" : "bg-gray-200"}`} />
+            <button
+              onClick={archiveSelection}
+              className="rounded-full px-2 py-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              갈무리
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className={`rounded-full px-2 py-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/10 ${
+                isDarkMode ? "text-zinc-400" : "text-gray-400"
+              }`}
+            >
+              해제
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
