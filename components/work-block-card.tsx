@@ -15,7 +15,7 @@ interface WorkBlockCardProps {
   block: WorkBlock
   isDragging: boolean
   visibility: "normal" | "emphasized" | "dimmed"
-  onMouseDown: (e: React.MouseEvent) => void
+  onPointerDown: (e: React.PointerEvent) => void
   onUpdate: (updates: Partial<WorkBlock>, skipHistory?: boolean) => void
   zones: Array<{ id: string; label: string }>
   isDarkMode: boolean
@@ -45,7 +45,7 @@ export function WorkBlockCard({
   block,
   isDragging,
   visibility,
-  onMouseDown,
+  onPointerDown,
   onUpdate,
   zones,
   isDarkMode,
@@ -103,13 +103,13 @@ export function WorkBlockCard({
     return () => ro.disconnect()
   }, [isCompleted])
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent) => {
     startPosRef.current = { x: e.clientX, y: e.clientY }
     isMovingRef.current = false
-    onMouseDown(e)
+    onPointerDown(e)
   }
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handlePointerMove = (e: React.PointerEvent) => {
     const dx = Math.abs(e.clientX - startPosRef.current.x)
     const dy = Math.abs(e.clientY - startPosRef.current.y)
     if (dx > 5 || dy > 5) {
@@ -164,6 +164,8 @@ export function WorkBlockCard({
           // 카드 위에서 드래그 시 텍스트가 선택되지 않도록 (모든 브라우저).
           userSelect: "none",
           WebkitUserSelect: "none",
+          // 터치 드래그가 브라우저 스크롤로 새지 않도록.
+          touchAction: "none",
           // 활성 블럭은 내용에 맞춰 가변. 완료 블럭은 슬림 바 형태 유지.
           height: isCompleted ? 56 : "auto",
           minHeight: isCompleted ? 56 : 64,
@@ -183,8 +185,8 @@ export function WorkBlockCard({
               : undefined,
           zIndex: archiveFlight ? 60 : isDragging ? 50 : isSelected ? 40 : visibility === "emphasized" ? 30 : isCompleted ? 5 : 10,
         }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
         onClick={handleClick}
       >
         <div
@@ -231,7 +233,7 @@ export function WorkBlockCard({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 -mt-1 -mr-1"
+                    className="opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity h-7 w-7 -mt-1 -mr-1"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MoreVertical className="w-4 h-4" />
@@ -247,7 +249,7 @@ export function WorkBlockCard({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 -mt-1 -mr-1"
+                    className="opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity h-7 w-7 -mt-1 -mr-1"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MoreVertical className="w-4 h-4" />
