@@ -168,6 +168,8 @@ export function WorkBlockCard({
           // 카드 위에서 드래그 시 텍스트가 선택되지 않도록 (모든 브라우저).
           userSelect: "none",
           WebkitUserSelect: "none",
+          // iOS 롱프레스 시 뜨는 텍스트/링크 콜아웃 메뉴가 드래그를 방해하지 않도록.
+          WebkitTouchCallout: "none",
           // 터치 드래그가 브라우저 스크롤로 새지 않도록.
           touchAction: "none",
           // 활성 블럭은 내용에 맞춰 가변. 완료 블럭은 슬림 바 형태 유지.
