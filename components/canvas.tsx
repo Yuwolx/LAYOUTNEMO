@@ -5,7 +5,7 @@ import type { JSX } from "react"
 import { useRef, useState, useEffect } from "react"
 import { WorkBlockCard } from "@/components/work-block-card"
 import type { CanvasViewport, WorkBlock, Zone } from "@/types"
-import { URGENCY_KEYS, URGENCY_META, URGENCY_RGB } from "@/lib/constants/urgency"
+import { URGENCY_KEYS, URGENCY_META, URGENCY_RGB, NOTICE_RGB } from "@/lib/constants/urgency"
 import { Pin, X } from "lucide-react"
 
 interface CanvasProps {
@@ -798,7 +798,7 @@ export function Canvas({
 
       {/* 대표(공지) 블럭 배너 — 캔버스 상단(헤더 아래)에 고정. 팬/줌 무관. 클릭 시 상세 열림. */}
       {pinnedBlock && (
-        <div className="absolute left-1/2 top-4 z-[70] w-[min(90%,420px)] -translate-x-1/2">
+        <div className="absolute left-1/2 top-7 z-[70] w-[min(90%,420px)] -translate-x-1/2">
           <div
             role="button"
             tabIndex={0}
@@ -810,20 +810,21 @@ export function Canvas({
               }
             }}
             title={pinnedBlock.title}
-            className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-2.5 shadow-md transition-all active:scale-[0.99] ${
+            className={`flex cursor-pointer items-center gap-4 rounded-2xl px-3.5 py-2.5 transition-all active:scale-[0.99] ${
               isDarkMode
-                ? "bg-zinc-800/95 border-zinc-700 text-zinc-100 hover:bg-zinc-800"
-                : "bg-white/95 border-gray-200 text-gray-900 hover:bg-white"
+                ? "bg-zinc-800/95 text-zinc-100 hover:bg-zinc-800"
+                : "bg-white/95 text-gray-900 hover:bg-white"
             }`}
+            style={{ boxShadow: `0 0 16px rgba(${NOTICE_RGB}, 0.5)` }}
           >
             <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2.5px]"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[1.5px]"
               style={{
-                borderColor: `rgb(${URGENCY_RGB[pinnedBlock.urgency ?? "thinking"]})`,
-                boxShadow: `0 0 9px rgba(${URGENCY_RGB[pinnedBlock.urgency ?? "thinking"]}, 0.6)`,
+                borderColor: `rgba(${NOTICE_RGB}, 0.85)`,
+                boxShadow: `0 0 9px rgba(${NOTICE_RGB}, 0.5)`,
               }}
             >
-              <Pin className="h-4 w-4 -rotate-45 text-violet-500" />
+              <Pin className="h-4 w-4 -rotate-45" style={{ color: `rgb(${NOTICE_RGB})` }} />
             </span>
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold leading-tight">{pinnedBlock.title || "제목 없음"}</div>

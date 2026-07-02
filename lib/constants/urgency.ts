@@ -69,3 +69,6 @@ export const URGENCY_RGB: Record<Urgency, string> = {
   lingering: "134, 239, 172",
   urgent: "252, 165, 165",
 }
+
+/** 대표(공지) 블럭 전용 색 — 시급도 4색·선택 보라와 겹치지 않는 앰버. 핀/링/글로우 통일용. */
+export const NOTICE_RGB = "245, 158, 11"

@@ -83,6 +83,10 @@ export function WorkBlockCard({
   // 주의: 비교 대상은 ref 로 늘 최신 block.height — 클로저가 stale 안 되도록.
   const latestHeightRef = useRef(block.height)
   latestHeightRef.current = block.height
+  // onUpdate 는 매 렌더 새로 생성되는 인라인 콜백. effect deps 에 넣으면 매 렌더 재구독되어
+  // 측정 → setState → 재렌더가 무한 반복될 수 있다(Maximum update depth). ref 로 최신값만 참조.
+  const onUpdateRef = useRef(onUpdate)
+  onUpdateRef.current = onUpdate
 
   useEffect(() => {
     if (!cardRef.current || isCompleted) return
@@ -90,14 +94,14 @@ export function WorkBlockCard({
     const measure = () => {
       const measured = Math.round(el.getBoundingClientRect().height)
       if (measured > 0 && Math.abs(measured - latestHeightRef.current) > 1) {
-        onUpdate({ height: measured }, true)
+        onUpdateRef.current({ height: measured }, true)
       }
     }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [isCompleted, onUpdate])
+  }, [isCompleted])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     startPosRef.current = { x: e.clientX, y: e.clientY }
@@ -172,7 +176,7 @@ export function WorkBlockCard({
               : "none",
           willChange: archiveFlight ? "transform, opacity" : isDragging || isTossingBack ? "transform" : "auto",
           // 선택 시 보라 글로우 — drop-shadow 라 카드 시급도 그림자(inner box-shadow)와 안 겹치고,
-          // 둥근 실루엣을 따라 부드러운 후광이 진다.
+          // 둥근 실루엣을 따라 부드러운 후광이 진다. (대표 블럭은 캔버스에선 원래 시급도 색 그대로)
           filter:
             isSelected && !archiveFlight
               ? "drop-shadow(0 0 3px rgba(139,92,246,0.55)) drop-shadow(0 0 10px rgba(139,92,246,0.32))"
