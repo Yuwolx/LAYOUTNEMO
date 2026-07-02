@@ -85,7 +85,8 @@ function blockToRow(block: WorkBlock, canvasId: string, userId: string): BlockRo
     is_completed: block.isCompleted ?? false,
     is_deleted: block.isDeleted ?? false,
     deleted_at: block.deletedAt ? new Date(block.deletedAt).toISOString() : null,
-    metadata: {},
+    // 대표(공지) 블럭 여부는 별도 컬럼 없이 metadata 에 저장 → 마이그레이션 없이 기기 간 동기화.
+    metadata: { pinned: block.isPinned ?? false },
   }
 }
 
@@ -108,6 +109,7 @@ function rowToBlock(row: BlockRow): WorkBlock {
     isCompleted: row.is_completed,
     isDeleted: row.is_deleted,
     deletedAt: row.deleted_at ? new Date(row.deleted_at).getTime() : undefined,
+    isPinned: Boolean((row.metadata as { pinned?: boolean } | null)?.pinned),
   }
 }
 

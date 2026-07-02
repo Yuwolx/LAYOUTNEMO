@@ -28,6 +28,8 @@ export interface WorkBlock {
   aiEnabled?: boolean
   /** 외부 링크 URL — 있으면 카드 하단에 링크 아이콘 노출, 클릭 시 새 탭으로 이동 */
   url?: string
+  /** 대표(공지) 블럭 여부 — 캔버스당 1개. 상단 배너로 항상 노출. */
+  isPinned?: boolean
 }
 
 export interface Zone {

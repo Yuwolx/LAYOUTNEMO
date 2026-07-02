@@ -5,7 +5,8 @@ import type { JSX } from "react"
 import { useRef, useState, useEffect } from "react"
 import { WorkBlockCard } from "@/components/work-block-card"
 import type { CanvasViewport, WorkBlock, Zone } from "@/types"
-import { URGENCY_KEYS, URGENCY_META } from "@/lib/constants/urgency"
+import { URGENCY_KEYS, URGENCY_META, URGENCY_RGB } from "@/lib/constants/urgency"
+import { Pin, X } from "lucide-react"
 
 interface CanvasProps {
   blocks: WorkBlock[]
@@ -20,6 +21,10 @@ interface CanvasProps {
   onViewportChange?: (viewport: CanvasViewport) => void
   /** 블럭 검색에서 "이동" 시 해당 블럭을 화면 중앙으로 팬. nonce 가 바뀔 때마다 재이동. */
   focusRequest?: { blockId: string; nonce: number } | null
+  /** 대표(공지) 블럭 고정 토글. */
+  onTogglePin?: (blockId: string) => void
+  /** 대표 배너 클릭 시 해당 블럭 상세 열기. */
+  onOpenDetail?: (blockId: string) => void
 }
 
 // 우하단 갈무리함 drop 감지 여유. 아이콘 가장자리 주변까지 자연스럽게 받아준다.
@@ -27,14 +32,6 @@ const ARCHIVE_DROP_PADDING = 40
 const ARCHIVE_FLIGHT_MS = 150
 // 브라우저 Cmd/Ctrl - 한 단계와 비슷한 초기 캔버스 배율.
 const DEFAULT_CANVAS_SCALE = 0.9
-
-// 시급도 색(블럭 그림자와 같은 계열) — 일괄 툴바의 색 점에 사용.
-const URGENCY_RGB: Record<string, string> = {
-  thinking: "212, 212, 216",
-  stable: "147, 197, 253",
-  lingering: "134, 239, 172",
-  urgent: "252, 165, 165",
-}
 
 type ArchiveFlight = {
   id: string
@@ -56,6 +53,8 @@ export function Canvas({
   previewBlock, // Receive preview block
   onViewportChange,
   focusRequest,
+  onTogglePin,
+  onOpenDetail,
 }: CanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -86,16 +85,19 @@ export function Canvas({
     }
   }, [])
 
-  // 블럭 검색 → "이동": 대상 블럭을 화면 중앙으로 오도록 팬을 맞춘다.
-  // (screen = origin + pan + world*scale, transformOrigin 0 0 기준이므로 pan = viewportCenter - blockCenter*scale)
-  useEffect(() => {
-    if (!focusRequest || !canvasRef.current) return
-    const target = blocks.find((b) => b.id === focusRequest.blockId)
-    if (!target) return
+  // 특정 블럭을 화면 중앙으로 팬. 검색 "이동" + 대표 배너 클릭에서 공용.
+  // screen = pan + world*scale (transformOrigin 0 0) → pan = viewportCenter - blockCenter*scale
+  const focusOnBlock = (blockId: string) => {
+    const target = blocks.find((b) => b.id === blockId)
+    if (!target || !canvasRef.current) return
     const rect = canvasRef.current.getBoundingClientRect()
     const blockCenterX = (target.x + target.width / 2) * DEFAULT_CANVAS_SCALE
     const blockCenterY = (target.y + target.height / 2) * DEFAULT_CANVAS_SCALE
     setPan({ x: rect.width / 2 - blockCenterX, y: rect.height / 2 - blockCenterY })
+  }
+
+  useEffect(() => {
+    if (focusRequest) focusOnBlock(focusRequest.blockId)
     // nonce 가 바뀔 때만 실행 (같은 블럭 재검색도 다시 이동). blocks 는 그 시점 최신값.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRequest?.nonce])
@@ -660,6 +662,8 @@ export function Canvas({
 
   const activeBlocks = blocks.filter((b) => !b.isCompleted)
   const zonesArray = zones.map((z) => ({ id: z.id, label: z.label }))
+  // 대표(공지) 블럭 — 캔버스당 1개. 캔버스 상단 배너로 노출.
+  const pinnedBlock = blocks.find((b) => b.isPinned && !b.isCompleted && !b.isDeleted)
 
   // 선택 일괄 동작.
   const applyUrgencyToSelection = (urgency: WorkBlock["urgency"]) => {
@@ -749,6 +753,7 @@ export function Canvas({
             isTossingBack={tossingBackId === block.id}
             isSelected={selectedIds.has(block.id)}
             dimmed={selectedIds.size > 0 && !selectedIds.has(block.id)}
+            onTogglePin={onTogglePin ? () => onTogglePin(block.id) : undefined}
             archiveFlight={
               archiveFlight?.id === block.id
                 ? {
@@ -790,6 +795,60 @@ export function Canvas({
       </div>
 
       </div>
+
+      {/* 대표(공지) 블럭 배너 — 캔버스 상단(헤더 아래)에 고정. 팬/줌 무관. 클릭 시 상세 열림. */}
+      {pinnedBlock && (
+        <div className="absolute left-1/2 top-4 z-[70] w-[min(90%,420px)] -translate-x-1/2">
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => onOpenDetail?.(pinnedBlock.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                onOpenDetail?.(pinnedBlock.id)
+              }
+            }}
+            title={pinnedBlock.title}
+            className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-2.5 shadow-md transition-all active:scale-[0.99] ${
+              isDarkMode
+                ? "bg-zinc-800/95 border-zinc-700 text-zinc-100 hover:bg-zinc-800"
+                : "bg-white/95 border-gray-200 text-gray-900 hover:bg-white"
+            }`}
+          >
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-[2.5px]"
+              style={{
+                borderColor: `rgb(${URGENCY_RGB[pinnedBlock.urgency ?? "thinking"]})`,
+                boxShadow: `0 0 9px rgba(${URGENCY_RGB[pinnedBlock.urgency ?? "thinking"]}, 0.6)`,
+              }}
+            >
+              <Pin className="h-4 w-4 -rotate-45 text-violet-500" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold leading-tight">{pinnedBlock.title || "제목 없음"}</div>
+              {(pinnedBlock.detailedNotes || pinnedBlock.description) && (
+                <div className={`truncate text-xs leading-tight ${isDarkMode ? "text-zinc-400" : "text-gray-500"}`}>
+                  {pinnedBlock.detailedNotes || pinnedBlock.description}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onTogglePin?.(pinnedBlock.id)
+              }}
+              className={`shrink-0 rounded-full p-1.5 transition-colors ${
+                isDarkMode ? "text-zinc-400 hover:bg-white/10" : "text-gray-400 hover:bg-black/5"
+              }`}
+              aria-label="고정 해제"
+              title="고정 해제"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Ctrl+드래그 마퀴(박스 선택) 사각형 */}
       {marquee && (

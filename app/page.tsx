@@ -10,6 +10,7 @@ import { CanvasSelectorDialog } from "@/components/canvas-selector-dialog"
 import { AboutDialog } from "@/components/about-dialog"
 import { WelcomeDialog } from "@/components/welcome-dialog"
 import { BlockSearchDialog } from "@/components/block-search-dialog"
+import { BlockDetailDialog } from "@/components/block-detail-dialog"
 import { ArchiveDock } from "@/components/archive-dock"
 import { ArchiveDialog } from "@/components/archive-dialog"
 import type { CanvasViewport, WorkBlock, Zone, Canvas as CanvasType } from "@/types"
@@ -87,7 +88,10 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
 '결 관리' 버튼에서 결을 추가/수정/삭제할 수 있습니다. 각 결은 고유의 색을 가져요.
 
 12) 마감일
-블럭 상세에서 마감일을 추가하면 카드 제목 아래에 표시됩니다.`,
+블럭 상세에서 마감일을 추가하면 카드 제목 아래에 표시됩니다.
+
+13) 대표 블럭(공지)
+중요한 블럭 하나를 캔버스 상단에 공지처럼 띄워둘 수 있습니다. 블럭의 ⋮ 메뉴에서 '대표로 고정'을 누르면, 캔버스를 팬하거나 옮겨도 상단 배너에 항상 보입니다. 배너를 누르면 그 블럭 상세가 열리고, 배너의 ✕ 또는 메뉴의 '고정 해제'로 내릴 수 있어요. 대표 블럭은 캔버스마다 하나이며, 새로 고정하면 이전 대표는 자동으로 해제됩니다.`,
   },
   {
     id: "shortcuts-guide",
@@ -302,6 +306,7 @@ export default function Page() {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [focusRequest, setFocusRequest] = useState<{ blockId: string; nonce: number } | null>(null)
+  const [detailBlockId, setDetailBlockId] = useState<string | null>(null)
   const [aiUsage, setAiUsage] = useState<{ create: number; tidy: number; plan: string } | null>(null)
   const [isArchiveOpen, setIsArchiveOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
@@ -579,6 +584,8 @@ export default function Page() {
   const archivedBlocks = blocks.filter((b) => !b.isDeleted && b.isCompleted && !b.isGuide)
   const activeBlocks = blocks.filter((b) => !b.isDeleted)
   const canvasBlocks = activeBlocks.filter((b) => !b.isCompleted)
+  // 대표 배너 클릭 시 열 상세 블럭 (id 로 추적해 항상 최신 상태 반영).
+  const detailBlock = detailBlockId ? canvasBlocks.find((b) => b.id === detailBlockId) ?? null : null
 
   const persistCanvasNow = (canvas: CanvasType) => {
     if (!user || !supabaseRef.current || !remoteSyncReadyRef.current) return
@@ -789,6 +796,19 @@ export default function Page() {
     setFocusRequest({ blockId, nonce: Date.now() })
   }
 
+  // 대표(공지) 블럭 토글. 캔버스당 1개만 유지 — 새로 고정하면 기존 대표는 해제.
+  const handleTogglePin = (blockId: string) => {
+    const target = blocks.find((b) => b.id === blockId)
+    if (!target) return
+    const willPin = !target.isPinned
+    const newBlocks = blocks.map((b) => {
+      if (b.id === blockId) return { ...b, isPinned: willPin }
+      if (willPin && b.isPinned) return { ...b, isPinned: false }
+      return b
+    })
+    saveToHistory(newBlocks)
+  }
+
   const handleUpdateZones = (newZones: Zone[]) => {
     // 사라진 결을 감지해 명시적으로만 삭제한다. (saveCanvas 는 결을 지우지 않으므로,
     // 여기서 지우지 않으면 클라우드에 유령 결이 남는다.)
@@ -980,6 +1000,7 @@ export default function Page() {
         aiUsage={aiUsage}
       />
 
+
       <Canvas
         blocks={canvasBlocks}
         zones={zones}
@@ -992,6 +1013,8 @@ export default function Page() {
         previewBlock={previewBlock} // 미리보기 블록 전달
         onViewportChange={handleCanvasViewportChange}
         focusRequest={focusRequest}
+        onTogglePin={handleTogglePin}
+        onOpenDetail={(id) => setDetailBlockId(id)}
       />
 
       <CreateBlockDialog
@@ -1043,6 +1066,18 @@ export default function Page() {
         zones={zones}
         onJump={handleJumpToBlock}
       />
+
+      {detailBlock && (
+        <BlockDetailDialog
+          open
+          onOpenChange={(o) => {
+            if (!o) setDetailBlockId(null)
+          }}
+          block={detailBlock}
+          onUpdate={(updates, skipHistory) => handleUpdateBlock(detailBlock.id, updates, skipHistory)}
+          zones={zones}
+        />
+      )}
 
       <AboutDialog open={isAboutOpen} onOpenChange={setIsAboutOpen} />
 

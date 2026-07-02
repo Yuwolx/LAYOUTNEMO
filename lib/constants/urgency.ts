@@ -61,3 +61,11 @@ export function formatUrgencyLabel(urgency: Urgency): string {
   const meta = URGENCY_META[urgency]
   return `${meta.label} (${meta.colorName})`
 }
+
+/** 시급도 색 RGB 트리플 (블럭 그림자와 같은 계열). 링/점 등 인라인 스타일용. */
+export const URGENCY_RGB: Record<Urgency, string> = {
+  thinking: "212, 212, 216",
+  stable: "147, 197, 253",
+  lingering: "134, 239, 172",
+  urgent: "252, 165, 165",
+}

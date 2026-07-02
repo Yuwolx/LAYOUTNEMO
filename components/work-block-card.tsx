@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { BlockDetailDialog } from "@/components/block-detail-dialog"
-import { MoreVertical, Sparkles, Power, ExternalLink, Archive } from "lucide-react"
+import { MoreVertical, Sparkles, Power, ExternalLink, Archive, Pin } from "lucide-react"
 import type { WorkBlock } from "@/types"
 import { URGENCY_META } from "@/lib/constants/urgency"
 import { useLanguage, useT } from "@/lib/i18n/context"
@@ -24,6 +24,7 @@ interface WorkBlockCardProps {
   archiveFlight?: { targetX: number; targetY: number } | null
   isSelected?: boolean
   dimmed?: boolean
+  onTogglePin?: () => void
 }
 
 const urgencyShadows = {
@@ -53,6 +54,7 @@ export function WorkBlockCard({
   archiveFlight = null,
   isSelected = false,
   dimmed = false,
+  onTogglePin,
 }: WorkBlockCardProps) {
   const { language } = useLanguage()
   const t = useT()
@@ -248,6 +250,22 @@ export function WorkBlockCard({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onTogglePin?.()
+                    }}
+                    className="text-muted-foreground font-light"
+                  >
+                    <Pin className="w-4 h-4 mr-2" />
+                    {block.isPinned
+                      ? language === "en"
+                        ? "Unpin"
+                        : "고정 해제"
+                      : language === "en"
+                        ? "Pin to top"
+                        : "대표로 고정"}
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleCompleteBlock} className="text-muted-foreground font-light">
                     <Archive className="w-4 h-4 mr-2" />
                     {t("action.archive")}

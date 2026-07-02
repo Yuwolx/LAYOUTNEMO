@@ -90,7 +90,10 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
 '결 관리' 버튼에서 결을 추가/수정/삭제할 수 있습니다. 각 결은 고유의 색을 가져요.
 
 12) 마감일
-블럭 상세에서 마감일을 추가하면 카드 제목 아래에 표시됩니다.`,
+블럭 상세에서 마감일을 추가하면 카드 제목 아래에 표시됩니다.
+
+13) 대표 블럭(공지)
+중요한 블럭 하나를 캔버스 상단에 공지처럼 띄워둘 수 있습니다. 블럭의 ⋮ 메뉴에서 '대표로 고정'을 누르면, 캔버스를 팬하거나 옮겨도 상단 배너에 항상 보입니다. 배너를 누르면 그 블럭 상세가 열리고, 배너의 ✕ 또는 메뉴의 '고정 해제'로 내릴 수 있어요. 대표 블럭은 캔버스마다 하나이며, 새로 고정하면 이전 대표는 자동으로 해제됩니다.`,
       en: `LAYOUTNEMO is a tool for spreading tasks across a canvas instead of stuffing them into lists or boards.
 
 1) Creating Blocks
@@ -134,7 +137,10 @@ Click the canvas name next to the logo, or use Cmd/Ctrl + K. Each canvas has its
 Use "Manage Facets" to add, rename, or remove facets. Each has its own color.
 
 12) Due Dates
-Add a due date from the block details — it shows up under the title.`,
+Add a due date from the block details — it shows up under the title.
+
+13) Featured block (pinned notice)
+Keep one important block pinned to the top of the canvas, like an announcement. Open a block's ⋮ menu and choose "Pin to top" — it stays visible in a banner even as you pan around. Click the banner to open that block's details; remove it with the banner's ✕ or "Unpin" in the menu. There's one featured block per canvas, and pinning a new one automatically unpins the previous one.`,
     },
   },
   "shortcuts-guide": {
