@@ -24,6 +24,7 @@ LAYOUTNEMO를 만들면서 마주친 문제, 선택, 삽질, 배운 것을 기�
 
 | 날짜 | 제목 | 상태 |
 |------|------|------|
+| 2026-07-02 | [여러 개를 한 번에, 하나를 위로 — 멀티 선택과 대표 블럭]({{ site.baseurl }}/docs/devlog/2026-07-02-multi-select-and-pin/) | ✅ 공개 |
 | 2026-07-01 | [있는데 안 이어져 있던 것들 — AI 한도, 빠진 사용량 집계, 첫 인사]({{ site.baseurl }}/docs/devlog/2026-07-01-quota-and-missing-analytics/) | ✅ 공개 |
 | 2026-06-29 | [멀티 디바이스 동기화에서 블럭이 사라지는 문제를 줄이기]({{ site.baseurl }}/docs/devlog/2026-06-29-sync-pruning-fix/) | ✅ 공개 |
 | 2026-06-09 | [로그인·DB 코드, 지금 점검하고 가기]({{ site.baseurl }}/docs/devlog/2026-06-09-auth-db-code-review/) | ✅ 공개 |
