@@ -24,6 +24,7 @@ LAYOUTNEMO를 만들면서 마주친 문제, 선택, 삽질, 배운 것을 기�
 
 | 날짜 | 제목 | 상태 |
 |------|------|------|
+| 2026-07-03 | [영원히 사는 쿠키와 겹치는 헤더 — 하드닝 묶음과 실기기 피드백]({{ site.baseurl }}/docs/devlog/2026-07-03-hardening-and-header-scroll/) | ✅ 공개 |
 | 2026-07-03 | [수락 버튼이 지우고 있던 것들 — 정리하기 tombstone 유실과 결 삭제 재배정]({{ site.baseurl }}/docs/devlog/2026-07-03-tidy-tombstone-and-facet-reassign/) | ✅ 공개 |
 | 2026-07-03 | [audit 15줄의 경고 — Next.js 16.2.10 보안 업그레이드]({{ site.baseurl }}/docs/devlog/2026-07-03-security-deps-upgrade/) | ✅ 공개 |
 | 2026-07-03 | [검토가 열어 본 뚜껑 — 권한 상승, 오픈 리다이렉트, 잠기는 캔버스, 태블릿 헤더]({{ site.baseurl }}/docs/devlog/2026-07-03-review-driven-fixes/) | ✅ 공개 |
