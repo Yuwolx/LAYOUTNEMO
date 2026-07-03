@@ -933,7 +933,10 @@ export function Canvas({
         </div>
       )}
 
-      {/* 터치 전용: 선택 모드 토글 (마우스는 Ctrl 로 대체됨). hover 없는 기기에서만 노출 */}
+      {/* 터치 전용: 선택 모드 토글 (마우스는 Ctrl 로 대체됨).
+          hover:none(주 입력이 hover 불가)이 아니라 any-pointer:coarse(터치스크린 존재)로 판정 —
+          태블릿에 마우스만 연결하면(키보드 없음) hover:hover 가 되어 버튼이 사라지는데
+          Ctrl 도 없어 멀티 선택 수단이 전무해지는 구멍을 막는다. 터치 랩탑도 손가락만으로 선택 가능. */}
       <button
         onClick={() => {
           setTouchSelectMode((v) => {
@@ -941,7 +944,7 @@ export function Canvas({
             return !v
           })
         }}
-        className={`absolute bottom-5 left-5 z-[75] hidden rounded-full border px-4 py-2.5 text-xs font-medium shadow-md transition-colors [@media(hover:none)]:block ${
+        className={`absolute bottom-5 left-5 z-[75] hidden rounded-full border px-4 py-2.5 text-xs font-medium shadow-md transition-colors [@media(any-pointer:coarse)]:block ${
           touchSelectMode
             ? "border-violet-600 bg-violet-600 text-white"
             : isDarkMode
