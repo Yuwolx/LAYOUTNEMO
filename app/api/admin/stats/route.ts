@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { createClient } from "@supabase/supabase-js"
-import { getAdminSessionToken } from "@/lib/admin/session"
+import { verifyAdminSessionToken } from "@/lib/admin/session"
 
 const COOKIE = "admin_session"
 
@@ -16,7 +16,7 @@ export async function GET() {
   // 어드민 쿠키 검증
   const cookieStore = await cookies()
   const token = cookieStore.get(COOKIE)?.value
-  if (!token || token !== getAdminSessionToken()) {
+  if (!verifyAdminSessionToken(token)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
