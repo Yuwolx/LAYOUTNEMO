@@ -165,7 +165,12 @@ export async function loadUserCanvases(
   if (ze) throw ze
   if (be) throw be
 
-  return (canvasRows as CanvasRow[]).map((c) => ({
+  // tombstone(삭제된) 캔버스는 노출하지 않는다 — deleteCanvas 참고.
+  const aliveCanvasRows = (canvasRows as CanvasRow[]).filter(
+    (c) => !(c.metadata as { deleted?: boolean } | null)?.deleted,
+  )
+
+  return aliveCanvasRows.map((c) => ({
     id: c.id,
     name: c.name,
     createdAt: new Date(c.created_at).getTime(),
@@ -235,14 +240,25 @@ export async function deleteZones(supabase: SupabaseClient, zoneIds: string[]): 
   throwIfSupabaseError(error, "Failed to delete zones")
 }
 
+// 캔버스 삭제 = tombstone (hard delete 아님).
+// 행을 지우면 다른 기기의 autosave 가 로컬에 남아 있던 캔버스를 통째로 upsert 해 부활시킨다.
+// metadata.deleted 마킹은 saveCanvas 가 metadata 컬럼을 건드리지 않으므로 오래된 기기의
+// 저장에도 살아남고, loadUserCanvases 가 걸러낸다. (관례: 컬럼 추가 없이 metadata 로 동기화)
+// tombstone 행과 그 아래 blocks/zones 는 남지만 어디에도 노출되지 않는다.
 export async function deleteCanvas(supabase: SupabaseClient, canvasId: string): Promise<void> {
-  // blocks, zones 는 cascade 삭제됨
-  const { error } = await supabase.from("canvases").delete().eq("id", canvasId)
+  const { error } = await supabase
+    .from("canvases")
+    .update({ metadata: { deleted: true, deleted_at: new Date().toISOString() } })
+    .eq("id", canvasId)
   throwIfSupabaseError(error, "Failed to delete canvas")
 }
 
 export async function resetUserCanvases(supabase: SupabaseClient, userId: string): Promise<void> {
-  const { error } = await supabase.from("canvases").delete().eq("user_id", userId)
+  // 초기화도 tombstone — hard delete 하면 다른 기기가 옛 캔버스를 되살릴 수 있다.
+  const { error } = await supabase
+    .from("canvases")
+    .update({ metadata: { deleted: true, deleted_at: new Date().toISOString() } })
+    .eq("user_id", userId)
   throwIfSupabaseError(error, "Failed to reset canvases")
 }
 

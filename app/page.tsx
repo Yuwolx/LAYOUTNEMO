@@ -510,9 +510,66 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentCanvasId, isClient])
 
-  // Supabase 저장 debounce 타이머
+  // Supabase 저장 debounce + 실패 재시도.
   const supabaseSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const syncSaveErrorShownRef = useRef(false)
+  // 클라우드에 아직 반영 안 된 변경이 있는지. 재시도/온라인 복귀 판단에 쓴다.
+  const cloudDirtyRef = useRef(false)
+  // 재시도 시점의 최신 canvases 를 읽기 위한 ref 미러 (실패한 시점의 스냅샷이 아니라).
+  const canvasesRef = useRef(canvases)
+  useEffect(() => {
+    canvasesRef.current = canvases
+  }, [canvases])
+
+  const flushCloudSave = useCallback(() => {
+    if (!user || !supabaseRef.current || !remoteSyncReadyRef.current) return
+    const supabase = supabaseRef.current
+    const userId = user.id
+    const snapshot = canvasesRef.current
+    cloudDirtyRef.current = false
+    Promise.all(snapshot.map((c, i) => saveCanvas(supabase, userId, c, i)))
+      .then(() => {
+        if (syncSaveErrorShownRef.current) {
+          syncSaveErrorShownRef.current = false
+          toast.success("클라우드 저장이 재개됐어요.")
+        }
+      })
+      .catch((err) => {
+        console.error("Supabase save error:", err)
+        cloudDirtyRef.current = true
+        // 10초 뒤 자동 재시도 (변경이 새로 생기면 debounce 경로가 먼저 저장할 수도 있다 — 무해).
+        // 네트워크 복귀 시엔 아래 online 리스너가 즉시 재시도.
+        if (saveRetryTimer.current) clearTimeout(saveRetryTimer.current)
+        saveRetryTimer.current = setTimeout(() => flushCloudSave(), 10_000)
+        if (!syncSaveErrorShownRef.current) {
+          syncSaveErrorShownRef.current = true
+          toast.error("클라우드 저장에 실패했어요. 자동으로 다시 시도할게요.", {
+            description: err instanceof Error ? err.message : String(err),
+            duration: 8000,
+          })
+        }
+      })
+  }, [user])
+
+  // 네트워크 복귀 시 미반영 변경 즉시 재저장.
+  useEffect(() => {
+    const handleOnline = () => {
+      if (cloudDirtyRef.current) flushCloudSave()
+    }
+    window.addEventListener("online", handleOnline)
+    return () => window.removeEventListener("online", handleOnline)
+  }, [flushCloudSave])
+
+  // 로그아웃/언마운트 시 재시도 타이머 정리.
+  useEffect(() => {
+    return () => {
+      if (saveRetryTimer.current) {
+        clearTimeout(saveRetryTimer.current)
+        saveRetryTimer.current = null
+      }
+    }
+  }, [user])
 
   useEffect(() => {
     if (!isClient) return
@@ -540,25 +597,9 @@ export default function Page() {
     // Supabase 저장 (로그인 상태일 때만, 2초 debounce)
     if (!user || !supabaseRef.current) return
     if (!remoteSyncReadyRef.current) return
-    const supabase = supabaseRef.current
-    const userId = user.id
 
-    supabaseSaveTimer.current = setTimeout(() => {
-      Promise.all(canvases.map((c, i) => saveCanvas(supabase, userId, c, i)))
-        .then(() => {
-          syncSaveErrorShownRef.current = false
-        })
-        .catch((err) => {
-          console.error("Supabase save error:", err)
-          if (!syncSaveErrorShownRef.current) {
-            syncSaveErrorShownRef.current = true
-            toast.error("클라우드 저장에 실패했어요. 이 기기에는 저장되지만 다른 기기에는 아직 반영되지 않았어요.", {
-              description: err instanceof Error ? err.message : String(err),
-              duration: 8000,
-            })
-          }
-        })
-    }, 2000)
+    cloudDirtyRef.current = true
+    supabaseSaveTimer.current = setTimeout(flushCloudSave, 2000)
 
     return () => {
       if (supabaseSaveTimer.current) {
@@ -566,7 +607,7 @@ export default function Page() {
         supabaseSaveTimer.current = null
       }
     }
-  }, [canvases, currentCanvasId, isClient, user])
+  }, [canvases, currentCanvasId, isClient, user, flushCloudSave])
 
   // AI 사용량(쿼터) 헤더 표시용. 로그인 시 + AI 다이얼로그가 닫힐 때마다 최신화.
   useEffect(() => {
