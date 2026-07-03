@@ -24,6 +24,7 @@ LAYOUTNEMO를 만들면서 마주친 문제, 선택, 삽질, 배운 것을 기�
 
 | 날짜 | 제목 | 상태 |
 |------|------|------|
+| 2026-07-03 | [홈 화면에 자리 하나 — 스토어 없이 앱이 되는 법 (PWA)]({{ site.baseurl }}/docs/devlog/2026-07-03-pwa/) | ✅ 공개 |
 | 2026-07-03 | [두 손가락을 위한 자리 — 핀치 줌과 다시 살아난 배율]({{ site.baseurl }}/docs/devlog/2026-07-03-pinch-zoom/) | ✅ 공개 |
 | 2026-07-03 | [영원히 사는 쿠키와 겹치는 헤더 — 하드닝 묶음과 실기기 피드백]({{ site.baseurl }}/docs/devlog/2026-07-03-hardening-and-header-scroll/) | ✅ 공개 |
 | 2026-07-03 | [수락 버튼이 지우고 있던 것들 — 정리하기 tombstone 유실과 결 삭제 재배정]({{ site.baseurl }}/docs/devlog/2026-07-03-tidy-tombstone-and-facet-reassign/) | ✅ 공개 |
