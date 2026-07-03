@@ -6,6 +6,7 @@ import { useRef, useState, useEffect } from "react"
 import { WorkBlockCard } from "@/components/work-block-card"
 import type { CanvasViewport, WorkBlock, Zone } from "@/types"
 import { URGENCY_KEYS, URGENCY_META, URGENCY_RGB, NOTICE_RGB } from "@/lib/constants/urgency"
+import { useT } from "@/lib/i18n/context"
 import { Pin, X } from "lucide-react"
 
 interface CanvasProps {
@@ -32,6 +33,11 @@ const ARCHIVE_DROP_PADDING = 40
 const ARCHIVE_FLIGHT_MS = 150
 // 브라우저 Cmd/Ctrl - 한 단계와 비슷한 초기 캔버스 배율.
 const DEFAULT_CANVAS_SCALE = 0.9
+// 휴대폰 폭에서는 한 화면에 더 넓게 보이도록 초기 배율을 낮춘다.
+const PHONE_CANVAS_SCALE = 0.6
+// 핀치/휠 줌 배율 범위.
+const MIN_CANVAS_SCALE = 0.3
+const MAX_CANVAS_SCALE = 2
 
 type ArchiveFlight = {
   id: string
@@ -56,6 +62,7 @@ export function Canvas({
   onTogglePin,
   onOpenDetail,
 }: CanvasProps) {
+  const t = useT()
   const canvasRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
@@ -66,6 +73,12 @@ export function Canvas({
   const [tossingBackId, setTossingBackId] = useState<string | null>(null)
   // 피그마식 팬: 스페이스바 누른 채 드래그하면 캔버스 전체가 따라온다.
   const [pan, setPan] = useState({ x: 0, y: 0 })
+  // 캔버스 배율. 핀치(두 손가락)와 Ctrl/⌘+휠로 조절. (Canvas 는 isClient 이후에만 렌더되므로 window 접근 안전)
+  const [scale, setScale] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth < 640 ? PHONE_CANVAS_SCALE : DEFAULT_CANVAS_SCALE,
+  )
+  // 이 기기의 기본 배율 (휴대폰 0.6 / 그 외 0.9). 배율 리셋 배지의 기준점.
+  const defaultScaleRef = useRef(scale)
   const [isSpacePressed, setIsSpacePressed] = useState(false)
   const [isPanning, setIsPanning] = useState(false)
   const panStartRef = useRef<{ mouseX: number; mouseY: number; panX: number; panY: number } | null>(null)
@@ -86,6 +99,29 @@ export function Canvas({
   // pointerdown 을 선택/연결로 "소비"했을 때 true. 뒤따르는 click(상세 다이얼로그 열기)을
   // 억제하는 신호. preventDefault 로는 click 이 막히지 않아 카드로 이 ref 를 넘겨 판별한다.
   const suppressClickRef = useRef(false)
+  // 핀치 줌: window 캡처 리스너(마운트 1회 등록)에서 최신 상태를 읽기 위한 ref 미러들.
+  const scaleRef = useRef(scale)
+  const panRef = useRef(pan)
+  const draggingIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    scaleRef.current = scale
+  }, [scale])
+  useEffect(() => {
+    panRef.current = pan
+  }, [pan])
+  useEffect(() => {
+    draggingIdRef.current = draggingId
+  }, [draggingId])
+  // 현재 캔버스에 닿아 있는 터치 포인터들 (id → 화면 좌표).
+  const touchPointsRef = useRef<Map<number, { x: number; y: number }>>(new Map())
+  // 진행 중인 핀치. 시작 시점의 거리·배율과 "손가락 중심 아래에 있던 월드 지점"을 기억해
+  // 이동 중 그 지점이 계속 손가락 중심 아래에 오도록 pan 을 보정한다.
+  const pinchRef = useRef<{
+    ids: [number, number]
+    startDist: number
+    startScale: number
+    startWorldMid: { x: number; y: number }
+  } | null>(null)
 
   useEffect(() => {
     return () => {
@@ -101,8 +137,8 @@ export function Canvas({
     const target = blocks.find((b) => b.id === blockId)
     if (!target || !canvasRef.current) return
     const rect = canvasRef.current.getBoundingClientRect()
-    const blockCenterX = (target.x + target.width / 2) * DEFAULT_CANVAS_SCALE
-    const blockCenterY = (target.y + target.height / 2) * DEFAULT_CANVAS_SCALE
+    const blockCenterX = (target.x + target.width / 2) * scale
+    const blockCenterY = (target.y + target.height / 2) * scale
     setPan({ x: rect.width / 2 - blockCenterX, y: rect.height / 2 - blockCenterY })
   }
 
@@ -119,17 +155,17 @@ export function Canvas({
       const rect = canvasRef.current?.getBoundingClientRect()
       if (!rect) return
       onViewportChange({
-        x: -pan.x / DEFAULT_CANVAS_SCALE,
-        y: -pan.y / DEFAULT_CANVAS_SCALE,
-        width: rect.width / DEFAULT_CANVAS_SCALE,
-        height: rect.height / DEFAULT_CANVAS_SCALE,
+        x: -pan.x / scale,
+        y: -pan.y / scale,
+        width: rect.width / scale,
+        height: rect.height / scale,
       })
     }
 
     reportViewport()
     window.addEventListener("resize", reportViewport)
     return () => window.removeEventListener("resize", reportViewport)
-  }, [onViewportChange, pan.x, pan.y])
+  }, [onViewportChange, pan.x, pan.y, scale])
 
   useEffect(() => {
     const isEditable = (target: EventTarget | null) => {
@@ -174,6 +210,9 @@ export function Canvas({
       setDragStartPos(null)
       groupDragRef.current = null
       setMarquee(null)
+      // 핀치 추적 상태도 초기화 — pointerup 을 못 받은 손가락이 남으면 다음 핀치 판정이 꼬인다.
+      touchPointsRef.current.clear()
+      pinchRef.current = null
     }
 
     window.addEventListener("keydown", handleKeyDown)
@@ -215,6 +254,116 @@ export function Canvas({
     }
   }, [isPanning])
 
+  // 핀치 줌 — 두 손가락 거리 변화로 배율 조절, 손가락 중심점 기준.
+  // pointerdown 을 window 캡처 단계에서 받는 이유: 기존 핸들러들은 activePointerIdRef 가드로
+  // 두 번째 손가락을 무시하므로, 그보다 앞단에서 두 손가락째를 감지해야 한다.
+  useEffect(() => {
+    const clampScale = (v: number) => Math.min(MAX_CANVAS_SCALE, Math.max(MIN_CANVAS_SCALE, v))
+
+    const beginPinchIfReady = () => {
+      if (touchPointsRef.current.size !== 2) return
+      if (draggingIdRef.current) return // 블럭 드래그 중엔 핀치로 전환하지 않음 (드래그 유지)
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const [[idA, ptA], [idB, ptB]] = Array.from(touchPointsRef.current.entries())
+      // 첫 손가락이 시작한 팬/마퀴는 종료하고 핀치로 전환.
+      setIsPanning(false)
+      panStartRef.current = null
+      setMarquee(null)
+      activePointerIdRef.current = null
+      const midX = (ptA.x + ptB.x) / 2 - rect.left
+      const midY = (ptA.y + ptB.y) / 2 - rect.top
+      const s = scaleRef.current
+      const p = panRef.current
+      pinchRef.current = {
+        ids: [idA, idB],
+        startDist: Math.max(Math.hypot(ptA.x - ptB.x, ptA.y - ptB.y), 1),
+        startScale: s,
+        startWorldMid: { x: (midX - p.x) / s, y: (midY - p.y) / s },
+      }
+    }
+
+    const handleDown = (e: PointerEvent) => {
+      if (e.pointerType !== "touch") return
+      if (!canvasRef.current?.contains(e.target as Node)) return
+      touchPointsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      beginPinchIfReady()
+    }
+    const handleMove = (e: PointerEvent) => {
+      if (!touchPointsRef.current.has(e.pointerId)) return
+      touchPointsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      const pinch = pinchRef.current
+      if (!pinch) return
+      const p1 = touchPointsRef.current.get(pinch.ids[0])
+      const p2 = touchPointsRef.current.get(pinch.ids[1])
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (!p1 || !p2 || !rect) return
+      const nextScale = clampScale(
+        pinch.startScale * (Math.hypot(p1.x - p2.x, p1.y - p2.y) / pinch.startDist),
+      )
+      const midX = (p1.x + p2.x) / 2 - rect.left
+      const midY = (p1.y + p2.y) / 2 - rect.top
+      setScale(nextScale)
+      // 중심점 고정 + 두 손가락을 함께 움직이면 팬도 같이 된다.
+      setPan({ x: midX - pinch.startWorldMid.x * nextScale, y: midY - pinch.startWorldMid.y * nextScale })
+    }
+    const handleUp = (e: PointerEvent) => {
+      if (!touchPointsRef.current.has(e.pointerId)) return
+      touchPointsRef.current.delete(e.pointerId)
+      const pinch = pinchRef.current
+      if (!pinch || (e.pointerId !== pinch.ids[0] && e.pointerId !== pinch.ids[1])) return
+      pinchRef.current = null
+      // 한 손가락이 남았으면 그 손가락으로 자연스럽게 팬을 이어간다.
+      const rest = Array.from(touchPointsRef.current.entries())[0]
+      if (rest) {
+        const [restId, restPt] = rest
+        panStartRef.current = { mouseX: restPt.x, mouseY: restPt.y, panX: panRef.current.x, panY: panRef.current.y }
+        activePointerIdRef.current = restId
+        setIsPanning(true)
+      }
+    }
+
+    window.addEventListener("pointerdown", handleDown, true)
+    window.addEventListener("pointermove", handleMove, true)
+    window.addEventListener("pointerup", handleUp, true)
+    window.addEventListener("pointercancel", handleUp, true)
+    return () => {
+      window.removeEventListener("pointerdown", handleDown, true)
+      window.removeEventListener("pointermove", handleMove, true)
+      window.removeEventListener("pointerup", handleUp, true)
+      window.removeEventListener("pointercancel", handleUp, true)
+    }
+  }, [])
+
+  // 데스크톱/트랙패드 줌·팬: Ctrl(⌘)+휠 = 커서 기준 확대·축소 (트랙패드 핀치는 ctrlKey 로 들어온다),
+  // 그냥 휠 = 캔버스 팬 (트랙패드 두 손가락 스크롤 포함). 브라우저 페이지 줌을 막아야 하므로
+  // React onWheel(passive) 대신 native non-passive 리스너.
+  useEffect(() => {
+    const el = canvasRef.current
+    if (!el) return
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      // Firefox 라인 단위 델타 보정.
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY
+      if (e.ctrlKey || e.metaKey) {
+        const s = scaleRef.current
+        const next = Math.min(MAX_CANVAS_SCALE, Math.max(MIN_CANVAS_SCALE, s * Math.exp(-dy * 0.0022)))
+        if (next === s) return
+        const rect = el.getBoundingClientRect()
+        const cx = e.clientX - rect.left
+        const cy = e.clientY - rect.top
+        const p = panRef.current
+        setScale(next)
+        setPan({ x: cx - ((cx - p.x) / s) * next, y: cy - ((cy - p.y) / s) * next })
+      } else {
+        const dx = e.deltaMode === 1 ? e.deltaX * 16 : e.deltaX
+        setPan((prev) => ({ x: prev.x - dx, y: prev.y - dy }))
+      }
+    }
+    el.addEventListener("wheel", handleWheel, { passive: false })
+    return () => el.removeEventListener("wheel", handleWheel)
+  }, [])
+
   // Ctrl/Cmd + 드래그(또는 터치 선택 모드) 마퀴 선택.
   useEffect(() => {
     if (!marquee) return
@@ -233,10 +382,10 @@ export function Canvas({
       // 클릭 수준의 작은 드래그는 무시.
       if (x1 - x0 >= 4 || y1 - y0 >= 4) {
         // 화면(캔버스 기준) → 월드 좌표 (transformOrigin 0 0: screen = pan + world*scale)
-        const wx0 = (x0 - pan.x) / DEFAULT_CANVAS_SCALE
-        const wx1 = (x1 - pan.x) / DEFAULT_CANVAS_SCALE
-        const wy0 = (y0 - pan.y) / DEFAULT_CANVAS_SCALE
-        const wy1 = (y1 - pan.y) / DEFAULT_CANVAS_SCALE
+        const wx0 = (x0 - pan.x) / scale
+        const wx1 = (x1 - pan.x) / scale
+        const wy0 = (y0 - pan.y) / scale
+        const wy1 = (y1 - pan.y) / scale
         const hits = blocks
           .filter(
             (b) =>
@@ -261,7 +410,7 @@ export function Canvas({
       window.removeEventListener("pointerup", handleUp)
       window.removeEventListener("pointercancel", handleUp)
     }
-  }, [marquee, pan.x, pan.y, blocks])
+  }, [marquee, pan.x, pan.y, scale, blocks])
 
   // 선택 상태 키보드: Esc 해제 / Delete·Backspace 로 선택 블럭 일괄 갈무리.
   useEffect(() => {
@@ -283,6 +432,7 @@ export function Canvas({
 
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return
+    if (pinchRef.current) return // 핀치 진행 중 — 두 번째 손가락이 팬/마퀴를 새로 시작하지 않게
     if (activePointerIdRef.current !== null) return // 이미 다른 포인터가 인터랙션 중
 
     // 연결 모드 중 빈 곳을 누르면 취소.
@@ -329,6 +479,7 @@ export function Canvas({
 
   const handlePointerDown = (e: React.PointerEvent, blockId: string) => {
     if (isSpacePressed) return // 스페이스 누른 상태면 블럭이 아니라 캔버스 팬을 우선.
+    if (pinchRef.current) return // 핀치 진행 중 — 두 번째 손가락이 블럭 드래그를 시작하지 않게
     if (activePointerIdRef.current !== null) return // 이미 다른 포인터가 인터랙션 중
 
     // 연결 모드: 다른 블럭을 탭하면 두 블럭을 이어주고 모드 종료 (같은 블럭이면 취소).
@@ -397,8 +548,8 @@ export function Canvas({
     // 블럭은 transform 된 wrapper 안에 그려지므로 화면상 위치는 block.x * scale + pan.x.
     // offset 을 화면좌표 기준으로 잡고, move 시점에 다시 pan/scale 을 빼서 world 좌표로 환원.
     setOffset({
-      x: e.clientX - (block.x * DEFAULT_CANVAS_SCALE + pan.x),
-      y: e.clientY - (block.y * DEFAULT_CANVAS_SCALE + pan.y),
+      x: e.clientX - (block.x * scale + pan.x),
+      y: e.clientY - (block.y * scale + pan.y),
     })
     setDragStartPos({ x: block.x, y: block.y })
   }
@@ -413,8 +564,8 @@ export function Canvas({
     const handleMouseMove = (e: PointerEvent) => {
       if (e.pointerId !== activePointerIdRef.current) return
       if (draggingId) {
-        const newX = (e.clientX - offset.x - pan.x) / DEFAULT_CANVAS_SCALE
-        const newY = (e.clientY - offset.y - pan.y) / DEFAULT_CANVAS_SCALE
+        const newX = (e.clientX - offset.x - pan.x) / scale
+        const newY = (e.clientY - offset.y - pan.y) / scale
 
         const group = groupDragRef.current
         if (group && dragStartPos) {
@@ -466,10 +617,10 @@ export function Canvas({
           const dockEl = typeof document !== "undefined" ? document.querySelector("[data-archive-dock]") : null
           const dockRect = dockEl?.getBoundingClientRect()
           const blockRect = {
-            left: (canvasRect?.left ?? 0) + block.x * DEFAULT_CANVAS_SCALE + pan.x,
-            right: (canvasRect?.left ?? 0) + (block.x + block.width) * DEFAULT_CANVAS_SCALE + pan.x,
-            top: (canvasRect?.top ?? 0) + block.y * DEFAULT_CANVAS_SCALE + pan.y,
-            bottom: (canvasRect?.top ?? 0) + (block.y + block.height) * DEFAULT_CANVAS_SCALE + pan.y,
+            left: (canvasRect?.left ?? 0) + block.x * scale + pan.x,
+            right: (canvasRect?.left ?? 0) + (block.x + block.width) * scale + pan.x,
+            top: (canvasRect?.top ?? 0) + block.y * scale + pan.y,
+            bottom: (canvasRect?.top ?? 0) + (block.y + block.height) * scale + pan.y,
           }
           const droppedOnArchiveDock = Boolean(
             dockRect &&
@@ -488,11 +639,11 @@ export function Canvas({
               id: draggingId,
               targetX:
                 ((dockRect?.left ?? 0) + (dockRect?.width ?? 0) / 2 - (canvasRect?.left ?? 0) - pan.x) /
-                  DEFAULT_CANVAS_SCALE -
+                  scale -
                 block.width / 2,
               targetY:
                 ((dockRect?.top ?? 0) + (dockRect?.height ?? 0) / 2 - (canvasRect?.top ?? 0) - pan.y) /
-                  DEFAULT_CANVAS_SCALE -
+                  scale -
                 block.height / 2,
               restoreX,
               restoreY,
@@ -590,7 +741,7 @@ export function Canvas({
       window.removeEventListener("pointerup", handleMouseUp)
       window.removeEventListener("pointercancel", handleMouseUp)
     }
-  }, [draggingId, offset, pan, dragStartPos, onUpdateBlock, onBatchUpdateBlocks, blocks])
+  }, [draggingId, offset, pan, scale, dragStartPos, onUpdateBlock, onBatchUpdateBlocks, blocks])
 
   const getBlockVisibility = (block: WorkBlock) => {
     if (!selectedZone) return "normal"
@@ -765,7 +916,7 @@ export function Canvas({
           ? "radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px)"
           : "radial-gradient(circle, rgba(0,0,0,0.015) 1px, transparent 1px)",
         // pan 만큼 배경 도트도 함께 흘러야 자연스럽다.
-        backgroundSize: `${48 * DEFAULT_CANVAS_SCALE}px ${48 * DEFAULT_CANVAS_SCALE}px`,
+        backgroundSize: `${48 * scale}px ${48 * scale}px`,
         backgroundPosition: `${pan.x}px ${pan.y}px`,
         cursor: isPanning ? "grabbing" : isSpacePressed ? "grab" : isCopyMode ? "copy" : "default",
         // 터치가 브라우저 스크롤/줌으로 새지 않고 캔버스 팬/드래그에 쓰이도록.
@@ -775,10 +926,10 @@ export function Canvas({
       <div
         className="absolute inset-0"
         style={{
-          transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${DEFAULT_CANVAS_SCALE})`,
+          transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${scale})`,
           transformOrigin: "0 0",
-          // 팬 중에는 transition 없이 즉각 반응. 손 떼면 OS 가 한 프레임 보간하도록.
-          willChange: isPanning ? "transform" : "auto",
+          // 팬/핀치 중에는 transition 없이 즉각 반응. 손 떼면 OS 가 한 프레임 보간하도록.
+          willChange: isPanning || pinchRef.current ? "transform" : "auto",
         }}
       >
       <svg
@@ -933,24 +1084,55 @@ export function Canvas({
         </div>
       )}
 
-      {/* 터치 전용: 선택 모드 토글 (마우스는 Ctrl 로 대체됨). hover 없는 기기에서만 노출 */}
-      <button
-        onClick={() => {
-          setTouchSelectMode((v) => {
-            if (v) setSelectedIds(new Set()) // 끌 때 선택 해제
-            return !v
-          })
-        }}
-        className={`absolute bottom-5 left-5 z-[75] hidden rounded-full border px-4 py-2.5 text-xs font-medium shadow-md transition-colors [@media(hover:none)]:block ${
-          touchSelectMode
-            ? "border-violet-600 bg-violet-600 text-white"
-            : isDarkMode
-              ? "border-zinc-700 bg-zinc-800 text-zinc-200"
-              : "border-gray-200 bg-white text-gray-700"
-        }`}
-      >
-        {touchSelectMode ? "선택 모드 ✕" : "선택 모드"}
-      </button>
+      {/* 좌하단 컨트롤 묶음: 배율 리셋(줌 상태일 때만) + 터치 선택 모드 토글 */}
+      <div className="absolute bottom-5 left-5 z-[75] flex flex-col items-start gap-2">
+        {/* 배율 표시 + 탭/클릭으로 기본 배율 복귀. 핀치·휠로 배율이 바뀌었을 때만 노출. */}
+        {Math.abs(scale - defaultScaleRef.current) > 0.01 && (
+          <button
+            onClick={() => {
+              // 화면 중앙에 보이던 지점이 리셋 후에도 중앙에 오도록 pan 을 함께 보정.
+              const next = defaultScaleRef.current
+              const rect = canvasRef.current?.getBoundingClientRect()
+              if (rect) {
+                const cx = rect.width / 2
+                const cy = rect.height / 2
+                setPan({ x: cx - ((cx - pan.x) / scale) * next, y: cy - ((cy - pan.y) / scale) * next })
+              }
+              setScale(next)
+            }}
+            title={t("canvas.zoomReset")}
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium tabular-nums shadow-md transition-colors ${
+              isDarkMode
+                ? "border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            {Math.round(scale * 100)}% ↺
+          </button>
+        )}
+
+        {/* 터치 전용: 선택 모드 토글 (마우스는 Ctrl 로 대체됨).
+            hover:none(주 입력이 hover 불가)이 아니라 any-pointer:coarse(터치스크린 존재)로 판정 —
+            태블릿에 마우스만 연결하면(키보드 없음) hover:hover 가 되어 버튼이 사라지는데
+            Ctrl 도 없어 멀티 선택 수단이 전무해지는 구멍을 막는다. 터치 랩탑도 손가락만으로 선택 가능. */}
+        <button
+          onClick={() => {
+            setTouchSelectMode((v) => {
+              if (v) setSelectedIds(new Set()) // 끌 때 선택 해제
+              return !v
+            })
+          }}
+          className={`hidden rounded-full border px-4 py-2.5 text-xs font-medium shadow-md transition-colors [@media(any-pointer:coarse)]:block ${
+            touchSelectMode
+              ? "border-violet-600 bg-violet-600 text-white"
+              : isDarkMode
+                ? "border-zinc-700 bg-zinc-800 text-zinc-200"
+                : "border-gray-200 bg-white text-gray-700"
+          }`}
+        >
+          {touchSelectMode ? t("canvas.selectModeOff") : t("canvas.selectMode")}
+        </button>
+      </div>
 
       {/* 연결 모드 안내 */}
       {connectingId && (

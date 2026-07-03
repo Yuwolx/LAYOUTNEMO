@@ -45,6 +45,9 @@ export const DICT = {
     "facet.delete.moveHeading": "블럭을 어디로 옮길까요?",
     "facet.delete.unassigned": "미분류 (결 없음)",
     "facet.delete.apply": "옮기고 삭제",
+    "canvas.selectMode": "선택 모드",
+    "canvas.selectModeOff": "선택 모드 ✕",
+    "canvas.zoomReset": "기본 배율로",
     "dialog.trash.title": "휴지통",
     "dialog.canvasSelector.title": "캔버스 선택",
 
@@ -162,6 +165,9 @@ export const DICT = {
     "facet.delete.moveHeading": "Where should its blocks go?",
     "facet.delete.unassigned": "Unassigned (no facet)",
     "facet.delete.apply": "Move & delete",
+    "canvas.selectMode": "Select mode",
+    "canvas.selectModeOff": "Select mode ✕",
+    "canvas.zoomReset": "Reset zoom",
     "dialog.trash.title": "Trash",
     "dialog.canvasSelector.title": "Select Canvas",
 

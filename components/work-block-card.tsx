@@ -251,7 +251,7 @@ export function WorkBlockCard({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity h-7 w-7 -mt-1 -mr-1"
+                    className="opacity-0 group-hover:opacity-100 [@media(any-pointer:coarse)]:opacity-100 transition-opacity h-7 w-7 -mt-1 -mr-1"
                     onClick={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
@@ -268,7 +268,7 @@ export function WorkBlockCard({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity h-7 w-7 -mt-1 -mr-1"
+                    className="opacity-0 group-hover:opacity-100 [@media(any-pointer:coarse)]:opacity-100 transition-opacity h-7 w-7 -mt-1 -mr-1"
                     onClick={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
