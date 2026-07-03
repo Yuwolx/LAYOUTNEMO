@@ -129,19 +129,17 @@ export const CREATE_BLOCK_PROMPT = `
 `.trim()
 
 /**
- * 정리하기(체크포인트) 프롬프트.
+ * 정리하기(체크포인트) 프롬프트 — AI 는 "의미 판단"만 담당한다.
  *
- * 정책
- * - 자동 정리 아님 → 사용자가 자기 작업 공간을 점검하도록 돕는 제안
- * - 분석 자체는 라우트에서 사전 계산해서 전달 (영역 분포, 분산도, 잠재 연결)
- *   → 프롬프트는 "그 분석 위에서 의미를 추가" 만 담당. 좌표 계산을 직접 하지 않음.
- * - 모델은 사용자 톤의 질문 + 변경 제안 작성에 집중
+ * 하이브리드 역할 분담 (lib/tidy/rules.ts 참고):
+ * - 연결(유사도)·시급도(기한)·위치(분산도)는 클라이언트 룰베이스가 0초에 처리
+ * - AI 는 텍스트 의미가 필요한 것만: 결(zone) 오분류 + 전체 인사이트
+ * 이렇게 잘라야 중복 제안이 없고, 프롬프트/응답이 짧아져 빠르고 싸다.
  *
  * 치환 토큰
- *   {BLOCK_LIST}: 블럭 요약 텍스트 (id, 제목, 영역, 상태, 위치, 연결, 완료여부)
- *   {ZONE_DISPERSION}: 영역별 분산도 px (라우트에서 사전 계산)
- *   {POTENTIAL_CONNECTIONS}: 미연결 + 유사도 높은 페어 (사전 계산)
- *   {ZONE_DEFINITIONS}: 사용 가능한 영역 id/label
+ *   {TODAY}: 오늘 날짜 (인사이트에 기한 맥락 참고용)
+ *   {BLOCK_LIST}: 블럭 요약 텍스트 (id, 제목, 결, 상태, 기한, 설명)
+ *   {ZONE_DEFINITIONS}: 사용 가능한 결 id/label
  *   {TOTAL}: 전체 블럭 수
  *   {COMPLETED}: 완료 블럭 수
  */
@@ -149,41 +147,26 @@ export const TIDY_COMPREHENSIVE_PROMPT = `
 너는 LAYOUT의 작업 공간 분석 AI다.
 사용자가 자기 작업 공간을 점검하도록 도와라. 자동 정리가 아니라, 의미 있는 한 마디씩 던지는 체크포인트다.
 
+연결·기한·배치 제안은 앱이 규칙으로 이미 처리했다. **너는 텍스트의 의미를 읽어야만 알 수 있는 것에만 집중해라.**
+
 ## 입력
-- 오늘 날짜: {TODAY} (기한 임박 여부는 이 날짜 기준으로 판단)
+- 오늘 날짜: {TODAY}
 - 전체 블럭: {TOTAL} 개 (완료 {COMPLETED} 개 포함)
 - 블럭 목록:
 {BLOCK_LIST}
 
-- 영역 정의: {ZONE_DEFINITIONS}
-- 영역별 분산도(px, 높을수록 같은 영역 블럭이 흩어짐): {ZONE_DISPERSION}
-- 잠재 연결 후보 (유사도 높지만 미연결): {POTENTIAL_CONNECTIONS}
-
-## 그룹핑 우선순위 (위에서 아래 순서대로 강함)
-1. **같은 결(zone)** — 같은 결의 블럭들은 한 영역에 모이도록.
-2. **내용 유사도** — 제목/설명이 비슷한 블럭들은 가까이.
-3. **위치 근접** — 이미 가까이 놓인 관련 블럭은 유지/강화.
-
-위 순서대로 가중치를 주어 클러스터/연결을 판단해라.
+- 결(영역) 정의: {ZONE_DEFINITIONS}
 
 ## 무엇을 제안하나
-다음 카테고리에서, **명확히 가치가 있는 것만**:
-1. **position** — 같은 결 블럭이 너무 멀리 / 상태가 시급인 블럭이 시야 밖 / 겹침
-2. **connection** — 잠재 연결 후보 중 의미 관계가 자연스러운 페어
-3. **zone** — 제목/설명이 현재 영역과 명백히 어긋남
-4. **urgency** — 내부 필드명. 사용자가 보는 개념은 "상태"이며, 기한 임박인데 상태가 시급이 아닌 경우 등
+**zone (결 오분류)** 단 하나: 제목/설명의 내용이 현재 속한 결과 명백히 어긋나는 블럭.
+예) "인스타 홍보 문구 작성"이 '개발' 결에 있음 → '마케팅' 제안.
+애매하면 제안하지 마라. 명백한 것만, 최대 3개.
 
-좌표 추천이 필요하면 기존 블럭들의 평균 위치를 기준으로 잡되, 정확한 픽셀에 집착하지 말 것. 1차 제안은 "어디 근처로" 의 방향성으로 충분. **배치는 그룹핑 우선순위가 먼저 정해진 뒤 그 결과를 따라간다.**
+## 인사이트
+analysis.insight 에 작업 공간 전체를 본 한 줄 관찰을 담아라 — 결 분포의 쏠림, 기한 뭉침, 방치된 흐름 같은 것.
 
 ## 톤
-- 친근한 반말, 관찰자 톤
-- 단정하지 말고 제안: "이 두 개 가까이 두면 보기 편할 거예요" 식
-- 한 번에 한 질문, 명령조 금지
-
-## 우선순위
-- **High**: 상태가 시급인 블럭이 시야 밖, 명백한 영역 오분류, 가까이 둘 만한 연결을 놓침
-- **Medium**: 같은 영역 블럭들이 멀리 흩어짐, 상태 미스매치
-- **Low**: 미세 조정 (제안 안 해도 됨)
+- 친근한 반말, 관찰자 톤. 단정하지 말고 제안: "이건 마케팅에 더 어울려 보여요" 식.
 
 ## 출력 형식 (JSON only)
 {
@@ -191,26 +174,26 @@ export const TIDY_COMPREHENSIVE_PROMPT = `
     "totalBlocks": number,
     "completedBlocks": number,
     "zoneDistribution": { "<zoneId>": number, ... },
-    "connectionIssues": ["짧은 설명 문자열들"],
-    "positionIssues": ["..."],
-    "urgencyIssues": ["..."],
+    "connectionIssues": [],
+    "positionIssues": [],
+    "urgencyIssues": [],
     "overallHealth": "good" | "needs_attention" | "critical",
-    "insight": "전체 상태 한 줄 요약"
+    "insight": "전체 상태 한 줄 관찰"
   },
   "suggestions": [
     {
       "id": "suggestion-1",
-      "type": "position" | "connection" | "urgency" | "zone" | "cleanup",
-      "priority": "high" | "medium" | "low",
+      "type": "zone",
+      "priority": "high" | "medium",
       "blockIds": ["..."],
       "question": "사용자에게 던질 한 마디",
       "changes": [
         {
           "blockId": "...",
-          "field": "x" | "y" | "relatedTo" | "zone" | "urgency",
-          "currentValue": <현재값>,
-          "suggestedValue": <제안값>,
-          "reason": "왜 이 변경이 좋은지"
+          "field": "zone",
+          "currentValue": "<현재 결 id>",
+          "suggestedValue": "<제안 결 id>",
+          "reason": "왜 이 결이 더 맞는지"
         }
       ]
     }
@@ -218,7 +201,7 @@ export const TIDY_COMPREHENSIVE_PROMPT = `
 }
 
 ## 규칙
-- 제안은 최대 6개. 우선순위 높은 순서로
-- 진짜 가치 없는 제안은 넣지 말 것 (적은 게 낫다)
+- suggestedValue 는 반드시 결 정의에 있는 id 로
+- 명백한 오분류가 없으면 suggestions 는 빈 배열 — 억지로 만들지 마라
 - JSON 외 텍스트 금지
 `.trim()
