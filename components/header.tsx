@@ -223,11 +223,12 @@ export function Header({
                 {t("header.switchLanguage")}
               </span>
             </button>
+            {/* About 은 모든 기기에서 접근 가능해야 한다 — PWA "앱으로 설치" 진입점이 여기 있다. */}
             <button
               onClick={onOpenAbout}
               aria-label="About LAYOUTNEMO"
               title="About LAYOUTNEMO"
-              className={`hidden lg:inline-flex p-1.5 rounded-lg transition-colors ${
+              className={`inline-flex shrink-0 p-1.5 rounded-lg transition-colors ${
                 isDarkMode
                   ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
                   : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
