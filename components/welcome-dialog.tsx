@@ -42,6 +42,7 @@ const COPY = {
     urgencyTerm: "시급도",
     urgencyDesc: "얼마나 급한지를 색으로 나타냅니다.",
     hint: "자세한 사용법은 캔버스의 ‘사용 설명서’ 블럭에서 언제든 볼 수 있습니다.",
+    iosInstall: "iPhone/iPad 에서는 Safari 공유 버튼 → ‘홈 화면에 추가’로 앱처럼 설치할 수 있습니다.",
     viewGuide: "가이드 보기",
     start: "시작하기",
     back: "뒤로",
@@ -59,6 +60,7 @@ const COPY = {
     urgencyTerm: "State",
     urgencyDesc: "Shows how urgent something is, through color.",
     hint: "The full usage guide is always available in the “User Guide” block on the canvas.",
+    iosInstall: "On iPhone/iPad, tap Safari’s Share button → “Add to Home Screen” to install it like an app.",
     viewGuide: "Open guide",
     start: "Get started",
     back: "Back",
@@ -78,11 +80,24 @@ export function WelcomeDialog({ open, onOpenChange }: WelcomeDialogProps) {
   const t = useT()
   const c = COPY[language]
   const [view, setView] = useState<"intro" | "guide">("intro")
+  // iOS Safari + 아직 홈 화면 미설치일 때만 PWA 설치 안내를 노출.
+  const [showIOSInstall, setShowIOSInstall] = useState(false)
 
   // 다시 열릴 때는 항상 소개 화면부터.
   useEffect(() => {
     if (open) setView("intro")
   }, [open])
+
+  useEffect(() => {
+    // iPadOS 는 UA 가 Mac 으로 나오므로 터치점 수로 구분.
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.userAgent.includes("Macintosh") && navigator.maxTouchPoints > 1)
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      ("standalone" in navigator && (navigator as { standalone?: boolean }).standalone === true)
+    setShowIOSInstall(isIOS && !isStandalone)
+  }, [])
 
   const guideText = SEED_BLOCK_STRINGS.guide?.detailedNotes?.[language] ?? ""
 
@@ -161,6 +176,9 @@ export function WelcomeDialog({ open, onOpenChange }: WelcomeDialogProps) {
             </div>
 
             <p className="text-xs text-muted-foreground leading-relaxed">{c.hint}</p>
+            {showIOSInstall && (
+              <p className="text-xs text-muted-foreground leading-relaxed">{c.iosInstall}</p>
+            )}
 
             <div className="flex gap-3 pt-1">
               <Button variant="outline" className="flex-1 font-light bg-transparent" onClick={() => setView("guide")}>
