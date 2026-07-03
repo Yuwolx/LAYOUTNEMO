@@ -75,7 +75,7 @@ export function AuthButton({ isDarkMode }: AuthButtonProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className={`flex items-center gap-2 px-2 py-1 rounded-full text-xs transition-all border ${
+          className={`flex items-center gap-2 px-2 py-1 rounded-full text-xs transition-all border shrink-0 ${
             isDarkMode
               ? "bg-zinc-700 text-zinc-100 border-zinc-500 hover:bg-zinc-600"
               : "bg-white text-gray-800 border-gray-200 hover:bg-gray-50"
@@ -95,7 +95,7 @@ export function AuthButton({ isDarkMode }: AuthButtonProps) {
               {initial}
             </span>
           )}
-          <span className="max-w-[96px] truncate">{displayName}</span>
+          <span className="hidden sm:inline max-w-[72px] lg:max-w-[96px] truncate">{displayName}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[200px]">

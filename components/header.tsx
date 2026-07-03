@@ -160,11 +160,11 @@ export function Header({
       className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-sm transition-colors duration-700 ${isDarkMode ? "bg-[#151823]/95" : "bg-[#fafaf9]/95"}`}
     >
       <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-800" : "border-border/20"}`}>
-        <div className="max-w-[2000px] mx-auto px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-[2000px] mx-auto px-3 sm:px-5 lg:px-8 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 lg:gap-4 min-w-0">
             {/* 깃블로그(gh-pages) 헤더와 동일 톤 — 28px 마크 + LAYOUTNEMO 한 줄, gap 8px. */}
             <div
-              className={`h-10 flex items-center shrink-0 gap-2 ml-3 ${
+              className={`h-10 flex items-center shrink-0 gap-2 ml-1 lg:ml-3 ${
                 isDarkMode ? "text-zinc-100" : "text-zinc-900"
               }`}
               aria-label="LAYOUTNEMO"
@@ -191,11 +191,11 @@ export function Header({
                   strokeWidth="80"
                 />
               </svg>
-              <span className="text-base font-bold tracking-tight">LAYOUTNEMO</span>
+              <span className="hidden sm:inline text-base font-bold tracking-tight">LAYOUTNEMO</span>
             </div>
             <button
               onClick={onOpenCanvasSelector}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+              className={`px-2.5 lg:px-4 py-2 rounded-lg text-sm font-medium transition-all border shrink-0 max-w-[104px] sm:max-w-[160px] lg:max-w-none truncate ${
                 isDarkMode
                   ? "bg-zinc-800 text-zinc-200 border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600"
                   : "bg-white text-gray-900 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
@@ -207,7 +207,7 @@ export function Header({
               onClick={toggleLanguage}
               aria-label={language === "ko" ? "Switch to English" : "한국어로 전환"}
               title={t("header.switchLanguage")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex items-center gap-1.5 justify-center min-w-[86px] ${
+              className={`px-2 lg:px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex items-center gap-1.5 justify-center shrink-0 min-w-0 sm:min-w-[86px] ${
                 isDarkMode
                   ? "bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
@@ -233,15 +233,15 @@ export function Header({
               <Info className="w-4 h-4" />
             </button>
             <span
-              className={`text-xs inline-block min-w-[72px] ${isDarkMode ? "text-zinc-400" : "text-gray-400"}`}
+              className={`text-xs hidden lg:inline-block lg:min-w-[72px] ${isDarkMode ? "text-zinc-400" : "text-gray-400"}`}
             >
               {formatLastSaved()}
             </span>
           </div>
 
-          <div className="flex-1" />
+          <div className="flex-1 min-w-0" />
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 lg:gap-3 shrink-0">
             <button
               onClick={onToggleAI}
               className={`
@@ -263,7 +263,7 @@ export function Header({
 
             {aiUsage && aiUsage.plan === "free" && (
               <span
-                className={`text-[11px] tabular-nums ${isDarkMode ? "text-zinc-500" : "text-gray-400"}`}
+                className={`hidden md:inline text-[11px] tabular-nums ${isDarkMode ? "text-zinc-500" : "text-gray-400"}`}
                 title={
                   language === "en"
                     ? `This month — create ${aiUsage.create}/${AI_LIMITS.create}, reflect ${aiUsage.tidy}/${AI_LIMITS.tidy}`
@@ -320,11 +320,11 @@ export function Header({
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
 
-            <Button onClick={onCreateBlock} className="text-sm min-w-[128px]">
+            <Button onClick={onCreateBlock} className="text-sm px-3 lg:px-4 min-w-0 lg:min-w-[128px] shrink-0">
               {t("header.createBlock")}
             </Button>
 
-            <Button onClick={onReflect} className="text-sm min-w-[96px] bg-foreground text-background hover:bg-foreground/90">
+            <Button onClick={onReflect} className="text-sm px-3 lg:px-4 min-w-0 lg:min-w-[96px] shrink-0 bg-foreground text-background hover:bg-foreground/90">
               {t("header.reflect")}
             </Button>
 
@@ -344,7 +344,7 @@ export function Header({
               : "bg-[#fafaf9] border-stone-300 border-b-[#fafaf9]"
         }`}
       >
-        <div className="max-w-[2000px] mx-auto px-8 py-2 flex items-center gap-2">
+        <div className="max-w-[2000px] mx-auto px-3 sm:px-5 lg:px-8 py-2 flex items-center gap-2">
           {/* 결 탭 + 갭 인디케이터. 시각 포인트는 결들 사이 갭. */}
           {zones.map((zone, idx) => {
             const isSelected = selectedZone === zone.id
