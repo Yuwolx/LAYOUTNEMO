@@ -160,8 +160,11 @@ export function Header({
       className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-sm transition-colors duration-700 ${isDarkMode ? "bg-[#151823]/95" : "bg-[#fafaf9]/95"}`}
     >
       <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-800" : "border-border/20"}`}>
-        <div className="max-w-[2000px] mx-auto px-3 sm:px-5 lg:px-8 py-3 flex items-center gap-2">
-          <div className="flex items-center gap-1.5 lg:gap-4 min-w-0">
+        {/* 폭이 모자라면 요소를 겹치게 두지 않고 가로 스크롤. (이전: 왼쪽 그룹이 min-w-0 로
+            줄어드는데 자식은 shrink-0 라 상자를 뚫고 나와 오른쪽 버튼 밑에 깔렸다.)
+            모든 기기 폭에 맞춰 숨기기로 대응하는 건 한계가 있어 스크롤을 안전망으로 둔다. */}
+        <div className="max-w-[2000px] mx-auto px-3 sm:px-5 lg:px-8 py-3 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex items-center gap-1.5 lg:gap-4 shrink-0">
             {/* 깃블로그(gh-pages) 헤더와 동일 톤 — 28px 마크 + LAYOUTNEMO 한 줄, gap 8px. */}
             <div
               className={`h-10 flex items-center shrink-0 gap-2 ml-1 lg:ml-3 ${
@@ -232,8 +235,9 @@ export function Header({
             >
               <Info className="w-4 h-4" />
             </button>
+            {/* 마지막 저장시각: iPad 가로(lg)에서도 로그인 상태 헤더가 꽉 차 넘치므로 데스크톱(xl)부터만 */}
             <span
-              className={`text-xs hidden lg:inline-block lg:min-w-[72px] ${isDarkMode ? "text-zinc-400" : "text-gray-400"}`}
+              className={`text-xs hidden xl:inline-block xl:min-w-[72px] ${isDarkMode ? "text-zinc-400" : "text-gray-400"}`}
             >
               {formatLastSaved()}
             </span>
@@ -344,7 +348,7 @@ export function Header({
               : "bg-[#fafaf9] border-stone-300 border-b-[#fafaf9]"
         }`}
       >
-        <div className="max-w-[2000px] mx-auto px-3 sm:px-5 lg:px-8 py-2 flex items-center gap-2">
+        <div className="max-w-[2000px] mx-auto px-3 sm:px-5 lg:px-8 py-2 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* 결 탭 + 갭 인디케이터. 시각 포인트는 결들 사이 갭. */}
           {zones.map((zone, idx) => {
             const isSelected = selectedZone === zone.id
@@ -371,7 +375,7 @@ export function Header({
                   e.preventDefault()
                   commitZoneDrop()
                 }}
-                className="flex items-center"
+                className="flex items-center shrink-0"
               >
                 {/* 인디케이터: 1px 얇은 막대. 평소엔 0px. 활성 시에도 좁아서 갭만 살짝 벌어진다. */}
                 <span
@@ -396,7 +400,7 @@ export function Header({
                     onZoneSelect(isSelected ? null : zone.id)
                   }}
                   className={`
-                    px-4 py-1.5 rounded-full text-sm transition-all duration-300 font-light cursor-grab active:cursor-grabbing
+                    px-4 py-1.5 rounded-full text-sm transition-all duration-300 font-light cursor-grab active:cursor-grabbing whitespace-nowrap
                     ${isDragging ? "opacity-40" : ""}
                     ${
                       isSelected
@@ -441,16 +445,16 @@ export function Header({
 
           <button
             onClick={onManageAreas}
-            className={`ml-1 px-2 py-1.5 text-xs rounded-full transition-colors ${isDarkMode ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800" : "text-muted-foreground/60 hover:text-foreground hover:bg-accent/40"}`}
+            className={`ml-1 px-2 py-1.5 text-xs rounded-full transition-colors shrink-0 whitespace-nowrap ${isDarkMode ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800" : "text-muted-foreground/60 hover:text-foreground hover:bg-accent/40"}`}
           >
             {t("header.addFacet")}
           </button>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 shrink-0">
             <button
               onClick={onToggleRelationships}
               className={`
-                flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-all
+                flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-all whitespace-nowrap
                 ${
                   showRelationships
                     ? isDarkMode
