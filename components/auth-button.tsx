@@ -95,7 +95,7 @@ export function AuthButton({ isDarkMode }: AuthButtonProps) {
               {initial}
             </span>
           )}
-          <span className="hidden sm:inline max-w-[72px] lg:max-w-[96px] truncate">{displayName}</span>
+          <span className="hidden lg:inline max-w-[96px] truncate">{displayName}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[200px]">
