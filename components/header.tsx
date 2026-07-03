@@ -160,7 +160,7 @@ export function Header({
       className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-sm transition-colors duration-700 ${isDarkMode ? "bg-[#151823]/95" : "bg-[#fafaf9]/95"}`}
     >
       <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-800" : "border-border/20"}`}>
-        <div className="max-w-[2000px] mx-auto px-3 sm:px-5 lg:px-8 py-3 flex items-center justify-between gap-2">
+        <div className="max-w-[2000px] mx-auto px-3 sm:px-5 lg:px-8 py-3 flex items-center gap-2">
           <div className="flex items-center gap-1.5 lg:gap-4 min-w-0">
             {/* 깃블로그(gh-pages) 헤더와 동일 톤 — 28px 마크 + LAYOUTNEMO 한 줄, gap 8px. */}
             <div
@@ -191,7 +191,7 @@ export function Header({
                   strokeWidth="80"
                 />
               </svg>
-              <span className="hidden sm:inline text-base font-bold tracking-tight">LAYOUTNEMO</span>
+              <span className="hidden lg:inline text-base font-bold tracking-tight">LAYOUTNEMO</span>
             </div>
             <button
               onClick={onOpenCanvasSelector}
@@ -224,7 +224,7 @@ export function Header({
               onClick={onOpenAbout}
               aria-label="About LAYOUTNEMO"
               title="About LAYOUTNEMO"
-              className={`p-1.5 rounded-lg transition-colors ${
+              className={`hidden lg:inline-flex p-1.5 rounded-lg transition-colors ${
                 isDarkMode
                   ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
                   : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
@@ -245,7 +245,7 @@ export function Header({
             <button
               onClick={onToggleAI}
               className={`
-                flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-all font-medium border
+                flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-all font-medium border shrink-0 whitespace-nowrap
                 ${
                   isAIEnabled
                     ? isDarkMode
@@ -263,7 +263,7 @@ export function Header({
 
             {aiUsage && aiUsage.plan === "free" && (
               <span
-                className={`hidden md:inline text-[11px] tabular-nums ${isDarkMode ? "text-zinc-500" : "text-gray-400"}`}
+                className={`hidden lg:inline text-[11px] tabular-nums shrink-0 ${isDarkMode ? "text-zinc-500" : "text-gray-400"}`}
                 title={
                   language === "en"
                     ? `This month — create ${aiUsage.create}/${AI_LIMITS.create}, reflect ${aiUsage.tidy}/${AI_LIMITS.tidy}`
@@ -284,7 +284,7 @@ export function Header({
               <RotateCcw className="w-4 h-4" />
             </Button>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               <Button
                 variant="outline"
                 size="icon"
