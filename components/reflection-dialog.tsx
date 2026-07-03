@@ -1,14 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Sparkles, Loader2, CheckCircle2, XCircle } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { Sparkles, Loader2, CheckCircle2, Zap } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import type { Urgency, WorkBlock } from "@/types"
-import type { MultiStageTidyResult } from "@/lib/ai/types"
+import type { TidyComprehensiveAnalysis, TidyDetailedSuggestion } from "@/lib/ai/types"
+import { generateRuleSuggestions } from "@/lib/tidy/rules"
 import { URGENCY_KEYS } from "@/lib/constants/urgency"
 import { useLanguage, useT } from "@/lib/i18n/context"
-import { toast } from "sonner"
 import type { AIErrorCode } from "@/lib/ai/schemas"
 
 interface ReflectionDialogProps {
@@ -21,6 +22,14 @@ interface ReflectionDialogProps {
   zones: { id: string; label: string }[]
 }
 
+type AIStatus = "idle" | "loading" | "done" | "none" | "error"
+
+/**
+ * 하이브리드 정리하기:
+ * 1) 시작 즉시 룰베이스 제안(연결·기한·위치)이 체크리스트로 뜨고 — 0초, 쿼터 미사용
+ * 2) 동시에 AI 호출(결 오분류 + 인사이트)이 백그라운드로 출발, 도착하면 목록에 추가
+ * 3) 사용자는 체크박스로 골라 한 번에 적용 — 히스토리 1커밋이라 Undo 한 번에 복구
+ */
 export function ReflectionDialog({
   open,
   onOpenChange,
@@ -31,177 +40,205 @@ export function ReflectionDialog({
 }: ReflectionDialogProps) {
   const { language } = useLanguage()
   const t = useT()
-  const [showIntro, setShowIntro] = useState(true)
-  const [loading, setLoading] = useState(false)
-  const [analyzing, setAnalyzing] = useState(false)
-  const [result, setResult] = useState<MultiStageTidyResult | null>(null)
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [view, setView] = useState<"intro" | "review" | "done">("intro")
+  const [ruleSuggestions, setRuleSuggestions] = useState<TidyDetailedSuggestion[]>([])
+  const [aiSuggestions, setAiSuggestions] = useState<TidyDetailedSuggestion[]>([])
+  const [aiStatus, setAiStatus] = useState<AIStatus>("idle")
+  const [aiErrorMessage, setAiErrorMessage] = useState<string | null>(null)
+  const [insight, setInsight] = useState<string | null>(null)
+  const [checked, setChecked] = useState<Set<string>>(new Set())
   const [appliedCount, setAppliedCount] = useState(0)
-  const [skippedCount, setSkippedCount] = useState(0)
 
   useEffect(() => {
     if (open) {
-      setShowIntro(true)
-      setResult(null)
-      setCurrentIndex(0)
-      setAnalyzing(false)
+      setView("intro")
+      setRuleSuggestions([])
+      setAiSuggestions([])
+      setAiStatus("idle")
+      setAiErrorMessage(null)
+      setInsight(null)
+      setChecked(new Set())
       setAppliedCount(0)
-      setSkippedCount(0)
     }
   }, [open])
 
-  const startComprehensiveAnalysis = async () => {
-    setShowIntro(false)
-    setAnalyzing(true)
-    setLoading(true)
+  const startReview = () => {
+    // 1) 룰베이스 — 즉시, 로컬 계산.
+    const rules = generateRuleSuggestions(blocks, zones, language)
+    setRuleSuggestions(rules)
+    setChecked(new Set(rules.map((s) => s.id)))
+    setView("review")
 
-    try {
-      // 실제로 시간이 걸리는 건 OpenAI 호출 뿐.
-      // 가짜 setTimeout 단계 연출은 제거하고 "분석 중" 하나로 통일.
-      setResult({
-        stage: { stage: "analyzing", message: t("reflect.stage.analyzing"), progress: 50 },
-      })
-
-      const response = await fetch("/api/ai/tidy-comprehensive", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          blocks: blocks.map((b) => ({
-            id: b.id,
-            title: b.title,
-            description: b.description,
-            detailedNotes: b.detailedNotes,
-            zone: b.zone,
-            urgency: b.urgency || "thinking",
-            // 기한 — 서버 프롬프트가 "기한 임박인데 상태가 시급이 아님" 판단에 쓴다.
-            // 이전엔 안 보내서 AI 가 모든 블럭을 기한 없음으로 봤다.
-            dueDate: b.dueDate || null,
-            x: b.x,
-            y: b.y,
-            relatedTo: b.relatedTo || [],
-            isCompleted: b.isCompleted || false,
-          })),
-          zones,
-          language,
-        }),
-      })
-
-      if (!response.ok) {
-        let code: AIErrorCode = "upstream_error"
-        try {
-          const body = await response.json()
-          if (body?.error?.code) code = body.error.code as AIErrorCode
-        } catch {
-          // ignore
+    // 2) AI — 백그라운드. 실패해도 룰베이스 결과는 그대로 살아 있다.
+    setAiStatus("loading")
+    fetch("/api/ai/tidy-comprehensive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        blocks: blocks.map((b) => ({
+          id: b.id,
+          title: b.title,
+          description: b.description,
+          detailedNotes: b.detailedNotes,
+          zone: b.zone,
+          urgency: b.urgency || "thinking",
+          dueDate: b.dueDate || null,
+          isCompleted: b.isCompleted || false,
+          isGuide: b.isGuide || false,
+        })),
+        zones,
+        language,
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          let code: AIErrorCode = "upstream_error"
+          try {
+            const body = await response.json()
+            if (body?.error?.code) code = body.error.code as AIErrorCode
+          } catch {
+            // ignore
+          }
+          const messages: Record<AIErrorCode, string> = {
+            missing_api_key:
+              language === "en" ? "The server has no AI key configured." : "서버에 AI 키가 설정되어 있지 않아요.",
+            upstream_error:
+              language === "en" ? "The AI did not respond." : "AI 응답에 실패했어요.",
+            invalid_response:
+              language === "en" ? "The AI returned an unexpected shape." : "AI 응답이 예상과 달라요.",
+            network_error: language === "en" ? "Network error." : "네트워크 오류가 났어요.",
+            quota_exceeded:
+              language === "en"
+                ? "Monthly Reflect limit reached — rule-based suggestions still work."
+                : "이번 달 AI 분석 한도를 다 썼어요 — 위 제안은 한도 없이 쓸 수 있어요.",
+          }
+          setAiErrorMessage(messages[code])
+          setAiStatus("error")
+          return
         }
-        const messages: Record<AIErrorCode, string> = {
-          missing_api_key:
-            language === "en"
-              ? "Reflect needs an API key on the server."
-              : "정리하기는 서버에 API 키가 필요해요.",
-          upstream_error:
-            language === "en"
-              ? "AI failed to respond. Try again in a moment."
-              : "AI 응답에 실패했어요. 잠시 후 다시 시도해주세요.",
-          invalid_response:
-            language === "en"
-              ? "AI returned an unexpected shape."
-              : "AI 응답이 예상과 달라요.",
-          network_error:
-            language === "en"
-              ? "Network error."
-              : "네트워크 오류가 났어요.",
-          quota_exceeded:
-            language === "en"
-              ? "You've used up this month's Reflect limit. It refills next month."
-              : "이번 달 정리하기 한도를 다 썼어요. 다음 달에 다시 충전돼요.",
-        }
-        toast.error(messages[code])
-        setResult({
-          stage: { stage: "complete", message: t("reflect.message.error"), progress: 100 },
+        const data: { analysis?: TidyComprehensiveAnalysis; suggestions?: TidyDetailedSuggestion[] } =
+          await response.json()
+        const suggestions = (data.suggestions ?? []).filter((s) => s.type === "zone")
+        setInsight(data.analysis?.insight ?? null)
+        setAiSuggestions(suggestions)
+        setChecked((prev) => {
+          const next = new Set(prev)
+          suggestions.forEach((s) => next.add(s.id))
+          return next
         })
-        return
-      }
-
-      const data: MultiStageTidyResult = await response.json()
-
-      setResult(data)
-      setCurrentIndex(0)
-    } catch (error) {
-      console.error("Analysis error:", error)
-      toast.error(
-        language === "en"
-          ? "Network error while reaching the server."
-          : "서버 연결에 문제가 있어요.",
-      )
-      setResult({
-        stage: { stage: "complete", message: t("reflect.message.error"), progress: 100 },
+        setAiStatus(suggestions.length > 0 ? "done" : "none")
       })
-    } finally {
-      setLoading(false)
-      setAnalyzing(false)
-    }
+      .catch(() => {
+        setAiErrorMessage(language === "en" ? "Could not reach the server." : "서버 연결에 문제가 있어요.")
+        setAiStatus("error")
+      })
   }
 
-  const handleAccept = () => {
-    if (!result?.suggestions || currentIndex >= result.suggestions.length) return
+  const toggleChecked = (id: string) => {
+    setChecked((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
-    const suggestion = result.suggestions[currentIndex]
+  const allSuggestions = useMemo(() => [...ruleSuggestions, ...aiSuggestions], [ruleSuggestions, aiSuggestions])
+  const selectedCount = allSuggestions.filter((s) => checked.has(s.id)).length
+
+  const applySelected = () => {
     const knownIds = new Set(blocks.map((b) => b.id))
-    const updates: Array<{ id: string; updates: Partial<WorkBlock> }> = []
     const zoneIds = new Set(zones.map((z) => z.id))
+    const blockById = new Map(blocks.map((b) => [b.id, b]))
 
-    // AI 제안은 프롬프트가 허용한 필드(x/y/relatedTo/zone/urgency)만 적용한다.
-    // isDeleted/isCompleted 같은 수명주기 필드는 응답이 뭐라 하든 건드리지 않음.
-    suggestion.changes.forEach((change) => {
-      if (!knownIds.has(change.blockId)) return
+    // 블럭별 변경 누적. relatedTo 는 덮어쓰지 않고 합집합으로 병합한다 —
+    // 한 블럭에 연결 제안이 두 개 오면 마지막 것이 앞의 것을 지워버리기 때문.
+    const pending = new Map<string, Partial<WorkBlock>>()
+    const relatedUnion = new Map<string, Set<string>>()
 
-      if (change.field === "relatedTo") {
-        const related = Array.isArray(change.suggestedValue)
-          ? change.suggestedValue.filter((id) => knownIds.has(id) && id !== change.blockId)
-          : []
-        updates.push({ id: change.blockId, updates: { relatedTo: related } })
-      } else if (change.field === "x" || change.field === "y") {
-        const value = Number(change.suggestedValue)
-        if (Number.isFinite(value)) {
-          updates.push({ id: change.blockId, updates: { [change.field]: value } })
-        }
-      } else if (change.field === "zone") {
-        if (typeof change.suggestedValue === "string" && zoneIds.has(change.suggestedValue)) {
-          updates.push({ id: change.blockId, updates: { zone: change.suggestedValue } })
-        }
-      } else if (change.field === "urgency") {
-        if (URGENCY_KEYS.includes(change.suggestedValue as Urgency)) {
-          updates.push({ id: change.blockId, updates: { urgency: change.suggestedValue as Urgency } })
-        }
-      }
+    // 적용 필드는 화이트리스트(x/y/relatedTo/zone/urgency)만 — AI 응답이 뭐라 하든
+    // isDeleted/isCompleted 같은 수명주기 필드는 건드리지 못한다.
+    allSuggestions
+      .filter((s) => checked.has(s.id))
+      .forEach((suggestion) => {
+        suggestion.changes.forEach((change) => {
+          if (!knownIds.has(change.blockId)) return
+          const entry = pending.get(change.blockId) ?? {}
+
+          if (change.field === "relatedTo") {
+            const base =
+              relatedUnion.get(change.blockId) ?? new Set(blockById.get(change.blockId)?.relatedTo ?? [])
+            if (Array.isArray(change.suggestedValue)) {
+              change.suggestedValue.forEach((id) => {
+                if (knownIds.has(id) && id !== change.blockId) base.add(id)
+              })
+            }
+            relatedUnion.set(change.blockId, base)
+          } else if (change.field === "x" || change.field === "y") {
+            const value = Number(change.suggestedValue)
+            if (Number.isFinite(value)) entry[change.field] = value
+          } else if (change.field === "zone") {
+            if (typeof change.suggestedValue === "string" && zoneIds.has(change.suggestedValue)) {
+              entry.zone = change.suggestedValue
+            }
+          } else if (change.field === "urgency") {
+            if (URGENCY_KEYS.includes(change.suggestedValue as Urgency)) {
+              entry.urgency = change.suggestedValue as Urgency
+            }
+          }
+          pending.set(change.blockId, entry)
+        })
+      })
+
+    relatedUnion.forEach((set, blockId) => {
+      const entry = pending.get(blockId) ?? {}
+      entry.relatedTo = Array.from(set)
+      pending.set(blockId, entry)
     })
 
+    const updates = Array.from(pending.entries())
+      .filter(([, u]) => Object.keys(u).length > 0)
+      .map(([id, u]) => ({ id, updates: u }))
+
     if (updates.length > 0) onApplyChanges(updates)
-    setAppliedCount((prev) => prev + 1)
-
-    if (currentIndex < result.suggestions.length - 1) {
-      setCurrentIndex(currentIndex + 1)
-    } else {
-      setResult({
-        stage: { stage: "complete", message: t("reflect.message.allReviewed"), progress: 100 },
-      })
-    }
+    setAppliedCount(selectedCount)
+    setView("done")
   }
 
-  const handleReject = () => {
-    if (!result?.suggestions) return
+  const typeLabel = (type: TidyDetailedSuggestion["type"]) =>
+    type === "connection"
+      ? t("reflect.type.connection")
+      : type === "position"
+        ? t("reflect.type.position")
+        : type === "zone"
+          ? t("reflect.type.zone")
+          : t("reflect.type.urgency")
 
-    setSkippedCount((prev) => prev + 1)
-
-    if (currentIndex < result.suggestions.length - 1) {
-      setCurrentIndex(currentIndex + 1)
-    } else {
-      setResult({
-        stage: { stage: "complete", message: t("reflect.message.allReviewed"), progress: 100 },
-      })
-    }
-  }
+  const renderSuggestionRow = (suggestion: TidyDetailedSuggestion) => (
+    <label
+      key={suggestion.id}
+      className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/40 bg-background px-3 py-2.5 transition-colors hover:bg-accent/20"
+    >
+      <Checkbox
+        checked={checked.has(suggestion.id)}
+        onCheckedChange={() => toggleChecked(suggestion.id)}
+        className="mt-0.5"
+      />
+      <div className="min-w-0 flex-1 text-sm leading-relaxed">
+        <div className="mb-1 flex items-center gap-1.5">
+          <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-[11px] text-foreground/60">
+            {typeLabel(suggestion.type)}
+          </span>
+          {suggestion.priority === "high" && (
+            <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] text-red-600 dark:text-red-400">
+              {t("reflect.priority.high")}
+            </span>
+          )}
+        </div>
+        <p className="text-foreground/90">{suggestion.question}</p>
+      </div>
+    </label>
+  )
 
   if (!isAIEnabled) {
     return (
@@ -212,7 +249,7 @@ export function ReflectionDialog({
             <p className="text-sm text-muted-foreground leading-relaxed">AI 보조를 켜면 사용할 수 있습니다.</p>
           </div>
           <Button onClick={() => onOpenChange(false)} variant="ghost" className="w-full mt-2">
-            닫기
+            {t("action.close")}
           </Button>
         </DialogContent>
       </Dialog>
@@ -228,23 +265,20 @@ export function ReflectionDialog({
             <p className="text-sm text-muted-foreground leading-relaxed">정리할 블럭이 없습니다.</p>
           </div>
           <Button onClick={() => onOpenChange(false)} variant="ghost" className="w-full mt-2">
-            닫기
+            {t("action.close")}
           </Button>
         </DialogContent>
       </Dialog>
     )
   }
 
-  const currentSuggestion = result?.suggestions?.[currentIndex]
-  const totalSuggestions = result?.suggestions?.length || 0
-
   return (
     <>
       {open && <div className="fixed inset-0 bg-black/20 z-40 backdrop-blur-sm transition-all duration-300" />}
 
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[600px] border-none shadow-2xl">
-          {showIntro ? (
+        <DialogContent className="sm:max-w-[600px] max-h-[86vh] overflow-y-auto border-none shadow-2xl">
+          {view === "intro" ? (
             <div className="py-6">
               <div className="mb-6">
                 <Sparkles className="w-7 h-7 mb-4 text-foreground/70" />
@@ -260,136 +294,81 @@ export function ReflectionDialog({
                 <p className="text-sm text-foreground/60 mt-4">{t("reflect.intro.subnote")}</p>
               </div>
 
-              <Button onClick={startComprehensiveAnalysis} className="w-full" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {t("reflect.action.analyzing")}
-                  </>
+              <Button onClick={startReview} className="w-full">
+                {t("reflect.action.start")}
+              </Button>
+            </div>
+          ) : view === "review" ? (
+            <div className="py-4 space-y-5">
+              {/* 룰베이스 제안 — 즉시 */}
+              <div>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-foreground/60">
+                  <Zap className="h-3.5 w-3.5" />
+                  {t("reflect.section.rules")}
+                </div>
+                {ruleSuggestions.length > 0 ? (
+                  <div className="space-y-2">{ruleSuggestions.map(renderSuggestionRow)}</div>
                 ) : (
-                  t("reflect.action.start")
-                )}
-              </Button>
-            </div>
-          ) : analyzing || result?.stage.stage === "analyzing" ? (
-            <div className="py-8 text-center">
-              <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-foreground/70" />
-              <p className="text-base text-foreground/90 mb-2">{result?.stage.message}</p>
-              {/* 실제 소요 시간 예측 불가(OpenAI 호출) → 불확정 스타일로 흘러가는 애니메이션 */}
-              <div className="w-full bg-muted rounded-full h-2 mt-4 overflow-hidden relative">
-                <div
-                  className="absolute inset-y-0 w-1/3 bg-foreground/20 rounded-full animate-[indeterminate_1.4s_ease-in-out_infinite]"
-                  style={{ animationName: "indeterminate" }}
-                />
-              </div>
-              <p className="text-xs text-foreground/50 mt-3">{t("reflect.progress.wait")}</p>
-            </div>
-          ) : currentSuggestion ? (
-            <div className="py-6">
-              <div className="flex items-start gap-3 mb-4">
-                <Sparkles className="w-6 h-6 mt-1 text-foreground/70 flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs text-foreground/50">
-                      {currentIndex + 1} / {totalSuggestions}
-                    </span>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${
-                        currentSuggestion.priority === "high"
-                          ? "bg-red-500/10 text-red-600 dark:text-red-400"
-                          : currentSuggestion.priority === "medium"
-                            ? "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
-                            : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                      }`}
-                    >
-                      {currentSuggestion.priority === "high"
-                        ? t("reflect.priority.high")
-                        : currentSuggestion.priority === "medium"
-                          ? t("reflect.priority.medium")
-                          : t("reflect.priority.low")}
-                    </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-foreground/5 text-foreground/60">
-                      {currentSuggestion.type === "connection"
-                        ? t("reflect.type.connection")
-                        : currentSuggestion.type === "position"
-                          ? t("reflect.type.position")
-                          : currentSuggestion.type === "zone"
-                            ? t("reflect.type.zone")
-                            : t("reflect.type.urgency")}
-                    </span>
-                  </div>
-                  <p className="text-base text-foreground/90 leading-relaxed mb-4">{currentSuggestion.question}</p>
-
-                  <div className="bg-muted/30 rounded-lg p-3 text-sm">
-                    <p className="text-foreground/60 mb-2">{t("reflect.changes.heading")}</p>
-                    <ul className="space-y-1 text-foreground/80">
-                      {currentSuggestion.changes.map((change, idx) => (
-                        <li key={idx} className="text-xs">
-                          • {change.reason}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <Button onClick={handleReject} variant="outline" className="flex-1 bg-transparent">
-                  <XCircle className="w-4 h-4 mr-2" />
-                  {t("reflect.action.skip")}
-                </Button>
-                <Button onClick={handleAccept} className="flex-1">
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  {t("reflect.action.apply")}
-                </Button>
-              </div>
-
-              <Button onClick={() => onOpenChange(false)} variant="ghost" className="w-full mt-3 text-xs">
-                {t("reflect.action.later")}
-              </Button>
-            </div>
-          ) : result?.stage.stage === "complete" ? (
-            <div className="text-center py-8">
-              <CheckCircle2 className="w-8 h-8 mx-auto mb-4 text-green-600 dark:text-green-400" />
-              <p className="text-base text-foreground/90 mb-2">{result.stage.message}</p>
-              {(appliedCount > 0 || skippedCount > 0) && (
-                <div className="mt-3 text-sm text-foreground/60">
-                  {t("reflect.summary.applied")}: {appliedCount}{t("reflect.summary.suffix")} · {t("reflect.summary.skipped")}: {skippedCount}{t("reflect.summary.suffix")}
-                </div>
-              )}
-              {result.analysis && (
-                <div className="mt-4 text-left bg-muted/30 rounded-lg p-4 text-sm space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-foreground/70">
-                      {t("reflect.health.label")}{" "}
-                      {result.analysis.overallHealth === "good"
-                        ? t("reflect.health.good")
-                        : result.analysis.overallHealth === "needs_attention"
-                          ? t("reflect.health.needs_attention")
-                          : t("reflect.health.critical")}
-                    </span>
-                  </div>
-                  <p className="text-foreground/60 text-xs">
-                    {t("reflect.blocks.total")}: {result.analysis.totalBlocks}{t("reflect.summary.suffix")}
-                    {result.analysis.completedBlocks !== undefined && ` (${t("reflect.blocks.completed")}: ${result.analysis.completedBlocks}${t("reflect.summary.suffix")})`}
+                  <p className="rounded-xl bg-muted/30 px-3 py-2.5 text-sm text-foreground/60">
+                    {t("reflect.none")}
                   </p>
-                  {result.analysis.insight && (
-                    <p className="text-foreground/70 text-xs mt-2 pt-2 border-t border-foreground/10">
-                      {result.analysis.insight}
-                    </p>
-                  )}
+                )}
+              </div>
+
+              {/* AI 제안 — 백그라운드 도착 */}
+              <div>
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-foreground/60">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {t("reflect.section.ai")}
                 </div>
-              )}
-              <Button onClick={() => onOpenChange(false)} variant="default" className="w-full mt-4">
-                {t("action.close")}
-              </Button>
+                {aiStatus === "loading" ? (
+                  <div className="flex items-center gap-2 rounded-xl bg-muted/30 px-3 py-2.5 text-sm text-foreground/60">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t("reflect.ai.analyzing")}
+                  </div>
+                ) : aiStatus === "error" ? (
+                  <p className="rounded-xl bg-muted/30 px-3 py-2.5 text-sm text-foreground/60">
+                    {aiErrorMessage ?? t("reflect.ai.failed")}
+                  </p>
+                ) : aiStatus === "none" ? (
+                  <p className="rounded-xl bg-muted/30 px-3 py-2.5 text-sm text-foreground/60">
+                    {t("reflect.ai.none")}
+                  </p>
+                ) : (
+                  <div className="space-y-2">{aiSuggestions.map(renderSuggestionRow)}</div>
+                )}
+                {insight && (
+                  <p className="mt-2 rounded-xl border border-border/40 px-3 py-2.5 text-xs leading-relaxed text-foreground/70">
+                    {insight}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <Button onClick={() => onOpenChange(false)} variant="outline" className="flex-1 bg-transparent">
+                  {t("action.close")}
+                </Button>
+                <Button onClick={applySelected} disabled={selectedCount === 0} className="flex-1">
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  {t("reflect.apply.selected")} ({selectedCount})
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="text-center py-8">
-              <Sparkles className="w-8 h-8 mx-auto mb-4 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">{t("reflect.message.allReviewed")}</p>
-              <Button onClick={() => onOpenChange(false)} variant="ghost" className="w-full mt-4">
-                닫기
+              <CheckCircle2 className="w-8 h-8 mx-auto mb-4 text-green-600 dark:text-green-400" />
+              <p className="text-base text-foreground/90 mb-2">{t("reflect.applied.done")}</p>
+              <p className="text-sm text-foreground/60">
+                {t("reflect.summary.applied")}: {appliedCount}
+                {t("reflect.summary.suffix")}
+              </p>
+              {insight && (
+                <p className="mx-auto mt-4 max-w-[420px] rounded-xl border border-border/40 px-3 py-2.5 text-left text-xs leading-relaxed text-foreground/70">
+                  {insight}
+                </p>
+              )}
+              <Button onClick={() => onOpenChange(false)} variant="default" className="w-full mt-5">
+                {t("action.close")}
               </Button>
             </div>
           )}

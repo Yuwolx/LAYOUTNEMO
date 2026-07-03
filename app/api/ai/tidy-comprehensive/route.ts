@@ -14,73 +14,11 @@ const FETCH_TIMEOUT_MS = 45_000
 // 토큰 비용 방어: 블럭 수·설명 길이·응답 크기 상한
 const MAX_BLOCKS = 150
 const MAX_DESC_CHARS = 300
-const MAX_COMPLETION_TOKENS = 2500
+// AI 역할이 결 오분류 + 인사이트로 줄어 응답도 짧다 (하이브리드 — lib/tidy/rules.ts 참고).
+const MAX_COMPLETION_TOKENS = 1200
 
 const errorResponse = (code: AIErrorPayload["code"], message: string, status: number) =>
   NextResponse.json<{ error: AIErrorPayload }>({ error: { code, message } }, { status })
-
-function analyzeBlockClusters(blocks: WorkBlock[], zones: Zone[]) {
-  const zoneClusters: Record<string, WorkBlock[]> = {}
-  const urgencyClusters: Record<string, WorkBlock[]> = {}
-
-  blocks.forEach((b) => {
-    if (!zoneClusters[b.zone]) zoneClusters[b.zone] = []
-    zoneClusters[b.zone].push(b)
-
-    const urgencyKey = b.urgency ?? "thinking"
-    if (!urgencyClusters[urgencyKey]) urgencyClusters[urgencyKey] = []
-    urgencyClusters[urgencyKey].push(b)
-  })
-
-  // 영역별 분산도 계산 (같은 영역 블록들이 얼마나 퍼져있는지)
-  const zoneDispersion: Record<string, number> = {}
-  Object.entries(zoneClusters).forEach(([zoneId, zoneBlocks]) => {
-    if (zoneBlocks.length < 2) {
-      zoneDispersion[zoneId] = 0
-      return
-    }
-
-    // 중심점 계산
-    const centerX = zoneBlocks.reduce((sum, b) => sum + b.x, 0) / zoneBlocks.length
-    const centerY = zoneBlocks.reduce((sum, b) => sum + b.y, 0) / zoneBlocks.length
-
-    // 평균 거리 계산
-    const avgDistance =
-      zoneBlocks.reduce((sum, b) => {
-        return sum + Math.sqrt(Math.pow(b.x - centerX, 2) + Math.pow(b.y - centerY, 2))
-      }, 0) / zoneBlocks.length
-
-    zoneDispersion[zoneId] = Math.round(avgDistance)
-  })
-
-  return { zoneClusters, urgencyClusters, zoneDispersion }
-}
-
-function calculateBlockSimilarity(block1: WorkBlock, block2: WorkBlock): number {
-  let similarity = 0
-
-  // 우선순위: 결 > 제목/설명 키워드 > 위치 근접
-
-  // 1. 영역(결) 동일
-  if (block1.zone === block2.zone) similarity += 30
-
-  // 2. 제목 + 메모 키워드 공통
-  const text1 = `${block1.title} ${block1.detailedNotes || block1.description || ""}`.toLowerCase()
-  const text2 = `${block2.title} ${block2.detailedNotes || block2.description || ""}`.toLowerCase()
-  const words1 = text1.split(/\s+/).filter((w) => w.length > 1)
-  const words2 = new Set(text2.split(/\s+/))
-  const commonCount = words1.filter((w) => words2.has(w)).length
-  if (commonCount > 0) similarity += Math.min(20, commonCount * 5)
-
-  // 3. 상태 동일 — 보조 신호
-  if (block1.urgency === block2.urgency) similarity += 5
-
-  // 4. 위치 근접 — 가까울수록 약간 가산 (최대 15)
-  const distance = Math.sqrt(Math.pow(block1.x - block2.x, 2) + Math.pow(block1.y - block2.y, 2))
-  similarity += Math.max(0, 15 - distance / 40)
-
-  return similarity
-}
 
 export async function POST(req: Request) {
   const supabase = await createSupabaseServerClient()
@@ -129,90 +67,32 @@ export async function POST(req: Request) {
   }
 
   try {
-
-    const { zoneClusters, urgencyClusters, zoneDispersion } = analyzeBlockClusters(regularBlocks, zones)
-
-    // 연결 누락 찾기
-    const potentialConnections: Array<{ block1: string; block2: string; similarity: number }> = []
-    for (let i = 0; i < regularBlocks.length; i++) {
-      for (let j = i + 1; j < regularBlocks.length; j++) {
-        const b1 = regularBlocks[i]
-        const b2 = regularBlocks[j]
-
-        // 이미 연결되어 있으면 스킵
-        if (b1.relatedTo?.includes(b2.id) || b2.relatedTo?.includes(b1.id)) continue
-
-        const similarity = calculateBlockSimilarity(b1, b2)
-        if (similarity > 50) {
-          potentialConnections.push({
-            block1: b1.id,
-            block2: b2.id,
-            similarity: Math.round(similarity),
-          })
-        }
-      }
-    }
-
-    // 우선순위순으로 정렬
-    potentialConnections.sort((a, b) => b.similarity - a.similarity)
-
-    const blockSummary = regularBlocks.map((b) => ({
-      id: b.id,
-      title: b.title,
-      description: (b.detailedNotes || b.description || "").slice(0, MAX_DESC_CHARS),
-      zone: b.zone,
-      urgency: b.urgency,
-      dueDate: b.dueDate || null,
-      position: { x: b.x, y: b.y },
-      connections: b.relatedTo || [],
-      isCompleted: b.isCompleted || false,
-    }))
-
+    // 연결(유사도)·시급도(기한)·위치(분산도) 판단은 클라이언트 룰베이스(lib/tidy/rules.ts)로 이동.
+    // AI 입력은 결 오분류 판단에 필요한 텍스트 맥락만 — 좌표·연결 정보를 빼서 프롬프트를 줄인다.
     const zoneMap = zones.reduce<Record<string, string>>((acc, z) => {
       acc[z.id] = z.label
       return acc
     }, {})
 
-    const blockListText = blockSummary
-      .map(
-        (b, idx) => {
-          const urgencyKey = b.urgency ?? "thinking"
-          const urgencyLabel = URGENCY_META[urgencyKey]?.label ?? urgencyKey
-          return `${idx + 1}. [${b.id}] "${b.title}" — 영역: ${zoneMap[b.zone] || b.zone}, 상태: ${urgencyLabel}, 위치: (${Math.round(
-            b.position.x,
-          )}, ${Math.round(b.position.y)}), 기한: ${b.dueDate || "없음"}, 연결: ${
-            b.connections.length > 0 ? b.connections.join(", ") : "없음"
-          }, 완료: ${b.isCompleted ? "예" : "아니오"}${b.description ? `\n   설명: ${b.description}` : ""}`
-        },
-      )
-      .join("\n")
-
-    const dispersionText = Object.entries(zoneDispersion)
-      .map(([zone, dist]) => `${zoneMap[zone]}: ${dist}px`)
-      .join(", ")
-
-    const potentialText = potentialConnections
-      .slice(0, 5)
-      .map((c) => {
-        const b1 = regularBlocks.find((b) => b.id === c.block1)
-        const b2 = regularBlocks.find((b) => b.id === c.block2)
-        return `"${b1?.title}" ↔ "${b2?.title}" (${c.similarity}%)`
+    const blockListText = regularBlocks
+      .map((b, idx) => {
+        const urgencyKey = b.urgency ?? "thinking"
+        const urgencyLabel = URGENCY_META[urgencyKey]?.label ?? urgencyKey
+        const description = (b.detailedNotes || b.description || "").slice(0, MAX_DESC_CHARS)
+        return `${idx + 1}. [${b.id}] "${b.title}" — 결: ${zoneMap[b.zone] || b.zone || "미분류"}, 상태: ${urgencyLabel}, 기한: ${
+          b.dueDate || "없음"
+        }, 완료: ${b.isCompleted ? "예" : "아니오"}${description ? `\n   설명: ${description}` : ""}`
       })
-      .join(" / ")
+      .join("\n")
 
     const zoneDefsText = zones.map((z) => `${z.id}=${z.label}`).join(", ")
     const completedCount = regularBlocks.filter((b) => b.isCompleted).length
-
-    // urgencyClusters 는 분석용으로만 사용 (현재 미사용 suppress)
-    void urgencyClusters
 
     const prompt = TIDY_COMPREHENSIVE_PROMPT.replace("{TODAY}", new Date().toISOString().split("T")[0])
       .replace("{TOTAL}", String(regularBlocks.length))
       .replace("{COMPLETED}", String(completedCount))
       .replace("{BLOCK_LIST}", blockListText)
       .replace("{ZONE_DEFINITIONS}", zoneDefsText)
-      .replace("{ZONE_DISPERSION}", dispersionText || "없음")
-      .replace("{POTENTIAL_CONNECTIONS}", potentialText || "없음")
 
     const languageDirective =
       lang === "en"
@@ -232,7 +112,7 @@ export async function POST(req: Request) {
           {
             role: "system",
             content:
-              "You are an expert workspace analyst specializing in spatial organization and cognitive ergonomics. You excel at optimizing block positions to create intuitive, efficient layouts that minimize cognitive load and maximize workflow clarity. " +
+              "You are a workspace analyst. Your only jobs: (1) spot blocks whose text content clearly belongs to a different facet (zone) than the one they are in, (2) give one insightful observation about the workspace as a whole. Numeric/positional analysis is handled elsewhere — do not suggest positions, connections, or urgency changes. " +
               languageDirective,
           },
           {
