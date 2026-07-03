@@ -344,7 +344,16 @@ export default function Page() {
 
   const applySnapshot = useCallback((snap: HistorySnapshot) => {
     setCanvases((prev) =>
-      prev.map((c) => (c.id === snap.canvasId ? { ...c, blocks: snap.blocks, updatedAt: Date.now() } : c)),
+      prev.map((c) => {
+        if (c.id !== snap.canvasId) return c
+        // 스냅샷이 그 사이 삭제된 결을 가리키면 미분류로 비운다.
+        // 안 그러면 Undo 가 죽은 zone_id 를 부활시켜 autosave 가 FK 위반으로 죽는다.
+        const validZoneIds = new Set(c.zones.map((z) => z.id))
+        const blocks = snap.blocks.map((b) =>
+          b.zone && !validZoneIds.has(b.zone) ? { ...b, zone: "" } : b,
+        )
+        return { ...c, blocks, updatedAt: Date.now() }
+      }),
     )
   }, [])
 
@@ -844,6 +853,36 @@ export default function Page() {
     }
   }
 
+  // 결 삭제 + 그 결 블럭 재배정 (결 관리 다이얼로그의 삭제 경로).
+  // moveToZoneId 가 "" 이면 미분류. tombstone 포함 전체 블럭을 옮겨야
+  // 죽은 zone_id 가 남아 autosave 가 FK 위반으로 죽는 일이 없다.
+  const handleDeleteZone = (zoneId: string, moveToZoneId: string) => {
+    const survivingZones = zones.filter((z) => z.id !== zoneId)
+    const target = survivingZones.some((z) => z.id === moveToZoneId) ? moveToZoneId : ""
+
+    setCanvases((prev) =>
+      prev.map((canvas) =>
+        canvas.id === currentCanvasId
+          ? {
+              ...canvas,
+              zones: survivingZones,
+              blocks: canvas.blocks.map((b) => (b.zone === zoneId ? { ...b, zone: target } : b)),
+              updatedAt: Date.now(),
+            }
+          : canvas,
+      ),
+    )
+
+    if (user && supabaseRef.current && remoteSyncReadyRef.current) {
+      deleteZones(supabaseRef.current, [zoneId]).catch((err) => {
+        console.error("Supabase delete zones error:", err)
+        toast.error("결 삭제를 클라우드에 반영하지 못했어요.", {
+          description: err instanceof Error ? err.message : String(err),
+        })
+      })
+    }
+  }
+
   // 헤더 결 탭 드래그 정렬: 새 순서의 zone id 배열을 받아 그 순서대로 zones 재구성.
   const handleReorderZones = (orderedIds: string[]) => {
     const byId = new Map(zones.map((z) => [z.id, z]))
@@ -1057,6 +1096,11 @@ export default function Page() {
         onOpenChange={setIsAreaManagementOpen}
         zones={zones}
         onUpdateZones={handleUpdateZones}
+        blockCountByZone={activeBlocks.reduce<Record<string, number>>((acc, b) => {
+          if (b.zone) acc[b.zone] = (acc[b.zone] ?? 0) + 1
+          return acc
+        }, {})}
+        onDeleteZone={handleDeleteZone}
       />
 
       <CanvasSelectorDialog
