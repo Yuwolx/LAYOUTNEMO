@@ -16,6 +16,9 @@ interface WorkBlockCardProps {
   isDragging: boolean
   visibility: "normal" | "emphasized" | "dimmed"
   onPointerDown: (e: React.PointerEvent) => void
+  // Canvas 가 pointerdown 을 선택/연결로 소비했을 때 true 로 세팅. 뒤따르는 click 이
+  // 상세 다이얼로그를 열지 않도록 여기서 확인한다.
+  suppressClickRef?: React.MutableRefObject<boolean>
   onUpdate: (updates: Partial<WorkBlock>, skipHistory?: boolean) => void
   zones: Array<{ id: string; label: string }>
   isDarkMode: boolean
@@ -48,6 +51,7 @@ export function WorkBlockCard({
   isDragging,
   visibility,
   onPointerDown,
+  suppressClickRef,
   onUpdate,
   zones,
   isDarkMode,
@@ -110,6 +114,9 @@ export function WorkBlockCard({
   const handlePointerDown = (e: React.PointerEvent) => {
     startPosRef.current = { x: e.clientX, y: e.clientY }
     isMovingRef.current = false
+    // 새 제스처 시작 — 소비 플래그 초기화. onPointerDown 안에서 선택/연결로
+    // 소비되면 다시 true 가 되고, 아니면 false 로 남아 정상 클릭이 통과한다.
+    if (suppressClickRef) suppressClickRef.current = false
     onPointerDown(e)
   }
 
@@ -123,6 +130,11 @@ export function WorkBlockCard({
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
+    // 선택/연결 모드에서 소비된 탭이면 상세 다이얼로그를 열지 않는다.
+    if (suppressClickRef?.current) {
+      suppressClickRef.current = false
+      return
+    }
     if (!isMovingRef.current && !isDragging && !isCopyMode) {
       if (isAIControl) {
         // Toggle AI state

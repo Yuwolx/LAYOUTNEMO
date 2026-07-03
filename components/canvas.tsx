@@ -83,6 +83,9 @@ export function Canvas({
   // 진행 중인 포인터(마우스/터치/펜) id. 멀티터치에서 두 번째 손가락이 드래그를 방해하지 않게,
   // 그리고 한 번에 하나의 인터랙션만 돌도록 가드로 쓴다.
   const activePointerIdRef = useRef<number | null>(null)
+  // pointerdown 을 선택/연결로 "소비"했을 때 true. 뒤따르는 click(상세 다이얼로그 열기)을
+  // 억제하는 신호. preventDefault 로는 click 이 막히지 않아 카드로 이 ref 를 넘겨 판별한다.
+  const suppressClickRef = useRef(false)
 
   useEffect(() => {
     return () => {
@@ -153,14 +156,24 @@ export function Canvas({
         setIsSpacePressed(false)
         setIsPanning(false)
         panStartRef.current = null
+        // 팬이 pointerup 없이 끝나도(스페이스를 버튼보다 먼저 뗀 경우) 진행중 포인터를
+        // 비워준다. 안 그러면 activePointerIdRef 가 남아 이후 모든 인터랙션이 막힌다.
+        activePointerIdRef.current = null
       }
     }
     const handleBlur = () => {
-      // 윈도우 포커스 잃으면 키 떼는 이벤트를 못 받을 수 있으니 안전하게 리셋.
+      // 윈도우 포커스 잃으면 키/포인터 떼는 이벤트를 못 받을 수 있으니 안전하게 리셋.
       setIsSpacePressed(false)
       setIsPanning(false)
       setIsCopyMode(false) // alt 가 stuck 된 상태로 남아 클릭 시 복제되는 버그 방지.
       panStartRef.current = null
+      // 진행중이던 팬/드래그/마퀴를 안전하게 종료. activePointerIdRef 가 남으면 캔버스가
+      // 영구 잠기고, draggingId 가 남으면 복귀 시 블럭이 커서에 붙는다.
+      activePointerIdRef.current = null
+      setDraggingId(null)
+      setDragStartPos(null)
+      groupDragRef.current = null
+      setMarquee(null)
     }
 
     window.addEventListener("keydown", handleKeyDown)
@@ -336,6 +349,7 @@ export function Canvas({
         }
       }
       setConnectingId(null)
+      suppressClickRef.current = true // 연결 완료 탭이 상세 다이얼로그를 열지 않도록
       return
     }
 
@@ -348,6 +362,7 @@ export function Canvas({
         else next.add(blockId)
         return next
       })
+      suppressClickRef.current = true // 선택 토글 탭이 상세 다이얼로그를 열지 않도록
       return
     }
 
@@ -810,6 +825,7 @@ export function Canvas({
             isDragging={draggingId === block.id}
             visibility={getBlockVisibility(block)}
             onPointerDown={(e) => handlePointerDown(e, block.id)}
+            suppressClickRef={suppressClickRef}
             onUpdate={(updates, skipHistory) => onUpdateBlock(block.id, updates, skipHistory)}
             zones={zonesArray}
             isDarkMode={isDarkMode}
