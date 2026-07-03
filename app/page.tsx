@@ -1045,7 +1045,9 @@ export default function Page() {
         open={isReflectionDialogOpen}
         onOpenChange={setIsReflectionDialogOpen}
         blocks={activeBlocks}
-        onUpdateBlocks={setBlocks}
+        // id 단위 병합이라 activeBlocks 에 없는 soft-delete 블럭(동기화 tombstone)이 보존되고,
+        // 수락 1회 = 히스토리 1커밋이라 Undo 로 되돌릴 수 있다.
+        onApplyChanges={handleBatchUpdateBlocks}
         isAIEnabled={isAIEnabled}
         zones={zones}
       />
