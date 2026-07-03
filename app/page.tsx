@@ -816,10 +816,21 @@ export default function Page() {
     const removedIds = (currentCanvas?.zones ?? [])
       .map((z) => z.id)
       .filter((id) => !newIds.has(id))
+    const removedSet = new Set(removedIds)
 
     setCanvases((prev) =>
       prev.map((canvas) =>
-        canvas.id === currentCanvasId ? { ...canvas, zones: newZones, updatedAt: Date.now() } : canvas,
+        canvas.id === currentCanvasId
+          ? {
+              ...canvas,
+              zones: newZones,
+              // 삭제된 결을 가리키던 블럭은 로컬에서도 결을 비운다. 안 그러면 DB 의
+              // zone_id(on delete set null)와 어긋나, 다음 autosave 가 삭제된 zone_id 로
+              // 블럭을 upsert → FK 위반 → 해당 캔버스 블럭 저장이 통째로 죽는다.
+              blocks: canvas.blocks.map((b) => (removedSet.has(b.zone) ? { ...b, zone: "" } : b)),
+              updatedAt: Date.now(),
+            }
+          : canvas,
       ),
     )
 
