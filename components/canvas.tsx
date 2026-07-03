@@ -356,8 +356,15 @@ export function Canvas({
         setScale(next)
         setPan({ x: cx - ((cx - p.x) / s) * next, y: cy - ((cy - p.y) / s) * next })
       } else {
-        const dx = e.deltaMode === 1 ? e.deltaX * 16 : e.deltaX
-        setPan((prev) => ({ x: prev.x - dx, y: prev.y - dy }))
+        let dx = e.deltaMode === 1 ? e.deltaX * 16 : e.deltaX
+        let dyPan = dy
+        // Shift+휠 = 좌우 팬 (피그마와 동일). 브라우저에 따라 shift 시 이미 deltaX 로
+        // 주기도 하므로, deltaX 가 비어 있을 때만 축을 바꾼다.
+        if (e.shiftKey && dx === 0) {
+          dx = dyPan
+          dyPan = 0
+        }
+        setPan((prev) => ({ x: prev.x - dx, y: prev.y - dyPan }))
       }
     }
     el.addEventListener("wheel", handleWheel, { passive: false })
@@ -1107,7 +1114,8 @@ export function Canvas({
                 : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
             }`}
           >
-            {Math.round(scale * 100)}% ↺
+            {/* 숫자는 데스크톱(정밀 조절)용 — 터치 기기에선 리셋 아이콘만 */}
+            <span className="[@media(any-pointer:coarse)]:hidden">{Math.round(scale * 100)}% </span>↺
           </button>
         )}
 
