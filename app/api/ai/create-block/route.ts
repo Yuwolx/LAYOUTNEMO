@@ -5,6 +5,12 @@ import { createBlockAIOutputSchema, type AIErrorPayload } from "@/lib/ai/schemas
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { reserveAICredit, refundAICredit } from "@/lib/ai/quota"
 
+// Vercel 함수 실행 상한 + OpenAI fetch 자체 타임아웃(환불 시간 확보) + 응답 토큰 상한
+export const maxDuration = 30
+
+const FETCH_TIMEOUT_MS = 25_000
+const MAX_COMPLETION_TOKENS = 600
+
 const errorResponse = (code: AIErrorPayload["code"], message: string, status: number) =>
   NextResponse.json<{ error: AIErrorPayload }>({ error: { code, message } }, { status })
 
@@ -27,6 +33,9 @@ export async function POST(req: Request) {
   // 입력 길이 상한 — 거대한 붙여넣기로 토큰 비용이 폭주하는 것을 막는다(클라이언트에도 maxLength 있음).
   if (typeof input.userInput !== "string" || input.userInput.length > 4000) {
     return errorResponse("invalid_response", "Input is too long (max 4000 chars).", 400)
+  }
+  if (!Array.isArray(input.zones)) {
+    return errorResponse("invalid_response", "zones must be an array.", 400)
   }
 
   const apiKey = process.env.OPENAI_API_KEY
@@ -68,6 +77,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
@@ -83,6 +93,7 @@ export async function POST(req: Request) {
           },
         ],
         temperature: 0.3,
+        max_tokens: MAX_COMPLETION_TOKENS,
         response_format: { type: "json_object" },
       }),
     })

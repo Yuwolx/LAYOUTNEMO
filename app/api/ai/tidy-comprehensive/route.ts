@@ -6,6 +6,16 @@ import type { WorkBlock, Zone } from "@/types"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { reserveAICredit, refundAICredit } from "@/lib/ai/quota"
 
+// Vercel 함수 실행 상한. 기본값(10s)이면 OpenAI 응답이 늦을 때 함수가 중간에 죽어
+// 크레딧 환불조차 못 한다. fetch 자체는 아래 FETCH_TIMEOUT_MS 로 먼저 끊어 환불 시간을 확보.
+export const maxDuration = 60
+
+const FETCH_TIMEOUT_MS = 45_000
+// 토큰 비용 방어: 블럭 수·설명 길이·응답 크기 상한
+const MAX_BLOCKS = 150
+const MAX_DESC_CHARS = 300
+const MAX_COMPLETION_TOKENS = 2500
+
 const errorResponse = (code: AIErrorPayload["code"], message: string, status: number) =>
   NextResponse.json<{ error: AIErrorPayload }>({ error: { code, message } }, { status })
 
@@ -88,9 +98,13 @@ export async function POST(req: Request) {
     return errorResponse("invalid_response", "Request body is not valid JSON.", 400)
   }
   const { blocks, zones, language } = input
+  if (!Array.isArray(blocks) || !Array.isArray(zones)) {
+    return errorResponse("invalid_response", "blocks and zones must be arrays.", 400)
+  }
   const lang = language ?? "ko"
 
-  const regularBlocks = blocks.filter((b) => !b.isGuide)
+  // 블럭 수 상한 — 초과분은 잘라서 분석 (프롬프트 크기 = 토큰 비용 방어)
+  const regularBlocks = blocks.filter((b) => !b.isGuide).slice(0, MAX_BLOCKS)
 
   if (regularBlocks.length === 0) {
     return NextResponse.json({
@@ -145,7 +159,7 @@ export async function POST(req: Request) {
     const blockSummary = regularBlocks.map((b) => ({
       id: b.id,
       title: b.title,
-      description: b.detailedNotes || b.description || "",
+      description: (b.detailedNotes || b.description || "").slice(0, MAX_DESC_CHARS),
       zone: b.zone,
       urgency: b.urgency,
       dueDate: b.dueDate || null,
@@ -210,6 +224,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
@@ -225,6 +240,7 @@ export async function POST(req: Request) {
           },
         ],
         temperature: 0.6,
+        max_tokens: MAX_COMPLETION_TOKENS,
         response_format: { type: "json_object" },
       }),
     })

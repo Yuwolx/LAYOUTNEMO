@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { getAdminSessionToken } from "@/lib/admin/session"
+import { createAdminSessionToken, verifyAdminSessionToken, safeEqual } from "@/lib/admin/session"
 
 const COOKIE = "admin_session"
 const MAX_AGE = 60 * 60 * 8 // 8시간
@@ -42,11 +42,20 @@ export async function POST(req: Request) {
     )
   }
 
-  const { id, password } = await req.json()
+  const body = await req.json().catch(() => null)
+  const id = typeof body?.id === "string" ? body.id : ""
+  const password = typeof body?.password === "string" ? body.password : ""
 
+  const adminId = process.env.ADMIN_ID
+  const adminPassword = process.env.ADMIN_PASSWORD
+
+  // 자격증명 비교는 timing-safe 로 — === 는 앞자리부터 일치할수록 비교가 길어져
+  // 응답 시간으로 문자 단위 추측이 가능하다. env 미설정이면 무조건 거부.
   if (
-    id !== process.env.ADMIN_ID ||
-    password !== process.env.ADMIN_PASSWORD
+    !adminId ||
+    !adminPassword ||
+    !safeEqual(id, adminId) ||
+    !safeEqual(password, adminPassword)
   ) {
     recordFailure(ip)
     return NextResponse.json({ error: "인증 실패" }, { status: 401 })
@@ -55,7 +64,7 @@ export async function POST(req: Request) {
   failures.delete(ip) // 성공 시 카운터 리셋
 
   const cookieStore = await cookies()
-  cookieStore.set(COOKIE, getAdminSessionToken(), {
+  cookieStore.set(COOKIE, createAdminSessionToken(MAX_AGE), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -69,8 +78,7 @@ export async function POST(req: Request) {
 export async function GET() {
   const cookieStore = await cookies()
   const token = cookieStore.get(COOKIE)?.value
-  const valid = Boolean(token) && token === getAdminSessionToken()
-  return NextResponse.json({ valid })
+  return NextResponse.json({ valid: verifyAdminSessionToken(token) })
 }
 
 export async function DELETE() {
