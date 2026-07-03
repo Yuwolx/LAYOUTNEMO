@@ -7,6 +7,7 @@ import "./globals.css"
 import { LanguageProvider } from "@/lib/i18n/context"
 import { AuthProvider } from "@/lib/auth/context"
 import { Toaster } from "@/components/ui/sonner"
+import { RegisterSW } from "@/components/register-sw"
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
@@ -15,6 +16,7 @@ export const viewport = {
   width: "device-width",
   maximumScale: 2,
   userScalable: true,
+  themeColor: "#fafaf9",
 }
 
 const TITLE = "LAYOUTNEMO — 캔버스 위 사고 공간"
@@ -52,7 +54,16 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description: twitterDesc,
     },
-    // icons 는 app/icon.svg + app/apple-icon.svg 가 Next.js 에서 자동 등록됨.
+    // icons 는 app/icon.svg 가 자동 등록됨. iOS 홈 화면용은 PNG 가 필요해 명시.
+    icons: {
+      apple: "/icons/apple-touch-icon.png",
+    },
+    // iOS 홈 화면 설치(PWA) 시 standalone 실행 + 앱 이름.
+    appleWebApp: {
+      capable: true,
+      title: "LAYOUTNEMO",
+      statusBarStyle: "default",
+    },
   }
 }
 
@@ -68,6 +79,7 @@ export default function RootLayout({
           <LanguageProvider>{children}</LanguageProvider>
         </AuthProvider>
         <Toaster position="top-center" richColors closeButton />
+        <RegisterSW />
         {/* <Analytics /> */}
       </body>
     </html>
