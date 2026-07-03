@@ -24,6 +24,7 @@ LAYOUTNEMO를 만들면서 마주친 문제, 선택, 삽질, 배운 것을 기�
 
 | 날짜 | 제목 | 상태 |
 |------|------|------|
+| 2026-07-03 | [검토가 열어 본 뚜껑 — 권한 상승, 오픈 리다이렉트, 잠기는 캔버스, 태블릿 헤더]({{ site.baseurl }}/docs/devlog/2026-07-03-review-driven-fixes/) | ✅ 공개 |
 | 2026-07-02 | [손가락 하나로 — 태블릿 터치 지원]({{ site.baseurl }}/docs/devlog/2026-07-02-touch-support/) | ✅ 공개 |
 | 2026-07-02 | [여러 개를 한 번에, 하나를 위로 — 멀티 선택과 대표 블럭]({{ site.baseurl }}/docs/devlog/2026-07-02-multi-select-and-pin/) | ✅ 공개 |
 | 2026-07-01 | [있는데 안 이어져 있던 것들 — AI 한도, 빠진 사용량 집계, 첫 인사]({{ site.baseurl }}/docs/devlog/2026-07-01-quota-and-missing-analytics/) | ✅ 공개 |
