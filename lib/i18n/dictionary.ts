@@ -42,6 +42,9 @@ export const DICT = {
     "dialog.manageFacets.title": "결 관리",
     "dialog.manageFacets.description": "작업 공간의 결을 추가하거나 수정할 수 있어요.",
     "dialog.manageFacets.placeholder": "새 결 이름",
+    "facet.delete.moveHeading": "블럭을 어디로 옮길까요?",
+    "facet.delete.unassigned": "미분류 (결 없음)",
+    "facet.delete.apply": "옮기고 삭제",
     "dialog.trash.title": "휴지통",
     "dialog.canvasSelector.title": "캔버스 선택",
 
@@ -156,6 +159,9 @@ export const DICT = {
     "dialog.manageFacets.title": "Manage Facets",
     "dialog.manageFacets.description": "Add or edit facets in this workspace.",
     "dialog.manageFacets.placeholder": "New facet name",
+    "facet.delete.moveHeading": "Where should its blocks go?",
+    "facet.delete.unassigned": "Unassigned (no facet)",
+    "facet.delete.apply": "Move & delete",
     "dialog.trash.title": "Trash",
     "dialog.canvasSelector.title": "Select Canvas",
 

@@ -4,8 +4,9 @@ import { useState, useEffect } from "react"
 import { Sparkles, Loader2, CheckCircle2, XCircle } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import type { WorkBlock } from "@/types"
+import type { Urgency, WorkBlock } from "@/types"
 import type { MultiStageTidyResult } from "@/lib/ai/types"
+import { URGENCY_KEYS } from "@/lib/constants/urgency"
 import { useLanguage, useT } from "@/lib/i18n/context"
 import { toast } from "sonner"
 import type { AIErrorCode } from "@/lib/ai/schemas"
@@ -14,7 +15,8 @@ interface ReflectionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   blocks: WorkBlock[]
-  onUpdateBlocks: (blocks: WorkBlock[]) => void
+  /** 수락한 제안의 변경분만 전달 — 전체 blocks 교체가 아니라 id 단위 병합(삭제 블럭 보존 + 히스토리 커밋)은 부모가 담당 */
+  onApplyChanges: (updates: Array<{ id: string; updates: Partial<WorkBlock> }>) => void
   isAIEnabled: boolean
   zones: { id: string; label: string }[]
 }
@@ -23,7 +25,7 @@ export function ReflectionDialog({
   open,
   onOpenChange,
   blocks,
-  onUpdateBlocks,
+  onApplyChanges,
   isAIEnabled,
   zones,
 }: ReflectionDialogProps) {
@@ -142,38 +144,37 @@ export function ReflectionDialog({
     if (!result?.suggestions || currentIndex >= result.suggestions.length) return
 
     const suggestion = result.suggestions[currentIndex]
-    const newBlocks = [...blocks]
+    const knownIds = new Set(blocks.map((b) => b.id))
+    const updates: Array<{ id: string; updates: Partial<WorkBlock> }> = []
+    const zoneIds = new Set(zones.map((z) => z.id))
 
+    // AI 제안은 프롬프트가 허용한 필드(x/y/relatedTo/zone/urgency)만 적용한다.
+    // isDeleted/isCompleted 같은 수명주기 필드는 응답이 뭐라 하든 건드리지 않음.
     suggestion.changes.forEach((change) => {
-      const blockIndex = newBlocks.findIndex((b) => b.id === change.blockId)
-      if (blockIndex === -1) return
-
-      const block = newBlocks[blockIndex]
+      if (!knownIds.has(change.blockId)) return
 
       if (change.field === "relatedTo") {
-        newBlocks[blockIndex] = {
-          ...block,
-          relatedTo: Array.isArray(change.suggestedValue) ? change.suggestedValue : [],
-        }
+        const related = Array.isArray(change.suggestedValue)
+          ? change.suggestedValue.filter((id) => knownIds.has(id) && id !== change.blockId)
+          : []
+        updates.push({ id: change.blockId, updates: { relatedTo: related } })
       } else if (change.field === "x" || change.field === "y") {
-        newBlocks[blockIndex] = {
-          ...block,
-          [change.field]: Number(change.suggestedValue),
+        const value = Number(change.suggestedValue)
+        if (Number.isFinite(value)) {
+          updates.push({ id: change.blockId, updates: { [change.field]: value } })
         }
-      } else if (change.field === "zone" || change.field === "urgency") {
-        newBlocks[blockIndex] = {
-          ...block,
-          [change.field]: String(change.suggestedValue),
+      } else if (change.field === "zone") {
+        if (typeof change.suggestedValue === "string" && zoneIds.has(change.suggestedValue)) {
+          updates.push({ id: change.blockId, updates: { zone: change.suggestedValue } })
         }
-      } else {
-        newBlocks[blockIndex] = {
-          ...block,
-          [change.field]: change.suggestedValue,
+      } else if (change.field === "urgency") {
+        if (URGENCY_KEYS.includes(change.suggestedValue as Urgency)) {
+          updates.push({ id: change.blockId, updates: { urgency: change.suggestedValue as Urgency } })
         }
       }
     })
 
-    onUpdateBlocks(newBlocks)
+    if (updates.length > 0) onApplyChanges(updates)
     setAppliedCount((prev) => prev + 1)
 
     if (currentIndex < result.suggestions.length - 1) {
