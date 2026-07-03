@@ -2,8 +2,9 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Mail, User, Calendar } from "lucide-react"
+import { Mail, User, Calendar, MonitorSmartphone } from "lucide-react"
 import { useLanguage, useT } from "@/lib/i18n/context"
+import { usePWAInstall } from "@/lib/pwa/install-prompt"
 
 interface AboutDialogProps {
   open: boolean
@@ -22,6 +23,10 @@ const INFO = {
     website: "웹사이트",
     feedback: "피드백 보내기",
     close: "닫기",
+    installTitle: "앱으로 설치",
+    installDesc: "홈 화면에 추가하면 주소창 없는 전체화면 앱으로 실행되고, 오프라인에서도 열립니다.",
+    installButton: "앱으로 설치",
+    installIOS: "Safari 하단의 공유 버튼을 누른 뒤 ‘홈 화면에 추가’를 선택하세요.",
   },
   en: {
     title: "About LAYOUTNEMO",
@@ -34,6 +39,10 @@ const INFO = {
     website: "Website",
     feedback: "Send feedback",
     close: "Close",
+    installTitle: "Install as app",
+    installDesc: "Add it to your home screen to run full-screen without the address bar, and open it offline.",
+    installButton: "Install app",
+    installIOS: "Tap Safari’s Share button, then choose “Add to Home Screen”.",
   },
 } as const
 
@@ -46,6 +55,9 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
   const { language } = useLanguage()
   const t = useT()
   const info = INFO[language]
+  const { canPrompt, isIOS, isStandalone, promptInstall } = usePWAInstall()
+  // 이미 앱으로 실행 중이거나, 원클릭 프롬프트도 iOS 안내도 못 주는 브라우저면 섹션 숨김.
+  const showInstall = !isStandalone && (canPrompt || isIOS)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -60,6 +72,27 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
             <p className="text-sm text-muted-foreground font-light mb-3">{info.tagline}</p>
             <p className="text-sm leading-relaxed text-foreground/80">{info.description}</p>
           </div>
+
+          {showInstall && (
+            <div className="pt-2 border-t border-border/30">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/60 text-foreground/70">
+                  <MonitorSmartphone className="h-[18px] w-[18px]" />
+                </span>
+                <div className="min-w-0 text-sm leading-relaxed">
+                  <p className="font-semibold text-foreground">{info.installTitle}</p>
+                  <p className="text-foreground/65">{info.installDesc}</p>
+                  {canPrompt ? (
+                    <Button size="sm" className="mt-2.5" onClick={promptInstall}>
+                      {info.installButton}
+                    </Button>
+                  ) : (
+                    <p className="mt-1.5 text-xs text-muted-foreground">{info.installIOS}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2.5 pt-2 border-t border-border/30">
             <div className="flex items-center gap-2 text-sm">
