@@ -206,7 +206,8 @@ export async function POST(req: Request) {
     // urgencyClusters 는 분석용으로만 사용 (현재 미사용 suppress)
     void urgencyClusters
 
-    const prompt = TIDY_COMPREHENSIVE_PROMPT.replace("{TOTAL}", String(regularBlocks.length))
+    const prompt = TIDY_COMPREHENSIVE_PROMPT.replace("{TODAY}", new Date().toISOString().split("T")[0])
+      .replace("{TOTAL}", String(regularBlocks.length))
       .replace("{COMPLETED}", String(completedCount))
       .replace("{BLOCK_LIST}", blockListText)
       .replace("{ZONE_DEFINITIONS}", zoneDefsText)

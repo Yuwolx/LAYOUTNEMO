@@ -73,6 +73,9 @@ export function ReflectionDialog({
             detailedNotes: b.detailedNotes,
             zone: b.zone,
             urgency: b.urgency || "thinking",
+            // 기한 — 서버 프롬프트가 "기한 임박인데 상태가 시급이 아님" 판단에 쓴다.
+            // 이전엔 안 보내서 AI 가 모든 블럭을 기한 없음으로 봤다.
+            dueDate: b.dueDate || null,
             x: b.x,
             y: b.y,
             relatedTo: b.relatedTo || [],
