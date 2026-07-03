@@ -150,6 +150,7 @@ export const TIDY_COMPREHENSIVE_PROMPT = `
 사용자가 자기 작업 공간을 점검하도록 도와라. 자동 정리가 아니라, 의미 있는 한 마디씩 던지는 체크포인트다.
 
 ## 입력
+- 오늘 날짜: {TODAY} (기한 임박 여부는 이 날짜 기준으로 판단)
 - 전체 블럭: {TOTAL} 개 (완료 {COMPLETED} 개 포함)
 - 블럭 목록:
 {BLOCK_LIST}
