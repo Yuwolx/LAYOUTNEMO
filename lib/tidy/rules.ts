@@ -21,6 +21,13 @@ const DISPERSION_THRESHOLD = 700
 // 모으기 제안 시 중심에서 이 반경의 링 위로 배치 (그대로 중심에 두면 블럭이 겹친다).
 const GATHER_RADIUS = 280
 const MAX_POSITION_ZONES = 2
+// 정렬 격자 간격 — 캔버스 배경 도트(48px)의 절반. 이 격자에서 벗어난 블럭을 정돈 대상으로.
+const ALIGN_GRID = 24
+// 격자에서 이 이하로 어긋난 건 이미 정렬된 것으로 간주.
+const ALIGN_EPSILON = 1
+const MIN_ALIGN_BLOCKS = 2
+
+const snapToGrid = (v: number) => Math.round(v / ALIGN_GRID) * ALIGN_GRID
 
 type Lang = "ko" | "en"
 
@@ -171,11 +178,16 @@ export function generateRuleSuggestions(
     if (outliers.length > 0) scattered.push({ zoneId, outliers, cx, cy })
   })
 
+  // 모으기 대상 블럭은 아래 격자 정렬에서 제외 — 두 제안이 같은 블럭의 좌표를
+  // 서로 덮어쓰면 나중 것이 이기면서 앞의 제안이 조용히 무효가 된다.
+  const gatheredIds = new Set<string>()
+
   scattered
     .sort((a, b) => b.outliers[0].dist - a.outliers[0].dist)
     .slice(0, MAX_POSITION_ZONES)
     .forEach(({ zoneId, outliers, cx, cy }) => {
       const label = zoneLabel(zoneId)
+      outliers.forEach(({ block }) => gatheredIds.add(block.id))
       suggestions.push({
         id: `rule-position-${zoneId}`,
         type: "position",
@@ -187,21 +199,51 @@ export function generateRuleSuggestions(
             : `'${label}' 결 블럭 ${outliers.length}개가 멀리 떨어져 있어요. 근처로 모아둘까요?`,
         changes: outliers.flatMap(({ block, dist }) => {
           // 중심 방향은 유지한 채 링 반경 위로 — 중심에 그대로 두면 서로 겹친다.
+          // 목표점도 격자에 스냅해 모은 결과가 정렬돼 보이게.
           const dirX = (block.x + block.width / 2 - cx) / dist
           const dirY = (block.y + block.height / 2 - cy) / dist
-          const targetX = cx + dirX * GATHER_RADIUS - block.width / 2
-          const targetY = cy + dirY * GATHER_RADIUS - block.height / 2
+          const targetX = snapToGrid(cx + dirX * GATHER_RADIUS - block.width / 2)
+          const targetY = snapToGrid(cy + dirY * GATHER_RADIUS - block.height / 2)
           const reason =
             language === "en"
               ? `${Math.round(dist)}px from the ${label} cluster center`
               : `${label} 결 중심에서 ${Math.round(dist)}px 떨어짐`
           return [
-            { blockId: block.id, field: "x", currentValue: block.x, suggestedValue: Math.round(targetX), reason },
-            { blockId: block.id, field: "y", currentValue: block.y, suggestedValue: Math.round(targetY), reason },
+            { blockId: block.id, field: "x", currentValue: block.x, suggestedValue: targetX, reason },
+            { blockId: block.id, field: "y", currentValue: block.y, suggestedValue: targetY, reason },
           ]
         }),
       })
     })
+
+  // ── 4. 격자 정렬 — 어긋난 블럭들을 배경 도트 격자에 맞춰 정돈 ──
+  const misaligned = blocks.filter((b) => {
+    if (gatheredIds.has(b.id)) return false
+    return (
+      Math.abs(b.x - snapToGrid(b.x)) > ALIGN_EPSILON || Math.abs(b.y - snapToGrid(b.y)) > ALIGN_EPSILON
+    )
+  })
+
+  if (misaligned.length >= MIN_ALIGN_BLOCKS) {
+    const reason =
+      language === "en"
+        ? "Snap to the canvas grid so edges line up"
+        : "캔버스 격자에 맞춰 가장자리가 나란해짐"
+    suggestions.unshift({
+      id: "rule-align-grid",
+      type: "position",
+      priority: "medium",
+      blockIds: misaligned.map((b) => b.id),
+      question:
+        language === "en"
+          ? `${misaligned.length} block(s) sit slightly off the grid. Align them neatly?`
+          : `블럭 ${misaligned.length}개가 격자에서 살짝 어긋나 있어요. 반듯하게 정렬할까요?`,
+      changes: misaligned.flatMap((b) => [
+        { blockId: b.id, field: "x", currentValue: b.x, suggestedValue: snapToGrid(b.x), reason },
+        { blockId: b.id, field: "y", currentValue: b.y, suggestedValue: snapToGrid(b.y), reason },
+      ]),
+    })
+  }
 
   return suggestions
 }

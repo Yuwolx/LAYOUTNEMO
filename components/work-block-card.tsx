@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { BlockDetailDialog } from "@/components/block-detail-dialog"
 import { MoreVertical, Sparkles, Power, ExternalLink, Archive, Pin, Link2, Copy } from "lucide-react"
 import type { WorkBlock } from "@/types"
-import { URGENCY_META } from "@/lib/constants/urgency"
+import { URGENCY_META, GUIDE_SHADOW_LIGHT, GUIDE_SHADOW_DARK } from "@/lib/constants/urgency"
 import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedBlockField } from "@/lib/i18n/seed"
 
@@ -211,7 +211,17 @@ export function WorkBlockCard({
           className={`
           relative w-full h-full bg-card text-card-foreground border-border/60 rounded-2xl
           hover:shadow-xl hover:border-border
-          ${isDarkMode ? urgencyShadowsDark[block.urgency || "thinking"] : urgencyShadows[block.urgency || "thinking"]}
+          ${
+            // 가이드 블럭은 시급도 색 대신 전용 청록 글로우 — 내 작업이 아니라 앱이 준 설명임을 색으로 구분.
+            isGuide
+              ? isDarkMode
+                ? GUIDE_SHADOW_DARK
+                : GUIDE_SHADOW_LIGHT
+              : isDarkMode
+                ? urgencyShadowsDark[block.urgency || "thinking"]
+                : urgencyShadows[block.urgency || "thinking"]
+          }
+          ${isGuide && !isAIControl ? "ring-1 ring-teal-400/40" : ""}
           ${isCompleted ? "opacity-80" : "opacity-100"}
           ${visibility === "emphasized" ? "scale-[1.22] shadow-2xl" : "scale-100"}
           ${visibility === "emphasized" ? "brightness-105" : "brightness-100"}

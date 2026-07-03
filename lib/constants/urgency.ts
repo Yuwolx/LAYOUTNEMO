@@ -72,3 +72,8 @@ export const URGENCY_RGB: Record<Urgency, string> = {
 
 /** 대표(공지) 블럭 전용 색 — 시급도 4색·선택 보라와 겹치지 않는 앰버. 핀/링/글로우 통일용. */
 export const NOTICE_RGB = "245, 158, 11"
+
+/** 가이드 블럭 전용 색 — 시급도 4색·공지 앰버·선택 보라와 겹치지 않는 청록(teal). */
+export const GUIDE_RGB = "45, 212, 191"
+export const GUIDE_SHADOW_LIGHT = "shadow-[0_6px_28px_rgba(45,212,191,0.55)]"
+export const GUIDE_SHADOW_DARK = "shadow-[0_6px_26px_rgba(45,212,191,0.40)]"
