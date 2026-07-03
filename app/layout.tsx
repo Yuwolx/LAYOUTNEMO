@@ -54,8 +54,13 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description: twitterDesc,
     },
-    // icons 는 app/icon.svg 가 자동 등록됨. iOS 홈 화면용은 PNG 가 필요해 명시.
+    // 주의: icons 필드를 명시하면 app/icon.svg 자동 등록이 "대체"된다 —
+    // apple 만 적었다가 파비콘 링크가 통째로 사라진 적 있음. icon 도 반드시 함께 명시.
     icons: {
+      icon: [
+        { url: "/icon.svg", type: "image/svg+xml" },
+        { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      ],
       apple: "/icons/apple-touch-icon.png",
     },
     // iOS 홈 화면 설치(PWA) 시 standalone 실행 + 앱 이름.
