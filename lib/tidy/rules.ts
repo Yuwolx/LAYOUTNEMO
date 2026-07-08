@@ -21,13 +21,17 @@ const DISPERSION_THRESHOLD = 700
 // 모으기 제안 시 중심에서 이 반경의 링 위로 배치 (그대로 중심에 두면 블럭이 겹친다).
 const GATHER_RADIUS = 280
 const MAX_POSITION_ZONES = 2
-// 정렬 격자 간격 — 캔버스 배경 도트(48px)의 절반. 줄/열 목표값을 여기에 스냅.
+// (모으기 전용) 격자 스냅 간격 — 캔버스 배경 도트(48px)의 절반. 정렬(#4)은 더 이상 격자에 안 스냅.
 const ALIGN_GRID = 24
-// 이 이내로 어긋난 블럭들은 "같은 줄/열에 두려던 의도"로 판정해 칼같이 맞춘다.
-// (격자 스냅만으로는 최대 12px 이동이라 눈에 안 보인다 — 정렬은 서로에 대한 것.)
-const ALIGN_TOLERANCE = 48
 const ALIGN_EPSILON = 1
 const MIN_ALIGN_BLOCKS = 2
+// 줄(가로) 판정: 윗변(top) y 가 이 이내로 인접하면 같은 줄로 묶어 머리를 맞춘다.
+// 넓힐수록 더 흩어진 side-by-side 블럭도 머리 맞춤 대상(사용자 요청 "정렬 기준 넓히자").
+const ROW_TOLERANCE = 100
+// 열(세로) 판정: 좌변(left) x 가 이 이내로 인접하면 같은 열. 넓혀서 x축 정렬을 더 관대하게.
+const COL_TOLERANCE = 180
+// 간격 균등화 시 블럭 간 최소 여백(겹침 방지).
+const ALIGN_MIN_GAP = 24
 // 모으기 배치 시 블럭 간 최소 간격. 겹치면 중심 반대 방향으로 이만큼씩 밀어낸다.
 const GATHER_GAP = 24
 const GATHER_STEP = 48
@@ -42,21 +46,22 @@ const rectsOverlap = (a: Rect, b: Rect) =>
   a.y < b.y + b.height + GATHER_GAP &&
   a.y + a.height + GATHER_GAP > b.y
 
-/** 같은 축 값이 ALIGN_TOLERANCE 이내로 뭉치는 블럭들을 그리디로 묶는다. */
-function clusterByAxis(items: Array<{ id: string; value: number }>): Array<Array<{ id: string; value: number }>> {
+/** 1D gap 클러스터: 정렬 후 인접 값 차이가 tolerance 를 넘으면 끊는다. 2개 이상 뭉친 것만 반환.
+ *  (running-mean 방식보다 순서 의존이 적고, "어디서 줄이 갈리나"를 이웃 간격으로 직관적으로 판정.) */
+function clusterByGap(
+  items: Array<{ id: string; value: number }>,
+  tolerance: number,
+): Array<Array<{ id: string; value: number }>> {
   const sorted = [...items].sort((a, b) => a.value - b.value)
   const clusters: Array<Array<{ id: string; value: number }>> = []
   let current: Array<{ id: string; value: number }> = []
-  let sum = 0
   sorted.forEach((item) => {
-    const mean = current.length > 0 ? sum / current.length : null
-    if (mean === null || Math.abs(item.value - mean) <= ALIGN_TOLERANCE) {
+    const prev = current.length > 0 ? current[current.length - 1].value : null
+    if (prev === null || item.value - prev <= tolerance) {
       current.push(item)
-      sum += item.value
     } else {
       clusters.push(current)
       current = [item]
-      sum = item.value
     }
   })
   if (current.length > 0) clusters.push(current)
@@ -269,44 +274,71 @@ export function generateRuleSuggestions(
       })
     })
 
-  // ── 4. 줄/열 맞춤 — "대충 나란히" 놓인 블럭들을 칼같이 정렬 ──
-  // 격자 스냅(최대 12px 이동)은 눈에 안 보인다. 정렬은 블럭들 서로에 대한 것:
-  // y 가 ALIGN_TOLERANCE 이내로 뭉친 블럭들은 같은 줄로, x 가 뭉친 블럭들은 같은 열로.
+  // ── 4. 줄/열 맞춤 (rows-first) — "대충 놓인" 블럭을 한눈에 정돈되게 ──
+  // v1/v2 실패(제안은 떴으나 이동량이 작아 티 안 남) 교훈으로 재작성:
+  //  - 넓은 허용범위(ROW/COL_TOLERANCE)로 더 흩어진 블럭도 줄/열에 편입 → 스냅 이동이 큼
+  //  - 라인 위 블럭도 "간격 균등화"로 재분배 → 이미 붙어 있던 것도 눈에 띄게 정돈(v1/v2에 없던 핵심)
+  //  - 격자 재-스냅 제거(이동량 깎던 범인). 목표는 클러스터 실제 평균.
+  // 사용자 클라리: x 정렬 = 옆 블럭들과 "머리(윗변) 맞추기". 그래서 줄은 top(y)으로 묶어
+  //  공통 top(머리)에 맞추고 + 가로 간격 균등화. 세로 열은 줄에 안 든 나머지에만(좌변 정렬).
   const alignable = blocks.filter((b) => !gatheredIds.has(b.id))
-  const pendingAlign = new Map<string, { x?: number; y?: number }>()
+  const byId = new Map(alignable.map((b) => [b.id, b]))
+  const alignMoves = new Map<string, { x?: number; y?: number }>()
+  const inRow = new Set<string>()
 
-  clusterByAxis(alignable.map((b) => ({ id: b.id, value: b.y }))).forEach((cluster) => {
-    const target = snapToGrid(cluster.reduce((s, i) => s + i.value, 0) / cluster.length)
-    cluster.forEach(({ id, value }) => {
-      if (Math.abs(value - target) > ALIGN_EPSILON) {
-        pendingAlign.set(id, { ...pendingAlign.get(id), y: target })
-      }
+  const setMove = (id: string, axis: "x" | "y", target: number, current: number) => {
+    if (Math.abs(target - current) > ALIGN_EPSILON) {
+      alignMoves.set(id, { ...alignMoves.get(id), [axis]: target })
+    }
+  }
+
+  // 양끝(첫 블럭 시작변·끝 블럭 끝변) 고정 후 사이 간격을 균일하게 재분배. size = 폭 또는 높이.
+  // 범위에 다 안 들어가면 gap 을 최소 여백으로 고정하고 끝변을 바깥으로 민다(겹침 방지).
+  const distribute = (ordered: WorkBlock[], axis: "x" | "y", size: (b: WorkBlock) => number) => {
+    const start = ordered[0][axis]
+    const last = ordered[ordered.length - 1]
+    const end = last[axis] + size(last)
+    const totalSize = ordered.reduce((s, b) => s + size(b), 0)
+    const gapCount = ordered.length - 1
+    let gap = gapCount > 0 ? (end - start - totalSize) / gapCount : 0
+    if (gap < ALIGN_MIN_GAP) gap = ALIGN_MIN_GAP
+    let cursor = start
+    ordered.forEach((b) => {
+      setMove(b.id, axis, Math.round(cursor), b[axis])
+      cursor += size(b) + gap
     })
+  }
+
+  // 줄: top(y)으로 묶어 머리(공통 top) 맞춤 + 가로 간격 균등화
+  clusterByGap(alignable.map((b) => ({ id: b.id, value: b.y })), ROW_TOLERANCE).forEach((cluster) => {
+    const row = cluster.map((c) => byId.get(c.id)!).sort((a, b) => a.x - b.x)
+    row.forEach((b) => inRow.add(b.id))
+    const commonTop = Math.round(row.reduce((s, b) => s + b.y, 0) / row.length)
+    row.forEach((b) => setMove(b.id, "y", commonTop, b.y))
+    distribute(row, "x", (b) => b.width)
   })
 
-  clusterByAxis(alignable.map((b) => ({ id: b.id, value: b.x }))).forEach((cluster) => {
-    const target = snapToGrid(cluster.reduce((s, i) => s + i.value, 0) / cluster.length)
-    cluster.forEach(({ id, value }) => {
-      if (Math.abs(value - target) > ALIGN_EPSILON) {
-        pendingAlign.set(id, { ...pendingAlign.get(id), x: target })
-      }
-    })
+  // 열: 줄에 안 든 나머지만 — 좌변(x)으로 묶어 공통 x 맞춤 + 세로 간격 균등화 (세로 리스트 정돈용)
+  const leftover = alignable.filter((b) => !inRow.has(b.id))
+  clusterByGap(leftover.map((b) => ({ id: b.id, value: b.x })), COL_TOLERANCE).forEach((cluster) => {
+    const col = cluster.map((c) => byId.get(c.id)!).sort((a, b) => a.y - b.y)
+    const commonLeft = Math.round(col.reduce((s, b) => s + b.x, 0) / col.length)
+    col.forEach((b) => setMove(b.id, "x", commonLeft, b.x))
+    distribute(col, "y", (b) => b.height)
   })
 
-  if (pendingAlign.size >= MIN_ALIGN_BLOCKS) {
-    const reason =
-      language === "en" ? "Line up rows and columns exactly" : "줄과 열이 정확히 나란해짐"
-    const byId = new Map(alignable.map((b) => [b.id, b]))
+  if (alignMoves.size >= MIN_ALIGN_BLOCKS) {
+    const reason = language === "en" ? "Line up rows and even out the spacing" : "줄을 맞추고 간격을 고르게"
     suggestions.unshift({
       id: "rule-align",
       type: "position",
       priority: "medium",
-      blockIds: Array.from(pendingAlign.keys()),
+      blockIds: Array.from(alignMoves.keys()),
       question:
         language === "en"
-          ? `${pendingAlign.size} block(s) are almost — but not quite — lined up. Align them exactly?`
-          : `블럭 ${pendingAlign.size}개가 거의 나란한데 살짝씩 어긋나 있어요. 줄 맞춰 정렬할까요?`,
-      changes: Array.from(pendingAlign.entries()).flatMap(([id, move]) => {
+          ? `${alignMoves.size} block(s) can be tidied into neat rows. Align them?`
+          : `블럭 ${alignMoves.size}개를 줄 맞춰 깔끔하게 정돈할 수 있어요. 정렬할까요?`,
+      changes: Array.from(alignMoves.entries()).flatMap(([id, move]) => {
         const block = byId.get(id)
         if (!block) return []
         const entries = []
