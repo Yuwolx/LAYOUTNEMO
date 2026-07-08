@@ -1057,14 +1057,14 @@ export default function Page() {
   if (!isClient) {
     return (
       <div
-        className={`min-h-screen ${isDarkMode ? "dark bg-[#151823]" : "bg-[#fafaf9]"}`}
+        className={`min-h-screen ${isDarkMode ? "dark bg-[#21252b]" : "bg-[#fafaf9]"}`}
         aria-hidden
       />
     )
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? "dark bg-[#151823] text-zinc-100" : "bg-[#fafaf9] text-foreground"}`}>
+    <div className={`min-h-screen ${isDarkMode ? "dark bg-[#21252b] text-foreground" : "bg-[#fafaf9] text-foreground"}`}>
       <Header
         onCreateBlock={() => setIsCreateDialogOpen(true)}
         onReflect={() => setIsReflectionDialogOpen(true)}

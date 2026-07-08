@@ -916,7 +916,7 @@ export function Canvas({
       ref={canvasRef}
       onPointerDown={handleCanvasPointerDown}
       className={`fixed inset-0 top-[104px] overflow-hidden transition-colors duration-700 ${
-        isDarkMode ? (selectedZone ? "bg-zinc-800" : "bg-zinc-900") : selectedZone ? "bg-[#f5f5f4]" : "bg-[#fafaf9]"
+        isDarkMode ? (selectedZone ? "bg-[#282c34]" : "bg-[#21252b]") : selectedZone ? "bg-[#f5f5f4]" : "bg-[#fafaf9]"
       }`}
       style={{
         backgroundImage: isDarkMode

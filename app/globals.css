@@ -41,44 +41,47 @@
 
 .dark {
   /*
-   * LAYOUTNEMO 다크 모드 토큰 — 남색 기조의 차분한 톤.
-   * 포인트:
-   *  - oklch 의 hue(3번째 값)에 살짝 남색(~265) 을 섞어 중성 회색 대신 깊은 블루 블랙
-   *  - --background 와 --card 의 밝기 차이를 확보해 블럭이 배경에 녹아들지 않게 함
-   *  - --foreground 를 덜 형광에 가깝게 살짝 낮춰 눈부심 완화
+   * LAYOUTNEMO 다크 모드 토큰 — One Dark(VSCode/Atom) 기조.
+   * 이전 순남색(hue 265) 판이 "안 예쁘고 가시성 떨어진다" 피드백 → 청록빛 회색의 One Dark 로 교체.
+   * hex 로 명시하는 이유: 시안에서 사용자가 승인한 정확한 One Dark 색값이 소스이므로,
+   * oklch 로 근사 변환하지 않고 그대로 못박는다(:root 라이트는 여전히 oklch, 여긴 의도적 hex).
+   * 원칙:
+   *  - --background(#21252b, 바닥) 와 --card(#2d323b) 밝기 차 확보 → 블럭이 바닥에서 뜬다(가시성).
+   *  - 본문 가독을 위해 --card-foreground 는 확실히 밝게(#dfe3ea), --muted-foreground 는
+   *    코드 주석색(#5c6370)처럼 너무 흐리지 않게 읽히는 회색(#98a0af)으로.
    */
-  --background: oklch(0.17 0.012 265);
-  --foreground: oklch(0.955 0.002 265);
-  --card: oklch(0.215 0.012 265);                   /* 배경보다 한 단계 밝게 — 카드 부각 */
-  --card-foreground: oklch(0.955 0.002 265);
-  --popover: oklch(0.215 0.012 265);
-  --popover-foreground: oklch(0.955 0.002 265);
-  --primary: oklch(0.955 0.002 265);
-  --primary-foreground: oklch(0.23 0.012 265);
-  --secondary: oklch(0.285 0.012 265);
-  --secondary-foreground: oklch(0.955 0.002 265);
-  --muted: oklch(0.285 0.012 265);
-  --muted-foreground: oklch(0.72 0.008 265);
-  --accent: oklch(0.285 0.012 265);
-  --accent-foreground: oklch(0.955 0.002 265);
-  --destructive: oklch(0.48 0.16 25);
-  --destructive-foreground: oklch(0.97 0.02 25);
-  --border: oklch(0.31 0.012 265);
-  --input: oklch(0.31 0.012 265);
-  --ring: oklch(0.56 0.04 265);
-  --chart-1: oklch(0.62 0.18 264);
-  --chart-2: oklch(0.7 0.15 162);
-  --chart-3: oklch(0.76 0.19 70);
-  --chart-4: oklch(0.62 0.22 304);
-  --chart-5: oklch(0.64 0.22 16);
-  --sidebar: oklch(0.22 0.012 265);
-  --sidebar-foreground: oklch(0.955 0.002 265);
-  --sidebar-primary: oklch(0.62 0.18 264);
-  --sidebar-primary-foreground: oklch(0.955 0.002 265);
-  --sidebar-accent: oklch(0.285 0.012 265);
-  --sidebar-accent-foreground: oklch(0.955 0.002 265);
-  --sidebar-border: oklch(0.31 0.012 265);
-  --sidebar-ring: oklch(0.56 0.04 265);
+  --background: #21252b;
+  --foreground: #dfe3ea;
+  --card: #2d323b;                                  /* 바닥보다 한 단계 밝게 — 카드 부각 */
+  --card-foreground: #dfe3ea;
+  --popover: #2c313a;
+  --popover-foreground: #dfe3ea;
+  --primary: #dfe3ea;                               /* 모노톤 유지: 근-흰 주색 */
+  --primary-foreground: #21252b;
+  --secondary: #333944;
+  --secondary-foreground: #dfe3ea;
+  --muted: #333944;
+  --muted-foreground: #98a0af;                      /* 라벨/메타 — 흐리되 읽히는 선 */
+  --accent: #333944;
+  --accent-foreground: #dfe3ea;
+  --destructive: #e06c75;                           /* One Dark red */
+  --destructive-foreground: #fbeaec;
+  --border: #3b414d;
+  --input: #3b414d;
+  --ring: #61afef;                                  /* One Dark blue 포커스 */
+  --chart-1: #61afef;
+  --chart-2: #98c379;
+  --chart-3: #e5c07b;
+  --chart-4: #c678dd;
+  --chart-5: #e06c75;
+  --sidebar: #21252b;
+  --sidebar-foreground: #dfe3ea;
+  --sidebar-primary: #61afef;
+  --sidebar-primary-foreground: #dfe3ea;
+  --sidebar-accent: #333944;
+  --sidebar-accent-foreground: #dfe3ea;
+  --sidebar-border: #3b414d;
+  --sidebar-ring: #61afef;
 }
 
 @theme inline {
