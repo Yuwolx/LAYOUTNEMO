@@ -1106,6 +1106,7 @@ export default function Page() {
         focusRequest={focusRequest}
         onTogglePin={handleTogglePin}
         onOpenDetail={(id) => setDetailBlockId(id)}
+        isReflecting={isReflectionDialogOpen}
       />
 
       <CreateBlockDialog

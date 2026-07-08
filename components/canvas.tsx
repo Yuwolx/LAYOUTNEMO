@@ -26,6 +26,8 @@ interface CanvasProps {
   onTogglePin?: (blockId: string) => void
   /** 대표 배너 클릭 시 해당 블럭 상세 열기. */
   onOpenDetail?: (blockId: string) => void
+  /** 정리하기 다이얼로그가 열려 있는지 — 열려 있으면 대표 배너를 백드롭 밑으로 내려 함께 블러 처리. */
+  isReflecting?: boolean
 }
 
 // 우하단 갈무리함 drop 감지 여유. 아이콘 가장자리 주변까지 자연스럽게 받아준다.
@@ -61,6 +63,7 @@ export function Canvas({
   focusRequest,
   onTogglePin,
   onOpenDetail,
+  isReflecting = false,
 }: CanvasProps) {
   const t = useT()
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -1036,9 +1039,10 @@ export function Canvas({
 
       </div>
 
-      {/* 대표(공지) 블럭 배너 — 캔버스 상단(헤더 아래)에 고정. 팬/줌 무관. 클릭 시 상세 열림. */}
+      {/* 대표(공지) 블럭 배너 — 캔버스 상단(헤더 아래)에 고정. 팬/줌 무관. 클릭 시 상세 열림.
+          정리하기 중엔 z 를 백드롭(z-40) 밑으로 내려 다른 블럭처럼 함께 블러된다(헤더 z-50 은 그대로 유지). */}
       {pinnedBlock && (
-        <div className="absolute left-1/2 top-7 z-[70] w-[min(90%,420px)] -translate-x-1/2">
+        <div className={`absolute left-1/2 top-7 w-[min(90%,420px)] -translate-x-1/2 ${isReflecting ? "z-30" : "z-[70]"}`}>
           <div
             role="button"
             tabIndex={0}
