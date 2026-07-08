@@ -259,25 +259,40 @@ export function generateRuleSuggestions(
     const ordered = [...gridBlocks].sort((a, b) => a.y - b.y || a.x - b.x)
     const cols = Math.max(1, Math.round(Math.sqrt(ordered.length)))
     const colWidth = Math.max(...ordered.map((b) => b.width)) + GRID_GAP
-    const anchorX = Math.min(...ordered.map((b) => b.x))
-    const gridSpanRight = anchorX + cols * colWidth - GRID_GAP
+    // 행별 높이 미리 계산 → 격자 전체 크기 산출(중심 배치에 필요).
+    const rowHeights: number[] = []
+    for (let s = 0; s < ordered.length; s += cols) {
+      rowHeights.push(Math.max(...ordered.slice(s, s + cols).map((b) => b.height)))
+    }
+    const gridWidth = cols * colWidth - GRID_GAP
+    const gridHeight = rowHeights.reduce((a, b) => a + b, 0) + (rowHeights.length - 1) * GRID_GAP
 
-    // 가이드 블럭이 격자의 가로 범위에 걸치면, 격자를 그 아래에서 시작해 안 겹치게 한다.
+    // 기존 위치 고수: 격자를 좌상단 구석이 아니라 블럭들 무게중심에 맞춰 배치한다.
+    // (전면 재배치라 개별 블럭은 셀로 가지만, 정돈된 격자가 "있던 자리 근처"에 생긴다.)
+    const cx = ordered.reduce((s, b) => s + b.x + b.width / 2, 0) / ordered.length
+    const cy = ordered.reduce((s, b) => s + b.y + b.height / 2, 0) / ordered.length
+    const anchorX = Math.round(cx - gridWidth / 2)
+    let anchorY = Math.round(cy - gridHeight / 2)
+
+    // 가이드 블럭이 격자의 가로 범위에 걸치면, 격자를 그 아래로 밀어 안 겹치게 한다.
+    const gridSpanRight = anchorX + gridWidth
     const guideBottoms = allBlocks
       .filter((b) => b.isGuide && !b.isCompleted && !b.isDeleted)
       .filter((b) => b.x < gridSpanRight && b.x + b.width > anchorX)
       .map((b) => b.y + b.height + GRID_GAP)
-    const anchorY = Math.max(Math.min(...ordered.map((b) => b.y)), ...guideBottoms)
+    if (guideBottoms.length) anchorY = Math.max(anchorY, ...guideBottoms)
 
     const gridMoves = new Map<string, { x: number; y: number }>()
     let rowY = anchorY
+    let rowIdx = 0
     for (let start = 0; start < ordered.length; start += cols) {
       const rowBlocks = ordered.slice(start, start + cols)
       rowBlocks.forEach((b, c) => {
         const tx = anchorX + c * colWidth
         if (b.x !== tx || b.y !== rowY) gridMoves.set(b.id, { x: tx, y: rowY })
       })
-      rowY += Math.max(...rowBlocks.map((b) => b.height)) + GRID_GAP
+      rowY += rowHeights[rowIdx] + GRID_GAP
+      rowIdx++
     }
 
     if (gridMoves.size >= MIN_GRID_MOVES) {
