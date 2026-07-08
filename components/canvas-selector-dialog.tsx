@@ -85,7 +85,7 @@ export function CanvasSelectorDialog({
               key={canvas.id}
               className={`
                 flex items-center gap-3 p-3 rounded-lg border-2 transition-all
-                ${currentCanvasId === canvas.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800"}
+                ${currentCanvasId === canvas.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950" : "border-gray-200 dark:border-[#3b414d] hover:bg-gray-50 dark:hover:bg-[#333944]"}
               `}
             >
               {editingId === canvas.id ? (
