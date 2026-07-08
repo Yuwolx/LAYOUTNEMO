@@ -215,20 +215,20 @@ export function generateRuleSuggestions(
   // 모으기 대상 블럭은 아래 격자 정렬에서 제외 — 두 제안이 같은 블럭의 좌표를
   // 서로 덮어쓰면 나중 것이 이기면서 앞의 제안이 조용히 무효가 된다.
   const gatheredIds = new Set<string>()
-
-  scattered
+  const gatherTargets = scattered
     .sort((a, b) => b.outliers[0].dist - a.outliers[0].dist)
     .slice(0, MAX_POSITION_ZONES)
-    .forEach(({ zoneId, outliers, cx, cy }) => {
-      const label = zoneLabel(zoneId)
-      const outlierIds = new Set(outliers.map(({ block }) => block.id))
-      outlierIds.forEach((id) => gatheredIds.add(id))
+  gatherTargets.forEach(({ outliers }) => outliers.forEach(({ block }) => gatheredIds.add(block.id)))
 
-      // 충돌 회피: 이동하지 않는 모든 블럭 + 먼저 배치된 목표들과 겹치면
-      // 자기 방향(중심→바깥)으로 한 발짝씩 밀어낸다. "모으되 겹치진 않게".
-      const occupied: Rect[] = blocks
-        .filter((b) => !outlierIds.has(b.id))
-        .map((b) => ({ x: b.x, y: b.y, width: b.width, height: b.height }))
+  // 충돌 회피 장애물: 캔버스에 "보이는" 모든 블럭 — 규칙 대상이 아닌 가이드 블럭도
+  // 실재하는 장애물이므로 포함해야 한다(빼면 사용 설명서 위에 얹힌다). 이동 대상만 제외.
+  // 목록은 모든 결이 공유 — 결 A 가 배치한 목표 위에 결 B 가 얹히지 않도록.
+  const occupied: Rect[] = allBlocks
+    .filter((b) => !b.isCompleted && !b.isDeleted && !gatheredIds.has(b.id))
+    .map((b) => ({ x: b.x, y: b.y, width: b.width, height: b.height }))
+
+  gatherTargets.forEach(({ zoneId, outliers, cx, cy }) => {
+      const label = zoneLabel(zoneId)
 
       const changes = outliers.flatMap(({ block, dist }) => {
         const dirX = (block.x + block.width / 2 - cx) / dist
