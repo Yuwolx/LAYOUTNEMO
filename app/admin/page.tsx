@@ -1,11 +1,66 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
+import {
+  AreaChart, Area, BarChart, Bar, LineChart, Line, Cell,
+  XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid,
+} from "recharts"
+import { URGENCY_META, URGENCY_RGB } from "@/lib/constants/urgency"
+import type { Urgency } from "@/types"
 
-type DailyCount = { date: string; count: number }
-type UserRow = { id: string; email: string | null; plan: string; created_at: string; block_count: number }
-type Stats = { totalUsers: number; todaySignups: number; totalBlocks: number; aiThisMonth: number }
+// 차트 색 — 인디고/앰버/레드 3색 (라이트·다크 양 모드 대비 검증 완료)
+const C_PRIMARY = "#6366f1"
+const C_SECONDARY = "#d97706"
+const C_DANGER = "#ef4444"
+
+type SeriesPoint = {
+  date: string
+  dau: number
+  signups: number
+  blocksCreated: number
+  blocksDeleted: number
+  aiCreate: number
+  aiTidy: number
+}
+type UserRow = {
+  id: string
+  email: string | null
+  plan: string
+  created_at: string
+  block_count: number
+  canvas_count: number
+  ai_count: number
+  last_active: string | null
+}
+type Stats = {
+  totalUsers: number
+  todaySignups: number
+  weekSignups: number
+  proUsers: number
+  totalBlocks: number
+  completedBlocks: number
+  deletedBlocks: number
+  guideBlocks: number
+  totalCanvases: number
+  totalZones: number
+  aiThisMonth: number
+  aiCreateTotal: number
+  aiTidyTotal: number
+  dauToday: number
+  wau: number
+  mau: number
+}
+type UrgencyDist = { key: Urgency; count: number }
+
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"]
+
+function formatLastActive(iso: string | null): string {
+  if (!iso) return "30일+"
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000))
+  if (days <= 0) return "오늘"
+  if (days === 1) return "어제"
+  return `${days}일 전`
+}
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null)
@@ -15,9 +70,9 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false)
 
   const [stats, setStats] = useState<Stats | null>(null)
-  const [dauData, setDauData] = useState<DailyCount[]>([])
-  const [blockTrend, setBlockTrend] = useState<DailyCount[]>([])
-  const [aiData, setAiData] = useState<{ name: string; count: number }[]>([])
+  const [series, setSeries] = useState<SeriesPoint[]>([])
+  const [urgencyDist, setUrgencyDist] = useState<UrgencyDist[]>([])
+  const [heatmap, setHeatmap] = useState<number[][]>([])
   const [users, setUsers] = useState<UserRow[]>([])
 
   // 쿠키 유효성 확인
@@ -58,31 +113,10 @@ export default function AdminPage() {
     const res = await fetch("/api/admin/stats")
     if (!res.ok) return
     const data = await res.json()
-
     setStats(data.stats)
-
-    const dauMap = new Map<string, Set<string>>()
-    ;(data.sessionsRaw ?? []).forEach((e: { created_at: string; user_id: string }) => {
-      const d = e.created_at.split("T")[0]
-      if (!dauMap.has(d)) dauMap.set(d, new Set())
-      dauMap.get(d)!.add(e.user_id)
-    })
-    setDauData(buildLast30Days(dauMap))
-
-    const blockMap = new Map<string, number>()
-    ;(data.blocksRaw ?? []).forEach((e: { created_at: string }) => {
-      const d = e.created_at.split("T")[0]
-      blockMap.set(d, (blockMap.get(d) ?? 0) + 1)
-    })
-    setBlockTrend(buildLast30DaysCount(blockMap))
-
-    const aiCount: Record<string, number> = {}
-    ;(data.aiRaw ?? []).forEach((e: { name: string }) => { aiCount[e.name] = (aiCount[e.name] ?? 0) + 1 })
-    setAiData([
-      { name: "AI 생성", count: aiCount["ai_create_used"] ?? 0 },
-      { name: "정리하기", count: aiCount["ai_tidy_used"] ?? 0 },
-    ])
-
+    setSeries(data.series ?? [])
+    setUrgencyDist(data.urgencyDist ?? [])
+    setHeatmap(data.heatmap ?? [])
     setUsers(data.users ?? [])
   }
 
@@ -126,6 +160,16 @@ export default function AdminPage() {
     )
   }
 
+  const heatmapMax = Math.max(1, ...heatmap.flat())
+  const urgencyData = urgencyDist.map(({ key, count }) => ({
+    key,
+    label: URGENCY_META[key].label,
+    count,
+  }))
+  const completionRate = stats && stats.totalBlocks > 0
+    ? Math.round((stats.completedBlocks / stats.totalBlocks) * 100)
+    : 0
+
   // 대시보드
   return (
     <div className="min-h-screen bg-background p-8 max-w-6xl mx-auto">
@@ -137,61 +181,158 @@ export default function AdminPage() {
       </div>
 
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-10">
           {[
-            { label: "총 유저", value: stats.totalUsers },
-            { label: "오늘 가입", value: stats.todaySignups },
-            { label: "총 블록", value: stats.totalBlocks },
-            { label: "이번달 AI", value: stats.aiThisMonth },
-          ].map(({ label, value }) => (
-            <div key={label} className="rounded-xl border border-border/60 bg-card p-5">
+            { label: "총 유저", value: stats.totalUsers, sub: `PRO ${stats.proUsers}` },
+            { label: "오늘 가입", value: stats.todaySignups, sub: `7일 ${stats.weekSignups}` },
+            { label: "DAU (오늘)", value: stats.dauToday, sub: null },
+            { label: "WAU", value: stats.wau, sub: null },
+            { label: "MAU", value: stats.mau, sub: null },
+            { label: "이번달 AI", value: stats.aiThisMonth, sub: `누적 ${stats.aiCreateTotal + stats.aiTidyTotal}` },
+            { label: "총 블록", value: stats.totalBlocks, sub: `가이드 ${stats.guideBlocks}` },
+            { label: "완료 블록", value: stats.completedBlocks, sub: `완료율 ${completionRate}%` },
+            { label: "삭제 블록", value: stats.deletedBlocks, sub: null },
+            { label: "캔버스", value: stats.totalCanvases, sub: null },
+            { label: "결", value: stats.totalZones, sub: null },
+            { label: "AI 생성/정리", value: stats.aiCreateTotal, sub: `정리 ${stats.aiTidyTotal}` },
+          ].map(({ label, value, sub }) => (
+            <div key={label} className="rounded-xl border border-border/60 bg-card p-4">
               <p className="text-xs text-muted-foreground mb-1">{label}</p>
-              <p className="text-3xl font-light">{value.toLocaleString()}</p>
+              <p className="text-2xl font-light">{value.toLocaleString()}</p>
+              {sub && <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>}
             </div>
           ))}
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6 mb-10">
+      <div className="grid md:grid-cols-2 gap-6 mb-6">
         <div className="rounded-xl border border-border/60 bg-card p-5">
           <p className="text-sm font-light mb-4">DAU (30일)</p>
           <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={dauData}>
+            <AreaChart data={series}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.06} />
               <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
               <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
               <Tooltip formatter={(v) => [v, "유저"]} />
-              <Area type="monotone" dataKey="count" stroke="#6366f1" fill="#6366f1" fillOpacity={0.15} strokeWidth={2} />
+              <Area type="monotone" dataKey="dau" stroke={C_PRIMARY} fill={C_PRIMARY} fillOpacity={0.15} strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card p-5">
-          <p className="text-sm font-light mb-4">블록 생성 추이 (30일)</p>
+          <p className="text-sm font-light mb-4">신규 가입 (30일)</p>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={blockTrend}>
+            <BarChart data={series}>
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.06} />
               <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
               <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-              <Tooltip formatter={(v) => [v, "블록"]} />
-              <Bar dataKey="count" fill="#6366f1" fillOpacity={0.7} radius={[3, 3, 0, 0]} />
+              <Tooltip formatter={(v) => [v, "명"]} />
+              <Bar dataKey="signups" fill={C_PRIMARY} fillOpacity={0.7} radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card p-5">
-          <p className="text-sm font-light mb-4">AI 기능 사용량 (전체)</p>
+          <p className="text-sm font-light mb-4">블록 생성 · 삭제 (30일)</p>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={aiData} layout="vertical">
+            <LineChart data={series}>
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.06} />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
+              <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+              <Tooltip />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Line type="monotone" dataKey="blocksCreated" name="생성" stroke={C_PRIMARY} strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="blocksDeleted" name="삭제" stroke={C_DANGER} strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-card p-5">
+          <p className="text-sm font-light mb-4">AI 사용 추이 (30일)</p>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={series}>
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.06} />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
+              <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+              <Tooltip />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Line type="monotone" dataKey="aiCreate" name="AI 생성" stroke={C_PRIMARY} strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="aiTidy" name="정리하기" stroke={C_SECONDARY} strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-card p-5">
+          <p className="text-sm font-light mb-4">시급도 분포 (활성 블록)</p>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={urgencyData} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.06} />
+              <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+              <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} width={40} />
+              <Tooltip formatter={(v) => [v, "블록"]} />
+              <Bar dataKey="count" radius={[0, 3, 3, 0]}>
+                {urgencyData.map((d) => (
+                  <Cell key={d.key} fill={`rgb(${URGENCY_RGB[d.key]})`} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-card p-5">
+          <p className="text-sm font-light mb-4">AI 기능 사용량 (누적)</p>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart
+              data={stats ? [
+                { name: "AI 생성", count: stats.aiCreateTotal },
+                { name: "정리하기", count: stats.aiTidyTotal },
+              ] : []}
+              layout="vertical"
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.06} />
               <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={60} />
               <Tooltip formatter={(v) => [v, "회"]} />
-              <Bar dataKey="count" fill="#f59e0b" fillOpacity={0.7} radius={[0, 3, 3, 0]} />
+              <Bar dataKey="count" fill={C_SECONDARY} fillOpacity={0.7} radius={[0, 3, 3, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
+
+      {heatmap.length > 0 && (
+        <div className="rounded-xl border border-border/60 bg-card p-5 mb-10">
+          <p className="text-sm font-light mb-4">활동 히트맵 — 요일 × 시간 (30일, KST)</p>
+          <div className="overflow-x-auto">
+            <div className="min-w-[640px]">
+              {heatmap.map((row, day) => (
+                <div key={day} className="flex items-center gap-1 mb-1">
+                  <span className="w-6 text-[10px] text-muted-foreground shrink-0">{WEEKDAYS[day]}</span>
+                  {row.map((count, hour) => (
+                    <div
+                      key={hour}
+                      title={`${WEEKDAYS[day]} ${hour}시 · ${count}회`}
+                      className="flex-1 aspect-square rounded-[3px] min-w-[14px]"
+                      style={{
+                        backgroundColor: count > 0
+                          ? `rgba(99, 102, 241, ${0.15 + 0.85 * (count / heatmapMax)})`
+                          : "rgba(128, 128, 128, 0.08)",
+                      }}
+                    />
+                  ))}
+                </div>
+              ))}
+              <div className="flex items-center gap-1 mt-1">
+                <span className="w-6 shrink-0" />
+                {Array.from({ length: 24 }, (_, h) => (
+                  <span key={h} className="flex-1 min-w-[14px] text-center text-[9px] text-muted-foreground">
+                    {h % 3 === 0 ? h : ""}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
         <div className="p-5 border-b border-border/40">
@@ -203,7 +344,10 @@ export default function AdminPage() {
               <tr className="border-b border-border/40 text-muted-foreground text-xs">
                 <th className="text-left p-3 font-normal">이메일</th>
                 <th className="text-left p-3 font-normal">플랜</th>
-                <th className="text-right p-3 font-normal">블록 수</th>
+                <th className="text-right p-3 font-normal">블록</th>
+                <th className="text-right p-3 font-normal">캔버스</th>
+                <th className="text-right p-3 font-normal">AI (30일)</th>
+                <th className="text-right p-3 font-normal">마지막 활동</th>
                 <th className="text-right p-3 font-normal">가입일</th>
               </tr>
             </thead>
@@ -218,14 +362,17 @@ export default function AdminPage() {
                         : "bg-muted text-muted-foreground"
                     }`}>{u.plan}</span>
                   </td>
-                  <td className="p-3 text-right text-muted-foreground">{u.block_count}</td>
+                  <td className="p-3 text-right text-muted-foreground tabular-nums">{u.block_count}</td>
+                  <td className="p-3 text-right text-muted-foreground tabular-nums">{u.canvas_count}</td>
+                  <td className="p-3 text-right text-muted-foreground tabular-nums">{u.ai_count}</td>
+                  <td className="p-3 text-right text-muted-foreground text-xs">{formatLastActive(u.last_active)}</td>
                   <td className="p-3 text-right text-muted-foreground text-xs">
                     {new Date(u.created_at).toLocaleDateString("ko-KR")}
                   </td>
                 </tr>
               ))}
               {users.length === 0 && (
-                <tr><td colSpan={4} className="p-8 text-center text-muted-foreground text-xs">데이터 없음</td></tr>
+                <tr><td colSpan={7} className="p-8 text-center text-muted-foreground text-xs">데이터 없음</td></tr>
               )}
             </tbody>
           </table>
@@ -233,18 +380,4 @@ export default function AdminPage() {
       </div>
     </div>
   )
-}
-
-function buildLast30Days(map: Map<string, Set<string>>): DailyCount[] {
-  return Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
-    return { date: d, count: map.get(d)?.size ?? 0 }
-  })
-}
-
-function buildLast30DaysCount(map: Map<string, number>): DailyCount[] {
-  return Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
-    return { date: d, count: map.get(d) ?? 0 }
-  })
 }
