@@ -221,7 +221,6 @@ export function WorkBlockCard({
                 ? urgencyShadowsDark[block.urgency || "thinking"]
                 : urgencyShadows[block.urgency || "thinking"]
           }
-          ${isGuide && !isAIControl ? "ring-1 ring-teal-400/40" : ""}
           ${isCompleted ? "opacity-80" : "opacity-100"}
           ${visibility === "emphasized" ? "scale-[1.22] shadow-2xl" : "scale-100"}
           ${visibility === "emphasized" ? "brightness-105" : "brightness-100"}
