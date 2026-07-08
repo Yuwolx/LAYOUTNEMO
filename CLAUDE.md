@@ -28,14 +28,17 @@
 
 ## 코드 관례 (반드시 지킬 것)
 
-- **시급도 단일 소스**: `lib/constants/urgency.ts`. 색·라벨·의미를 여기서만 정의. 4단계(thinking/stable/lingering/urgent). 강조/선택 색은 이 4색과 안 겹치게(선택=보라, 공지=앰버).
+- **시급도 단일 소스**: `lib/constants/urgency.ts`. 색·라벨·의미를 여기서만 정의. 4단계(thinking/stable/lingering/urgent). 강조/선택 색은 이 4색과 안 겹치게(선택=보라, 공지=앰버, 가이드=청록). 캔버스 시각 언어: 색=의미, 질감=동일(링/테두리로 구분하지 않음).
 - **i18n**: 한/영 문구는 `lib/i18n/seed.ts` 사전 경유. 하드코딩 금지.
 - **드래그 히스토리**: 드래그 중 위치 갱신은 `onUpdateBlock/onBatchUpdateBlocks(..., skipHistory=true)`, 손 뗄 때 최종값 1회만 히스토리 커밋. Undo 한 번에 제자리로.
 - **입력은 Pointer Events**: 마우스·터치 단일 경로. `pointerType`으로 분기, `activePointerId`로 멀티터치 가드. `touch-action: none`으로 브라우저 제스처 차단.
-- **마이그레이션 없는 동기화**: blocks 테이블 `metadata`(jsonb)에 신규 플래그 저장(예: `pinned`). 컬럼 추가 없이 기기 간 동기화.
-- **동기화 삭제 안전**: `saveCanvas`는 스냅샷 pruning을 하지 않음(오래된 탭이 새 블럭 지우는 것 방지). 삭제는 명시적 `deleteBlocks/deleteZones`로만.
+- **마이그레이션 없는 동기화**: blocks/canvases 테이블 `metadata`(jsonb)에 신규 플래그 저장(예: 블럭 `pinned`, 캔버스 `deleted` tombstone). 컬럼 추가 없이 기기 간 동기화.
+- **동기화 삭제 안전**: `saveCanvas`는 스냅샷 pruning을 하지 않고 metadata 컬럼도 건드리지 않음(tombstone 생존 조건). 블럭/결 삭제는 명시적 `deleteBlocks/deleteZones`, 캔버스 삭제는 tombstone(`deleteCanvas`).
+- **정리하기 = 하이브리드**: 연결·기한·위치·격자정렬 제안은 클라이언트 룰(`lib/tidy/rules.ts`, 쿼터 미사용), AI(`tidy-comprehensive`)는 결 오분류+인사이트 전담. 카테고리를 겹치지 않게 유지할 것(중복 제안 방지의 근거). 적용은 체크리스트 일괄 → 히스토리 1커밋.
+- **AI 라우트 방어**: `maxDuration` + fetch 타임아웃(환불 시간 확보) + `max_tokens` + 입력 상한. 적용 필드는 클라이언트에서 화이트리스트(x/y/relatedTo/zone/urgency).
 
-## 현재 상태 (2026-07-02 기준)
+## 현재 상태 (2026-07-03 기준)
 
-- **태블릿 터치 지원**을 방금 master에 머지·배포함(Pointer Events, 한 손가락 팬, ⋮ 메뉴 연결/복사, 선택 모드 토글). **실기기 미검증** — 태블릿에서 감각 확인 필요. 문제 시 `release/pre-touch`(d40fa4c)로 롤백.
-- **다음 후보**(블로그 roadmap 참조): 터치 후속(핀치 줌 + 휴대폰 반응형 레이아웃), 정리하기 삭제 블럭 보존 강화, 결 삭제 시 블럭 재배정 UX, Next.js 보안 패치 업그레이드. 동시 편집 대비 동기화 견고성(tombstone/서버시간 충돌판정)은 그 다음 큰 덩어리.
+- **7/2~7/3 이틀간 16회 배포**: 태블릿 터치(실기기 검증 완료) → next 16.2.10 보안 업그레이드 → 정리하기 tombstone 유실 수정 + 결 삭제 재배정 UX → admin/AI 하드닝 → 헤더 가로 스크롤 → 핀치 줌 + 휴대폰 기본 배율 60% → **PWA**(매니페스트+서비스워커+설치 진입점, 실기기 확인 완료) → 캔버스 tombstone + 저장 재시도 → **하이브리드 정리하기**(룰 0초 + AI 축소 + 체크리스트) + 격자 정렬 룰 + 가이드 블럭 청록. 롤백은 각 배포별 `release/pre-*` 브랜치.
+- **라이브 확인 대기**: 캔버스 tombstone(기기 A 삭제 → B 부활 안 함), 하이브리드 정리하기 룰 임계값 감각(유사도 50/기한 D-3/분산 700px/격자 24px).
+- **다음 후보**(블로그 roadmap 참조): 동기화 2차(서버시간 충돌판정 — DB 트리거 마이그레이션 + 실기기 2대 검증 필요), 블럭 템플릿, 통계/인사이트, Capacitor(스토어 입점 원할 때). 미사용 `ai` 패키지는 제거했음(ai@7 업그레이드 항목은 무효였음).
