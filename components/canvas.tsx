@@ -916,7 +916,7 @@ export function Canvas({
       ref={canvasRef}
       onPointerDown={handleCanvasPointerDown}
       className={`fixed inset-0 top-[104px] overflow-hidden transition-colors duration-700 ${
-        isDarkMode ? (selectedZone ? "bg-zinc-800" : "bg-zinc-900") : selectedZone ? "bg-[#f5f5f4]" : "bg-[#fafaf9]"
+        isDarkMode ? (selectedZone ? "bg-[#282c34]" : "bg-[#21252b]") : selectedZone ? "bg-[#f5f5f4]" : "bg-[#fafaf9]"
       }`}
       style={{
         backgroundImage: isDarkMode
@@ -1052,7 +1052,7 @@ export function Canvas({
             title={pinnedBlock.title}
             className={`flex cursor-pointer items-center gap-4 rounded-2xl px-3.5 py-2.5 transition-all active:scale-[0.99] ${
               isDarkMode
-                ? "bg-zinc-800/95 text-zinc-100 hover:bg-zinc-800"
+                ? "bg-[#333944]/95 text-[#dfe3ea] hover:bg-[#333944]"
                 : "bg-white/95 text-gray-900 hover:bg-white"
             }`}
             style={{ boxShadow: `0 0 16px rgba(${NOTICE_RGB}, 0.5)` }}
@@ -1069,7 +1069,7 @@ export function Canvas({
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold leading-tight">{pinnedBlock.title || "제목 없음"}</div>
               {(pinnedBlock.detailedNotes || pinnedBlock.description) && (
-                <div className={`truncate text-xs leading-tight ${isDarkMode ? "text-zinc-400" : "text-gray-500"}`}>
+                <div className={`truncate text-xs leading-tight ${isDarkMode ? "text-[#98a0af]" : "text-gray-500"}`}>
                   {pinnedBlock.detailedNotes || pinnedBlock.description}
                 </div>
               )}
@@ -1080,7 +1080,7 @@ export function Canvas({
                 onTogglePin?.(pinnedBlock.id)
               }}
               className={`shrink-0 rounded-full p-1.5 transition-colors ${
-                isDarkMode ? "text-zinc-400 hover:bg-white/10" : "text-gray-400 hover:bg-black/5"
+                isDarkMode ? "text-[#98a0af] hover:bg-white/10" : "text-gray-400 hover:bg-black/5"
               }`}
               aria-label="고정 해제"
               title="고정 해제"
@@ -1110,7 +1110,7 @@ export function Canvas({
             title={t("canvas.zoomReset")}
             className={`rounded-full border px-3 py-1.5 text-xs font-medium tabular-nums shadow-md transition-colors ${
               isDarkMode
-                ? "border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                ? "border-[#3b414d] bg-[#333944] text-[#c3cad6] hover:bg-[#3d4450]"
                 : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
             }`}
           >
@@ -1134,7 +1134,7 @@ export function Canvas({
             touchSelectMode
               ? "border-violet-600 bg-violet-600 text-white"
               : isDarkMode
-                ? "border-zinc-700 bg-zinc-800 text-zinc-200"
+                ? "border-[#3b414d] bg-[#333944] text-[#dfe3ea]"
                 : "border-gray-200 bg-white text-gray-700"
           }`}
         >
@@ -1147,7 +1147,7 @@ export function Canvas({
         <div className="absolute bottom-5 left-1/2 z-[80] -translate-x-1/2">
           <div
             className={`flex items-center gap-3 rounded-full border px-4 py-2 text-xs shadow-md ${
-              isDarkMode ? "border-zinc-700 bg-zinc-800 text-zinc-100" : "border-gray-200 bg-white text-gray-800"
+              isDarkMode ? "border-[#3b414d] bg-[#333944] text-[#dfe3ea]" : "border-gray-200 bg-white text-gray-800"
             }`}
           >
             <span>연결할 블럭을 탭하세요</span>
@@ -1179,11 +1179,11 @@ export function Canvas({
         <div className="absolute left-1/2 top-4 z-[90] -translate-x-1/2">
           <div
             className={`flex items-center gap-2 rounded-full border px-3 py-2 shadow-lg ${
-              isDarkMode ? "bg-zinc-800 border-zinc-700 text-zinc-200" : "bg-white border-gray-200 text-gray-800"
+              isDarkMode ? "bg-[#333944] border-[#3b414d] text-[#dfe3ea]" : "bg-white border-gray-200 text-gray-800"
             }`}
           >
             <span className="text-xs font-medium tabular-nums">{selectedIds.size}개 선택</span>
-            <span className={`h-4 w-px ${isDarkMode ? "bg-zinc-700" : "bg-gray-200"}`} />
+            <span className={`h-4 w-px ${isDarkMode ? "bg-[#3d4450]" : "bg-gray-200"}`} />
             <div className="flex items-center gap-1">
               {URGENCY_KEYS.map((key) => (
                 <button
@@ -1196,7 +1196,7 @@ export function Canvas({
                 />
               ))}
             </div>
-            <span className={`h-4 w-px ${isDarkMode ? "bg-zinc-700" : "bg-gray-200"}`} />
+            <span className={`h-4 w-px ${isDarkMode ? "bg-[#3d4450]" : "bg-gray-200"}`} />
             <button
               onClick={archiveSelection}
               className="rounded-full px-2 py-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/10"
@@ -1206,7 +1206,7 @@ export function Canvas({
             <button
               onClick={() => setSelectedIds(new Set())}
               className={`rounded-full px-2 py-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/10 ${
-                isDarkMode ? "text-zinc-400" : "text-gray-400"
+                isDarkMode ? "text-[#98a0af]" : "text-gray-400"
               }`}
             >
               해제

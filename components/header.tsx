@@ -157,9 +157,9 @@ export function Header({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-sm transition-colors duration-700 ${isDarkMode ? "bg-[#151823]/95" : "bg-[#fafaf9]/95"}`}
+      className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-sm transition-colors duration-700 ${isDarkMode ? "bg-[#282c34]/95" : "bg-[#fafaf9]/95"}`}
     >
-      <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-zinc-800" : "border-border/20"}`}>
+      <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-[#3b414d]" : "border-border/20"}`}>
         {/* 폭이 모자라면 요소를 겹치게 두지 않고 가로 스크롤. (이전: 왼쪽 그룹이 min-w-0 로
             줄어드는데 자식은 shrink-0 라 상자를 뚫고 나와 오른쪽 버튼 밑에 깔렸다.)
             모든 기기 폭에 맞춰 숨기기로 대응하는 건 한계가 있어 스크롤을 안전망으로 둔다. */}
@@ -168,7 +168,7 @@ export function Header({
             {/* 깃블로그(gh-pages) 헤더와 동일 톤 — 28px 마크 + LAYOUTNEMO 한 줄, gap 8px. */}
             <div
               className={`h-10 flex items-center shrink-0 gap-2 ml-1 lg:ml-3 ${
-                isDarkMode ? "text-zinc-100" : "text-zinc-900"
+                isDarkMode ? "text-[#dfe3ea]" : "text-zinc-900"
               }`}
               aria-label="LAYOUTNEMO"
             >
@@ -200,7 +200,7 @@ export function Header({
               onClick={onOpenCanvasSelector}
               className={`px-2.5 lg:px-4 py-2 rounded-lg text-sm font-medium transition-all border shrink-0 max-w-[104px] sm:max-w-[160px] lg:max-w-none truncate ${
                 isDarkMode
-                  ? "bg-zinc-800 text-zinc-200 border-zinc-700 hover:bg-zinc-700 hover:border-zinc-600"
+                  ? "bg-[#333944] text-[#dfe3ea] border-[#3b414d] hover:bg-[#3d4450] hover:border-[#4a5160]"
                   : "bg-white text-gray-900 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
               }`}
             >
@@ -212,7 +212,7 @@ export function Header({
               title={t("header.switchLanguage")}
               className={`px-2 lg:px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex items-center gap-1.5 justify-center shrink-0 min-w-0 sm:min-w-[86px] ${
                 isDarkMode
-                  ? "bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700"
+                  ? "bg-[#333944] text-[#c3cad6] border-[#3b414d] hover:bg-[#3d4450]"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
               }`}
             >
@@ -230,7 +230,7 @@ export function Header({
               title="About LAYOUTNEMO"
               className={`inline-flex shrink-0 p-1.5 rounded-lg transition-colors ${
                 isDarkMode
-                  ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+                  ? "text-[#98a0af] hover:text-[#dfe3ea] hover:bg-[#333944]"
                   : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
               }`}
             >
@@ -238,7 +238,7 @@ export function Header({
             </button>
             {/* 마지막 저장시각: iPad 가로(lg)에서도 로그인 상태 헤더가 꽉 차 넘치므로 데스크톱(xl)부터만 */}
             <span
-              className={`text-xs hidden xl:inline-block xl:min-w-[72px] ${isDarkMode ? "text-zinc-400" : "text-gray-400"}`}
+              className={`text-xs hidden xl:inline-block xl:min-w-[72px] ${isDarkMode ? "text-[#98a0af]" : "text-gray-400"}`}
             >
               {formatLastSaved()}
             </span>
@@ -257,7 +257,7 @@ export function Header({
                       ? "bg-blue-600/20 text-blue-300 border-blue-500/30 shadow-[0_6px_20px_rgba(59,130,246,0.22)]"
                       : "bg-blue-50 text-blue-700 border-blue-200"
                     : isDarkMode
-                      ? "bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700"
+                      ? "bg-[#333944] text-[#98a0af] border-[#3b414d] hover:bg-[#3d4450]"
                       : "bg-gray-100 text-gray-500 border-gray-300 hover:bg-gray-200"
                 }
               `}
@@ -268,7 +268,7 @@ export function Header({
 
             {aiUsage && aiUsage.plan === "free" && (
               <span
-                className={`hidden lg:inline text-[11px] tabular-nums shrink-0 ${isDarkMode ? "text-zinc-500" : "text-gray-400"}`}
+                className={`hidden lg:inline text-[11px] tabular-nums shrink-0 ${isDarkMode ? "text-[#7b8494]" : "text-gray-400"}`}
                 title={
                   language === "en"
                     ? `This month — create ${aiUsage.create}/${AI_LIMITS.create}, reflect ${aiUsage.tidy}/${AI_LIMITS.tidy}`
@@ -283,7 +283,7 @@ export function Header({
               variant="outline"
               size="icon"
               onClick={onReset}
-              className={`${isDarkMode ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700" : "bg-background hover:bg-accent"}`}
+              className={`${isDarkMode ? "bg-[#333944] hover:bg-[#3d4450] border-[#3b414d]" : "bg-background hover:bg-accent"}`}
               title={t("header.reset")}
             >
               <RotateCcw className="w-4 h-4" />
@@ -295,7 +295,7 @@ export function Header({
                 size="icon"
                 onClick={onUndo}
                 disabled={!canUndo}
-                className={`${isDarkMode ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700" : "bg-background hover:bg-accent"} ${!canUndo ? "opacity-40 cursor-not-allowed" : ""}`}
+                className={`${isDarkMode ? "bg-[#333944] hover:bg-[#3d4450] border-[#3b414d]" : "bg-background hover:bg-accent"} ${!canUndo ? "opacity-40 cursor-not-allowed" : ""}`}
                 title={`${t("header.undo")} (Cmd/Ctrl+Z)`}
               >
                 <Undo2 className="w-4 h-4" />
@@ -306,7 +306,7 @@ export function Header({
                 size="icon"
                 onClick={onRedo}
                 disabled={!canRedo}
-                className={`${isDarkMode ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700" : "bg-background hover:bg-accent"} ${!canRedo ? "opacity-40 cursor-not-allowed" : ""}`}
+                className={`${isDarkMode ? "bg-[#333944] hover:bg-[#3d4450] border-[#3b414d]" : "bg-background hover:bg-accent"} ${!canRedo ? "opacity-40 cursor-not-allowed" : ""}`}
                 title={`${t("header.redo")} (Cmd/Ctrl+Shift+Z)`}
               >
                 <Undo2 className="w-4 h-4 scale-x-[-1]" />
@@ -318,7 +318,7 @@ export function Header({
               onClick={onToggleDarkMode}
               className={
                 isDarkMode
-                  ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-700 shadow-[0_0_20px_rgba(250,204,21,0.3)]"
+                  ? "bg-[#333944] hover:bg-[#3d4450] border-[#3b414d] shadow-[0_0_20px_rgba(250,204,21,0.3)]"
                   : "bg-background hover:bg-accent"
               }
             >
@@ -342,8 +342,8 @@ export function Header({
         className={`border-t border-b transition-colors duration-700 ${
           isDarkMode
             ? selectedZone
-              ? "bg-zinc-800 border-zinc-700 border-b-zinc-800"
-              : "bg-zinc-900 border-zinc-700 border-b-zinc-900"
+              ? "bg-[#333944] border-[#3b414d] border-b-[#333944]"
+              : "bg-[#21252b] border-[#3b414d] border-b-[#21252b]"
             : selectedZone
               ? "bg-[#f5f5f4] border-stone-300 border-b-[#f5f5f4]"
               : "bg-[#fafaf9] border-stone-300 border-b-[#fafaf9]"
@@ -383,7 +383,7 @@ export function Header({
                   aria-hidden
                   className={`inline-block transition-all duration-150 ${
                     showIndicatorBefore
-                      ? `w-px h-6 mx-1 ${isDarkMode ? "bg-zinc-100" : "bg-foreground"}`
+                      ? `w-px h-6 mx-1 ${isDarkMode ? "bg-[#dfe3ea]" : "bg-foreground"}`
                       : "w-0 h-6"
                   }`}
                 />
@@ -406,10 +406,10 @@ export function Header({
                     ${
                       isSelected
                         ? isDarkMode
-                          ? "bg-zinc-100 text-zinc-900 font-normal shadow-sm"
+                          ? "bg-[#dfe3ea] text-[#21252b] font-normal shadow-sm"
                           : "bg-foreground text-background font-normal shadow-sm"
                         : isDarkMode
-                          ? "text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800"
+                          ? "text-[#c3cad6] hover:text-[#dfe3ea] hover:bg-[#333944]"
                           : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
                     }
                   `}
@@ -437,7 +437,7 @@ export function Header({
                 aria-hidden
                 className={`inline-block transition-all duration-150 ${
                   dropTargetIdx === zones.length
-                    ? `w-px h-6 mx-1 ${isDarkMode ? "bg-zinc-100" : "bg-foreground"}`
+                    ? `w-px h-6 mx-1 ${isDarkMode ? "bg-[#dfe3ea]" : "bg-foreground"}`
                     : "w-0 h-6"
                 }`}
               />
@@ -446,7 +446,7 @@ export function Header({
 
           <button
             onClick={onManageAreas}
-            className={`ml-1 px-2 py-1.5 text-xs rounded-full transition-colors shrink-0 whitespace-nowrap ${isDarkMode ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800" : "text-muted-foreground/60 hover:text-foreground hover:bg-accent/40"}`}
+            className={`ml-1 px-2 py-1.5 text-xs rounded-full transition-colors shrink-0 whitespace-nowrap ${isDarkMode ? "text-[#98a0af] hover:text-[#dfe3ea] hover:bg-[#333944]" : "text-muted-foreground/60 hover:text-foreground hover:bg-accent/40"}`}
           >
             {t("header.addFacet")}
           </button>
@@ -459,10 +459,10 @@ export function Header({
                 ${
                   showRelationships
                     ? isDarkMode
-                      ? "bg-zinc-800 text-zinc-200"
+                      ? "bg-[#333944] text-[#dfe3ea]"
                       : "bg-foreground/10 text-foreground"
                     : isDarkMode
-                      ? "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                      ? "text-[#98a0af] hover:bg-[#333944] hover:text-[#dfe3ea]"
                       : "text-muted-foreground/60 hover:bg-accent/40"
                 }
               `}

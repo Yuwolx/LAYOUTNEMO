@@ -31,7 +31,7 @@ export function AuthButton({ isDarkMode }: AuthButtonProps) {
       <div
         className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${
           isDarkMode
-            ? "bg-zinc-800 text-zinc-500 border-zinc-700"
+            ? "bg-[#333944] text-[#7b8494] border-[#3b414d]"
             : "bg-white text-gray-400 border-gray-200"
         }`}
       >
@@ -56,7 +56,7 @@ export function AuthButton({ isDarkMode }: AuthButtonProps) {
         }}
         className={`gap-2 text-sm ${
           isDarkMode
-            ? "bg-zinc-800 hover:bg-zinc-700 border-zinc-600 text-zinc-100"
+            ? "bg-[#333944] hover:bg-[#3d4450] border-[#4a5160] text-[#dfe3ea]"
             : "bg-white hover:bg-gray-50"
         }`}
       >
@@ -77,7 +77,7 @@ export function AuthButton({ isDarkMode }: AuthButtonProps) {
         <button
           className={`flex items-center gap-2 px-2 py-1 rounded-full text-xs transition-all border shrink-0 ${
             isDarkMode
-              ? "bg-zinc-700 text-zinc-100 border-zinc-500 hover:bg-zinc-600"
+              ? "bg-[#3d4450] text-[#dfe3ea] border-[#5a6472] hover:bg-[#4a5160]"
               : "bg-white text-gray-800 border-gray-200 hover:bg-gray-50"
           }`}
           aria-label={displayName}
@@ -89,7 +89,7 @@ export function AuthButton({ isDarkMode }: AuthButtonProps) {
           ) : (
             <span
               className={`w-6 h-6 rounded-full text-[11px] font-medium flex items-center justify-center ${
-                isDarkMode ? "bg-zinc-700 text-zinc-100" : "bg-gray-200 text-gray-700"
+                isDarkMode ? "bg-[#3d4450] text-[#dfe3ea]" : "bg-gray-200 text-gray-700"
               }`}
             >
               {initial}

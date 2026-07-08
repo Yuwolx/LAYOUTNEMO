@@ -331,8 +331,9 @@ export function WorkBlockCard({
           </div>
 
           {!isCompleted && displayNotes && (
+            // 다크 보정: 밝은 글자는 어두운 바닥에서 번져 얇아 보이므로 굵기·불투명도를 한 단계 올림.
             <p
-              className={`text-[12px] leading-snug font-light line-clamp-5 whitespace-pre-wrap ${isAIControl && !aiEnabled ? "text-muted-foreground/50" : "text-card-foreground/80"}`}
+              className={`text-[12px] leading-snug font-light dark:font-medium line-clamp-5 whitespace-pre-wrap ${isAIControl && !aiEnabled ? "text-muted-foreground/50" : "text-card-foreground/80 dark:text-card-foreground/90"}`}
             >
               {displayNotes}
             </p>
