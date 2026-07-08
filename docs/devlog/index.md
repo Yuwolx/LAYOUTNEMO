@@ -24,6 +24,7 @@ LAYOUTNEMO를 만들면서 마주친 문제, 선택, 삽질, 배운 것을 기�
 
 | 날짜 | 제목 | 상태 |
 |------|------|------|
+| 2026-07-08 | [다크 모드를 One Dark 로 — 원본을 베끼면 안 되는 이유]({{ site.baseurl }}/docs/devlog/2026-07-08-dark-mode-onedark/) | ✅ 공개 |
 | 2026-07-03 | [AI 를 기다리지 않는 정리하기 — 룰과 AI 의 역할 분담]({{ site.baseurl }}/docs/devlog/2026-07-03-tidy-hybrid/) | ✅ 공개 |
 | 2026-07-03 | [지운 캔버스가 돌아오는 문 — tombstone 과 재시도]({{ site.baseurl }}/docs/devlog/2026-07-03-sync-robustness/) | ✅ 공개 |
 | 2026-07-03 | [없는 걸 업그레이드할 뻔했다 — 안 쓰는 의존성과 눈 감은 기한]({{ site.baseurl }}/docs/devlog/2026-07-03-ai-dep-and-tidy-input/) | ✅ 공개 |
