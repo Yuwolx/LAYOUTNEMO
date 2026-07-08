@@ -21,15 +21,12 @@ const DISPERSION_THRESHOLD = 700
 // 모으기 제안 시 중심에서 이 반경의 링 위로 배치 (그대로 중심에 두면 블럭이 겹친다).
 const GATHER_RADIUS = 280
 const MAX_POSITION_ZONES = 2
-// (모으기 전용) 격자 스냅 간격 — 캔버스 배경 도트(48px)의 절반. 정렬(#4)은 더 이상 격자에 안 스냅.
+// (모으기 전용) 격자 스냅 간격 — 캔버스 배경 도트(48px)의 절반.
 const ALIGN_GRID = 24
-const ALIGN_EPSILON = 1
-const MIN_ALIGN_BLOCKS = 2
-// 줄(가로) 판정: 윗변(top) y 가 이 이내로 인접하면 같은 줄로 보고 머리를 맞춘다.
-// 너무 넓히면 서로 다른 줄이 뭉쳐 붕괴하므로 절제(블럭 최소 높이의 약 절반).
-const ROW_TOLERANCE = 64
-// 열(세로) 판정: 좌변(left) x 가 이 이내로 인접하면 같은 열.
-const COL_TOLERANCE = 110
+// 격자 정렬(#4): 셀 간 여백 / 격자 제안 최소 블럭 수 / 실제 이동 최소 수.
+const GRID_GAP = 40
+const MIN_GRID_BLOCKS = 4
+const MIN_GRID_MOVES = 2
 // 모으기 배치 시 블럭 간 최소 간격. 겹치면 중심 반대 방향으로 이만큼씩 밀어낸다.
 const GATHER_GAP = 24
 const GATHER_STEP = 48
@@ -43,28 +40,6 @@ const rectsOverlap = (a: Rect, b: Rect) =>
   a.x + a.width + GATHER_GAP > b.x &&
   a.y < b.y + b.height + GATHER_GAP &&
   a.y + a.height + GATHER_GAP > b.y
-
-/** 1D gap 클러스터: 정렬 후 인접 값 차이가 tolerance 를 넘으면 끊는다. 2개 이상 뭉친 것만 반환.
- *  (running-mean 방식보다 순서 의존이 적고, "어디서 줄이 갈리나"를 이웃 간격으로 직관적으로 판정.) */
-function clusterByGap(
-  items: Array<{ id: string; value: number }>,
-  tolerance: number,
-): Array<Array<{ id: string; value: number }>> {
-  const sorted = [...items].sort((a, b) => a.value - b.value)
-  const clusters: Array<Array<{ id: string; value: number }>> = []
-  let current: Array<{ id: string; value: number }> = []
-  sorted.forEach((item) => {
-    const prev = current.length > 0 ? current[current.length - 1].value : null
-    if (prev === null || item.value - prev <= tolerance) {
-      current.push(item)
-    } else {
-      clusters.push(current)
-      current = [item]
-    }
-  })
-  if (current.length > 0) clusters.push(current)
-  return clusters.filter((c) => c.length >= 2)
-}
 
 type Lang = "ko" | "en"
 
@@ -272,83 +247,60 @@ export function generateRuleSuggestions(
       })
     })
 
-  // ── 4. 줄/열 라인 맞춤 — 겹침 없이 윗변/좌변만 나란히 ──
-  // v3 재조정(겹침·왼쪽위 쏠림 피드백): 간격 재분배·전면 재배치는 블럭을 밀어
-  //  다른 블럭 위로 얹었다 → 전부 제거. 이제 오직 라인 정렬만 하고 한 축만 움직인다:
-  //  줄=윗변(top)을 공통값으로(x 불변), 열=좌변(left)을 공통값으로(y 불변).
-  // 그리고 이동 결과가 다른 블럭과 겹치면 그 블럭은 정렬하지 않는다 — 겹침 금지가 정렬보다 우선.
-  const alignable = blocks.filter((b) => !gatheredIds.has(b.id))
-  const byId = new Map(alignable.map((b) => [b.id, b]))
-  const alignMoves = new Map<string, { x?: number; y?: number }>()
+  // ── 4. 격자 정렬 — 캔버스 전체 블럭을 균일 격자로 재배치 (겹침 구조적 불가) ──
+  // 라인 정렬(제자리 근처 미세 조정)로는 "안 보임 ↔ 겹침"을 못 벗어나 3회 실패 →
+  // 전면 재배치(그리드 패킹)로 전환. 사용자 합의: 캔버스 전체 하나의 격자, 옵트인.
+  //  - 읽기 순서(위→아래·좌→우) 유지 → 블럭이 엉뚱하게 뒤섞이지 않음
+  //  - 균일 셀(열=최대폭, 각 행 높이=그 행 최대높이 + 여백) → 서로 겹칠 수가 없음(구조적 보장)
+  //  - 가이드 블럭(사용설명서·단축키)은 격자 밖 고정물 → 격자 x 범위에 걸치면 그 아래에서 시작
+  const gridBlocks = blocks.filter((b) => !gatheredIds.has(b.id))
+  if (gridBlocks.length >= MIN_GRID_BLOCKS) {
+    const gridById = new Map(gridBlocks.map((b) => [b.id, b]))
+    const ordered = [...gridBlocks].sort((a, b) => a.y - b.y || a.x - b.x)
+    const cols = Math.max(1, Math.round(Math.sqrt(ordered.length)))
+    const colWidth = Math.max(...ordered.map((b) => b.width)) + GRID_GAP
+    const anchorX = Math.min(...ordered.map((b) => b.x))
+    const gridSpanRight = anchorX + cols * colWidth - GRID_GAP
 
-  const median = (nums: number[]) => {
-    const s = [...nums].sort((a, b) => a - b)
-    const m = Math.floor(s.length / 2)
-    return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2)
-  }
+    // 가이드 블럭이 격자의 가로 범위에 걸치면, 격자를 그 아래에서 시작해 안 겹치게 한다.
+    const guideBottoms = allBlocks
+      .filter((b) => b.isGuide && !b.isCompleted && !b.isDeleted)
+      .filter((b) => b.x < gridSpanRight && b.x + b.width > anchorX)
+      .map((b) => b.y + b.height + GRID_GAP)
+    const anchorY = Math.max(Math.min(...ordered.map((b) => b.y)), ...guideBottoms)
 
-  // 겹침 검사 장애물: 이동 대상(alignable)이 아닌, 화면에 보이는 모든 블럭(가이드 포함).
-  const staticObstacles: Rect[] = allBlocks
-    .filter((b) => !b.isCompleted && !b.isDeleted && !byId.has(b.id))
-    .map((b) => ({ x: b.x, y: b.y, width: b.width, height: b.height }))
-  // 블럭의 "지금까지 확정된" 사각형(이미 정렬 이동이 잡혔으면 반영).
-  const liveRect = (b: WorkBlock): Rect => {
-    const mv = alignMoves.get(b.id)
-    return { x: mv?.x ?? b.x, y: mv?.y ?? b.y, width: b.width, height: b.height }
-  }
-  // target 으로 옮기면 다른 블럭(고정 장애물 + 다른 alignable 의 현재/확정 위치)과 겹치나?
-  const overlapsAnything = (self: WorkBlock, target: Rect) =>
-    staticObstacles.some((r) => rectsOverlap(target, r)) ||
-    alignable.some((o) => o.id !== self.id && rectsOverlap(target, liveRect(o)))
+    const gridMoves = new Map<string, { x: number; y: number }>()
+    let rowY = anchorY
+    for (let start = 0; start < ordered.length; start += cols) {
+      const rowBlocks = ordered.slice(start, start + cols)
+      rowBlocks.forEach((b, c) => {
+        const tx = anchorX + c * colWidth
+        if (b.x !== tx || b.y !== rowY) gridMoves.set(b.id, { x: tx, y: rowY })
+      })
+      rowY += Math.max(...rowBlocks.map((b) => b.height)) + GRID_GAP
+    }
 
-  const inRow = new Set<string>()
-  // 줄: 윗변(top)이 가까운 블럭들을 공통 top(중앙값)으로. x 는 그대로. 겹치면 스킵.
-  clusterByGap(alignable.map((b) => ({ id: b.id, value: b.y })), ROW_TOLERANCE).forEach((cluster) => {
-    const rowBlocks = cluster.map((c) => byId.get(c.id)!)
-    const commonTop = median(rowBlocks.map((b) => b.y))
-    rowBlocks.forEach((b) => {
-      inRow.add(b.id)
-      if (Math.abs(commonTop - b.y) <= ALIGN_EPSILON) return
-      const target = { x: b.x, y: commonTop, width: b.width, height: b.height }
-      if (!overlapsAnything(b, target)) alignMoves.set(b.id, { y: commonTop })
-    })
-  })
-  // 열: 줄에 안 든 나머지 — 좌변(left)이 가까운 블럭들을 공통 left(중앙값)으로. y 그대로. 겹치면 스킵.
-  const leftover = alignable.filter((b) => !inRow.has(b.id))
-  clusterByGap(leftover.map((b) => ({ id: b.id, value: b.x })), COL_TOLERANCE).forEach((cluster) => {
-    const colBlocks = cluster.map((c) => byId.get(c.id)!)
-    const commonLeft = median(colBlocks.map((b) => b.x))
-    colBlocks.forEach((b) => {
-      if (Math.abs(commonLeft - b.x) <= ALIGN_EPSILON) return
-      const target = { x: commonLeft, y: b.y, width: b.width, height: b.height }
-      if (!overlapsAnything(b, target)) alignMoves.set(b.id, { x: commonLeft })
-    })
-  })
-
-  if (alignMoves.size >= MIN_ALIGN_BLOCKS) {
-    const reason = language === "en" ? "Line up tops and left edges" : "윗변·좌변을 나란히"
-    suggestions.unshift({
-      id: "rule-align",
-      type: "position",
-      priority: "medium",
-      blockIds: Array.from(alignMoves.keys()),
-      question:
-        language === "en"
-          ? `${alignMoves.size} block(s) can be lined up neatly. Align them?`
-          : `블럭 ${alignMoves.size}개의 줄을 나란히 맞출 수 있어요. 정렬할까요?`,
-      changes: Array.from(alignMoves.entries()).flatMap(([id, move]) => {
-        const block = byId.get(id)
-        if (!block) return []
-        const entries = []
-        if (move.x !== undefined) {
-          entries.push({ blockId: id, field: "x", currentValue: block.x, suggestedValue: move.x, reason })
-        }
-        if (move.y !== undefined) {
-          entries.push({ blockId: id, field: "y", currentValue: block.y, suggestedValue: move.y, reason })
-        }
-        return entries
-      }),
-    })
+    if (gridMoves.size >= MIN_GRID_MOVES) {
+      const reason = language === "en" ? "Repack into a clean grid" : "격자로 재배치"
+      suggestions.unshift({
+        id: "rule-align",
+        type: "position",
+        priority: "medium",
+        blockIds: Array.from(gridMoves.keys()),
+        question:
+          language === "en"
+            ? `Repack ${gridMoves.size} block(s) into a tidy grid? (positions change)`
+            : `블럭 ${gridMoves.size}개를 격자로 깔끔하게 재배치할까요? (자리가 바뀌어요)`,
+        changes: Array.from(gridMoves.entries()).flatMap(([id, move]) => {
+          const block = gridById.get(id)
+          if (!block) return []
+          return [
+            { blockId: id, field: "x", currentValue: block.x, suggestedValue: move.x, reason },
+            { blockId: id, field: "y", currentValue: block.y, suggestedValue: move.y, reason },
+          ]
+        }),
+      })
+    }
   }
 
   return suggestions
