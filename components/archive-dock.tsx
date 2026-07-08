@@ -29,7 +29,7 @@ export function ArchiveDock({ archivedCount, isDarkMode, onClick }: ArchiveDockP
         transition-all duration-200
         ${
           isDarkMode
-            ? "bg-[#1c2032] text-zinc-200 border border-zinc-700 hover:bg-[#242a3e] hover:border-zinc-600 shadow-lg"
+            ? "bg-[#282c34] text-[#dfe3ea] border border-[#3b414d] hover:bg-[#333944] hover:border-[#4a5160] shadow-lg"
             : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-md"
         }
       `}
@@ -40,7 +40,7 @@ export function ArchiveDock({ archivedCount, isDarkMode, onClick }: ArchiveDockP
           className={`
             absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1.5 rounded-full
             text-[11px] font-semibold flex items-center justify-center
-            ${isDarkMode ? "bg-zinc-100 text-zinc-900" : "bg-foreground text-background"}
+            ${isDarkMode ? "bg-[#dfe3ea] text-[#21252b]" : "bg-foreground text-background"}
             shadow-sm
           `}
         >
