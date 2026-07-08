@@ -68,9 +68,13 @@ export function ReflectionDialog({
     setRuleSuggestions(rules)
     setChecked(new Set(rules.map((s) => s.id)))
     setView("review")
+    // AI 는 자동으로 쏘지 않는다 — 사용자가 "AI로 더 찾기"를 눌러야 발사(쿼터 절약·조기닫힘 낭비 방지).
+  }
 
-    // 2) AI — 백그라운드. 실패해도 룰베이스 결과는 그대로 살아 있다.
+  // AI 분석 옵트인 — 쿼터 1회 소진. 자동 발사 시 룰만 보고 닫으면 결과를 못 쓰고 쿼터만 낭비되던 문제 해결.
+  const runAI = () => {
     setAiStatus("loading")
+    setAiErrorMessage(null)
     fetch("/api/ai/tidy-comprehensive", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -321,7 +325,18 @@ export function ReflectionDialog({
                   <Sparkles className="h-3.5 w-3.5" />
                   {t("reflect.section.ai")}
                 </div>
-                {aiStatus === "loading" ? (
+                {aiStatus === "idle" ? (
+                  <button
+                    onClick={runAI}
+                    className="flex w-full items-center gap-3 rounded-xl border border-border/50 bg-background px-3 py-2.5 text-left transition-colors hover:bg-accent/20"
+                  >
+                    <Sparkles className="h-4 w-4 shrink-0 text-foreground/60" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm text-foreground/90">{t("reflect.ai.optin")}</span>
+                      <span className="block text-[11px] text-foreground/50">{t("reflect.ai.optinSub")}</span>
+                    </span>
+                  </button>
+                ) : aiStatus === "loading" ? (
                   <div className="flex items-center gap-2 rounded-xl bg-muted/30 px-3 py-2.5 text-sm text-foreground/60">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     {t("reflect.ai.analyzing")}
