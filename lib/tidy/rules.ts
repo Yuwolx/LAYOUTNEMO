@@ -26,10 +26,10 @@ const ALIGN_GRID = 24
 const ALIGN_EPSILON = 1
 const MIN_ALIGN_BLOCKS = 2
 // 줄(가로) 판정: 윗변(top) y 가 이 이내로 인접하면 같은 줄로 묶어 머리를 맞춘다.
-// 블럭 높이(116~168)의 약 0.5배 — 줄 안 지터는 묶고 다음 줄은 안 묶임.
-const ROW_TOLERANCE = 72
-// 열(세로) 판정: 좌변(left) x 가 이 이내로 인접하면 같은 열. 블럭 폭(280)의 약 0.43배.
-const COL_TOLERANCE = 120
+// 넓힐수록 더 흩어진 side-by-side 블럭도 머리 맞춤 대상(사용자 요청 "정렬 기준 넓히자").
+const ROW_TOLERANCE = 100
+// 열(세로) 판정: 좌변(left) x 가 이 이내로 인접하면 같은 열. 넓혀서 x축 정렬을 더 관대하게.
+const COL_TOLERANCE = 180
 // 간격 균등화 시 블럭 간 최소 여백(겹침 방지).
 const ALIGN_MIN_GAP = 24
 // 모으기 배치 시 블럭 간 최소 간격. 겹치면 중심 반대 방향으로 이만큼씩 밀어낸다.
