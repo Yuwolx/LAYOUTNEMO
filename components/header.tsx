@@ -19,6 +19,8 @@ interface HeaderProps {
   showRelationships: boolean
   onToggleRelationships: () => void
   isDarkMode: boolean
+  /** 정리하기 다이얼로그가 열리면 헤더를 백드롭 밑으로 내려 함께 블러 처리. */
+  isReflecting?: boolean
   onToggleDarkMode: () => void
   onUndo: () => void
   onRedo: () => void
@@ -45,6 +47,7 @@ export function Header({
   showRelationships,
   onToggleRelationships,
   isDarkMode,
+  isReflecting = false,
   onToggleDarkMode,
   onUndo,
   onRedo,
@@ -157,7 +160,7 @@ export function Header({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 backdrop-blur-sm transition-colors duration-700 ${isDarkMode ? "bg-[#282c34]/95" : "bg-[#fafaf9]/95"}`}
+      className={`fixed top-0 left-0 right-0 backdrop-blur-sm transition-colors duration-700 ${isReflecting ? "z-30" : "z-50"} ${isDarkMode ? "bg-[#282c34]/95" : "bg-[#fafaf9]/95"}`}
     >
       <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-[#3b414d]" : "border-border/20"}`}>
         {/* 폭이 모자라면 요소를 겹치게 두지 않고 가로 스크롤. (이전: 왼쪽 그룹이 min-w-0 로

@@ -1089,6 +1089,7 @@ export default function Page() {
         onReset={handleReset}
         onOpenAbout={() => setIsAboutOpen(true)}
         aiUsage={aiUsage}
+        isReflecting={isReflectionDialogOpen}
       />
 
 
