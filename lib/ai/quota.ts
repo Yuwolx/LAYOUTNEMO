@@ -1,4 +1,5 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server"
+import { isMasterEmail } from "@/lib/constants/master"
 
 /**
  * AI 무료 플랜 월 사용량 한도.
@@ -23,8 +24,11 @@ export async function reserveAICredit(
   supabase: ServerClient,
   userId: string | null,
   kind: AIKind,
+  email?: string | null,
 ): Promise<boolean> {
   if (!supabase || !userId) return true
+  // 마스터 계정은 한도 없음 — 크레딧 차감도 하지 않는다
+  if (isMasterEmail(email)) return true
   const { data, error } = await supabase.rpc("consume_ai_credit", {
     p_kind: kind,
     p_limit: AI_LIMITS[kind],
@@ -41,8 +45,11 @@ export async function refundAICredit(
   supabase: ServerClient,
   userId: string | null,
   kind: AIKind,
+  email?: string | null,
 ): Promise<void> {
   if (!supabase || !userId) return
+  // 마스터 계정은 차감한 적이 없으므로 환불도 없음
+  if (isMasterEmail(email)) return
   const { error } = await supabase.rpc("refund_ai_credit", { p_kind: kind })
   if (error) console.error("refund_ai_credit failed:", error.message)
 }

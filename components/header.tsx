@@ -1,7 +1,7 @@
 "use client"
 
 import { useLayoutEffect, useRef, useState } from "react"
-import { Eye, Moon, Sun, Undo2, Wand2, RotateCcw, Info } from "lucide-react"
+import { Eye, Moon, Sun, Undo2, Wand2, RotateCcw, Info, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Zone } from "@/types"
 import { useLanguage } from "@/lib/i18n/context"
@@ -33,6 +33,8 @@ interface HeaderProps {
   lastSaved: Date
   onReset: () => void
   onOpenAbout: () => void
+  /** 인사이트 다이얼로그 — 로그인 유저에게만 버튼 노출 (미전달 시 숨김) */
+  onOpenInsights?: () => void
   onReorderZones?: (orderedZoneIds: string[]) => void
   aiUsage?: { create: number; tidy: number; plan: string } | null
 }
@@ -60,6 +62,7 @@ export function Header({
   lastSaved,
   onReset,
   onOpenAbout,
+  onOpenInsights,
   onReorderZones,
   aiUsage,
 }: HeaderProps) {
@@ -226,6 +229,20 @@ export function Header({
                 {t("header.switchLanguage")}
               </span>
             </button>
+            {onOpenInsights && (
+              <button
+                onClick={onOpenInsights}
+                aria-label={t("header.insights")}
+                title={t("header.insights")}
+                className={`inline-flex shrink-0 p-1.5 rounded-lg transition-colors ${
+                  isDarkMode
+                    ? "text-[#98a0af] hover:text-[#dfe3ea] hover:bg-[#333944]"
+                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                }`}
+              >
+                <Sparkles className="w-4 h-4" />
+              </button>
+            )}
             {/* About 은 모든 기기에서 접근 가능해야 한다 — PWA "앱으로 설치" 진입점이 여기 있다. */}
             <button
               onClick={onOpenAbout}
