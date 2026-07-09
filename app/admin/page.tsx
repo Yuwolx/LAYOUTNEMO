@@ -51,6 +51,16 @@ type Stats = {
   mau: number
 }
 type UrgencyDist = { key: Urgency; count: number }
+type UserDetail = {
+  profile: { id: string; email: string | null; plan: string; created_at: string }
+  blockStats: { active: number; completed: number; deleted: number; guide: number }
+  urgencyDist: UrgencyDist[]
+  canvases: { id: string; name: string; block_count: number; created_at: string; updated_at: string }[]
+  zoneCount: number
+  series: { date: string; sessions: number; blocksCreated: number; ai: number }[]
+  aiTotals: { create: number; tidy: number }
+  lastActive: string | null
+}
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"]
 
@@ -74,6 +84,8 @@ export default function AdminPage() {
   const [urgencyDist, setUrgencyDist] = useState<UrgencyDist[]>([])
   const [heatmap, setHeatmap] = useState<number[][]>([])
   const [users, setUsers] = useState<UserRow[]>([])
+  const [detail, setDetail] = useState<UserDetail | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
 
   // 쿠키 유효성 확인
   useEffect(() => {
@@ -118,6 +130,17 @@ export default function AdminPage() {
     setUrgencyDist(data.urgencyDist ?? [])
     setHeatmap(data.heatmap ?? [])
     setUsers(data.users ?? [])
+  }
+
+  async function openUserDetail(userId: string) {
+    setDetailOpen(true)
+    setDetail(null)
+    const res = await fetch(`/api/admin/users/${userId}`)
+    if (!res.ok) {
+      setDetailOpen(false)
+      return
+    }
+    setDetail(await res.json())
   }
 
   // 로딩
@@ -336,7 +359,7 @@ export default function AdminPage() {
 
       <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
         <div className="p-5 border-b border-border/40">
-          <p className="text-sm font-light">유저 목록 (최근 50명)</p>
+          <p className="text-sm font-light">유저 목록 (최근 50명) <span className="text-xs text-muted-foreground">— 행을 누르면 상세</span></p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -353,7 +376,11 @@ export default function AdminPage() {
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
+                <tr
+                  key={u.id}
+                  onClick={() => openUserDetail(u.id)}
+                  className="border-b border-border/20 hover:bg-muted/20 transition-colors cursor-pointer"
+                >
                   <td className="p-3 text-xs">{u.email ?? u.id.slice(0, 8) + "…"}</td>
                   <td className="p-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -378,6 +405,131 @@ export default function AdminPage() {
           </table>
         </div>
       </div>
+
+      {detailOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-12 overflow-y-auto"
+          onClick={() => setDetailOpen(false)}
+        >
+          <div
+            className="w-full max-w-3xl rounded-2xl border border-border/60 bg-card shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {!detail ? (
+              <div className="p-16 text-center text-sm text-muted-foreground">불러오는 중...</div>
+            ) : (
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-1">
+                  <div>
+                    <p className="text-lg font-light">{detail.profile.email ?? detail.profile.id.slice(0, 8) + "…"}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      가입 {new Date(detail.profile.created_at).toLocaleDateString("ko-KR")}
+                      {" · "}마지막 활동 {formatLastActive(detail.lastActive)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      detail.profile.plan === "pro"
+                        ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300"
+                        : "bg-muted text-muted-foreground"
+                    }`}>{detail.profile.plan}</span>
+                    <button
+                      onClick={() => setDetailOpen(false)}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      닫기 ✕
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-2 my-5">
+                  {[
+                    { label: "활성 블록", value: detail.blockStats.active },
+                    { label: "완료", value: detail.blockStats.completed },
+                    { label: "삭제", value: detail.blockStats.deleted },
+                    { label: "캔버스", value: detail.canvases.length },
+                    { label: "결", value: detail.zoneCount },
+                    { label: "AI 누적", value: detail.aiTotals.create + detail.aiTotals.tidy },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="rounded-lg border border-border/50 p-3">
+                      <p className="text-[10px] text-muted-foreground mb-0.5">{label}</p>
+                      <p className="text-xl font-light">{value.toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 mb-5">
+                  <div className="rounded-lg border border-border/50 p-4">
+                    <p className="text-xs font-light mb-3">활동 (30일)</p>
+                    <ResponsiveContainer width="100%" height={150}>
+                      <LineChart data={detail.series}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.06} />
+                        <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={(v) => v.slice(5)} />
+                        <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
+                        <Tooltip />
+                        <Legend wrapperStyle={{ fontSize: 10 }} />
+                        <Line type="monotone" dataKey="sessions" name="접속" stroke={C_PRIMARY} strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="blocksCreated" name="블록 생성" stroke={C_SECONDARY} strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="ai" name="AI" stroke={C_DANGER} strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="rounded-lg border border-border/50 p-4">
+                    <p className="text-xs font-light mb-3">시급도 분포</p>
+                    <ResponsiveContainer width="100%" height={150}>
+                      <BarChart data={detail.urgencyDist.map(({ key, count }) => ({ key, label: URGENCY_META[key].label, count }))} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.06} />
+                        <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
+                        <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} width={36} />
+                        <Tooltip formatter={(v) => [v, "블록"]} />
+                        <Bar dataKey="count" radius={[0, 3, 3, 0]}>
+                          {detail.urgencyDist.map((d) => (
+                            <Cell key={d.key} fill={`rgb(${URGENCY_RGB[d.key]})`} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border/50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border/40">
+                    <p className="text-xs font-light">캔버스 ({detail.canvases.length})</p>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border/40 text-muted-foreground text-xs">
+                        <th className="text-left px-4 py-2 font-normal">이름</th>
+                        <th className="text-right px-4 py-2 font-normal">블록</th>
+                        <th className="text-right px-4 py-2 font-normal">마지막 수정</th>
+                        <th className="text-right px-4 py-2 font-normal">생성일</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.canvases.map((c) => (
+                        <tr key={c.id} className="border-b border-border/20 last:border-0">
+                          <td className="px-4 py-2 text-xs">{c.name}</td>
+                          <td className="px-4 py-2 text-right text-muted-foreground tabular-nums">{c.block_count}</td>
+                          <td className="px-4 py-2 text-right text-muted-foreground text-xs">
+                            {new Date(c.updated_at).toLocaleDateString("ko-KR")}
+                          </td>
+                          <td className="px-4 py-2 text-right text-muted-foreground text-xs">
+                            {new Date(c.created_at).toLocaleDateString("ko-KR")}
+                          </td>
+                        </tr>
+                      ))}
+                      {detail.canvases.length === 0 && (
+                        <tr><td colSpan={4} className="px-4 py-6 text-center text-muted-foreground text-xs">캔버스 없음</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -3,28 +3,15 @@ import { cookies } from "next/headers"
 import { createClient } from "@supabase/supabase-js"
 import { verifyAdminSessionToken } from "@/lib/admin/session"
 import { URGENCY_KEYS } from "@/lib/constants/urgency"
+import { KST_OFFSET_MS, kstDayKey, kstDayKeys } from "@/lib/admin/kst"
 
 const COOKIE = "admin_session"
-const KST_OFFSET_MS = 9 * 60 * 60 * 1000
 
 function createServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) return null
   return createClient(url, key, { auth: { persistSession: false } })
-}
-
-/** UTC ISO → KST 기준 YYYY-MM-DD (사용자·운영 모두 한국 기준이므로 날짜 버킷은 KST) */
-function kstDayKey(iso: string): string {
-  return new Date(new Date(iso).getTime() + KST_OFFSET_MS).toISOString().split("T")[0]
-}
-
-function kstDayKeys(days: number): string[] {
-  const todayKst = new Date(Date.now() + KST_OFFSET_MS)
-  return Array.from({ length: days }, (_, i) => {
-    const d = new Date(todayKst.getTime() - (days - 1 - i) * 24 * 60 * 60 * 1000)
-    return d.toISOString().split("T")[0]
-  })
 }
 
 type EventRow = { name: string; user_id: string; created_at: string }
