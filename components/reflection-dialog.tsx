@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Sparkles, Loader2, CheckCircle2, Zap, Brain } from "lucide-react"
+import { Sparkles, Loader2, CheckCircle2, Zap, Wand2 } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -325,7 +325,7 @@ export function ReflectionDialog({
               {/* AI 제안 — 백그라운드 도착 */}
               <div>
                 <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-foreground/60">
-                  <Brain className="h-3.5 w-3.5" />
+                  <Wand2 className="h-3.5 w-3.5" />
                   {t("reflect.section.ai")}
                 </div>
                 {aiStatus === "idle" ? (
@@ -333,7 +333,7 @@ export function ReflectionDialog({
                     onClick={runAI}
                     className="flex w-full items-center gap-3 rounded-xl border border-border/50 bg-background px-3 py-2.5 text-left transition-colors hover:bg-accent/20"
                   >
-                    <Brain className="h-4 w-4 shrink-0 text-foreground/60" />
+                    <Wand2 className="h-4 w-4 shrink-0 text-foreground/60" />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm text-foreground/90">{t("reflect.ai.optin")}</span>
                       <span className="block text-[11px] text-foreground/50">{t("reflect.ai.optinSub")}</span>

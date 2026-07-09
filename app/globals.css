@@ -47,13 +47,13 @@
    * oklch 로 근사 변환하지 않고 그대로 못박는다(:root 라이트는 여전히 oklch, 여긴 의도적 hex).
    * 원칙:
    *  - --background(#21252b, 바닥) 와 --card(#2d323b) 밝기 차 확보 → 블럭이 바닥에서 뜬다(가시성).
-   *  - 본문 가독을 위해 --card-foreground 는 확실히 밝게(#dfe3ea), --muted-foreground 는
+   *  - 본문 가독을 위해 --card-foreground 는 확실히 밝게(#eef1f6, 블럭 본문 가독 우선), --muted-foreground 는
    *    코드 주석색(#5c6370)처럼 너무 흐리지 않게 읽히는 회색(#98a0af)으로.
    */
   --background: #21252b;
   --foreground: #dfe3ea;
   --card: #2d323b;                                  /* 바닥보다 한 단계 밝게 — 카드 부각 */
-  --card-foreground: #dfe3ea;
+  --card-foreground: #eef1f6;
   --popover: #2c313a;
   --popover-foreground: #dfe3ea;
   --primary: #dfe3ea;                               /* 모노톤 유지: 근-흰 주색 */
