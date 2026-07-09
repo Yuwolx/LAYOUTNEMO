@@ -163,9 +163,9 @@ export function Header({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 backdrop-blur-sm transition-colors duration-700 ${isReflecting ? "z-30" : "z-50"} ${isDarkMode ? "bg-[#282c34]/95" : "bg-[#fafaf9]/95"}`}
+      className={`fixed top-0 left-0 right-0 backdrop-blur-sm transition-colors duration-700 ${isReflecting ? "z-30" : "z-50"} ${isDarkMode ? "bg-[#21252b]/95" : "bg-[#fafaf9]/95"}`}
     >
-      <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-[#3b414d]" : "border-border/20"}`}>
+      <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-[#1b1e24]" : "border-border/20"}`}>
         {/* 폭이 모자라면 요소를 겹치게 두지 않고 가로 스크롤. (이전: 왼쪽 그룹이 min-w-0 로
             줄어드는데 자식은 shrink-0 라 상자를 뚫고 나와 오른쪽 버튼 밑에 깔렸다.)
             모든 기기 폭에 맞춰 숨기기로 대응하는 건 한계가 있어 스크롤을 안전망으로 둔다. */}
@@ -362,8 +362,8 @@ export function Header({
         className={`border-t border-b transition-colors duration-700 ${
           isDarkMode
             ? selectedZone
-              ? "bg-[#333944] border-[#3b414d] border-b-[#333944]"
-              : "bg-[#21252b] border-[#3b414d] border-b-[#21252b]"
+              ? "bg-[#333944] border-[#1b1e24] border-b-[#333944]"
+              : "bg-[#21252b] border-[#1b1e24] border-b-[#21252b]"
             : selectedZone
               ? "bg-[#f5f5f4] border-stone-300 border-b-[#f5f5f4]"
               : "bg-[#fafaf9] border-stone-300 border-b-[#fafaf9]"
