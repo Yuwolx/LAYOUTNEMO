@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Pencil, Trash2, Plus, Download } from "lucide-react"
+import { Pencil, Trash2, Plus, Download, Lock } from "lucide-react"
 import type { Canvas } from "@/types"
 import { useLanguage, useT } from "@/lib/i18n/context"
 import { translateSeedCanvasName } from "@/lib/i18n/seed"
@@ -18,6 +18,8 @@ interface CanvasSelectorDialogProps {
   onRenameCanvas: (id: string, newName: string) => void
   onDeleteCanvas: (id: string) => void
   onCreateCanvas: (name: string) => void
+  /** 캔버스 추가 생성 가능 여부 — 무료 플랜 한도 도달 시 false (유료화 대비 잠금) */
+  canCreate: boolean
   onExport: () => void
   user: { id: string } | null
 }
@@ -31,6 +33,7 @@ export function CanvasSelectorDialog({
   onRenameCanvas,
   onDeleteCanvas,
   onCreateCanvas,
+  canCreate,
   onExport,
   user,
 }: CanvasSelectorDialogProps) {
@@ -139,23 +142,34 @@ export function CanvasSelectorDialog({
         </div>
 
         {user ? (
-          <div className="flex gap-2 mt-6 pt-4 border-t">
-            <Input
-              placeholder={newCanvasPlaceholder}
-              value={newCanvasName}
-              onChange={(e) => setNewCanvasName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleCreateCanvas()
-              }}
-            />
-            <Button onClick={handleCreateCanvas}>
-              <Plus className="w-4 h-4 mr-2" />
-              {createLabel}
-            </Button>
-          </div>
+          canCreate ? (
+            <div className="flex gap-2 mt-6 pt-4 border-t">
+              <Input
+                placeholder={newCanvasPlaceholder}
+                value={newCanvasName}
+                onChange={(e) => setNewCanvasName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleCreateCanvas()
+                }}
+              />
+              <Button onClick={handleCreateCanvas}>
+                <Plus className="w-4 h-4 mr-2" />
+                {createLabel}
+              </Button>
+            </div>
+          ) : (
+            <p className="mt-6 pt-4 border-t text-xs text-muted-foreground text-center flex items-center justify-center gap-1.5">
+              <Lock className="w-3 h-3 shrink-0" />
+              {language === "en"
+                ? "More canvases are coming with the paid plan."
+                : "추가 캔버스는 준비 중인 유료 플랜에서 열려요."}
+            </p>
+          )
         ) : (
           <p className="mt-6 pt-4 border-t text-xs text-muted-foreground text-center">
-            로그인하면 여러 캔버스를 사용할 수 있어요
+            {language === "en"
+              ? "Sign in to sync your canvas across devices."
+              : "로그인하면 캔버스가 기기 간에 동기화돼요."}
           </p>
         )}
 

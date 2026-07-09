@@ -10,6 +10,7 @@ import { CanvasSelectorDialog } from "@/components/canvas-selector-dialog"
 import { AboutDialog } from "@/components/about-dialog"
 import dynamic from "next/dynamic"
 import { isMasterEmail } from "@/lib/constants/master"
+import { FREE_CANVAS_LIMIT } from "@/lib/constants/plans"
 import { WelcomeDialog } from "@/components/welcome-dialog"
 import { BlockSearchDialog } from "@/components/block-search-dialog"
 import { BlockDetailDialog } from "@/components/block-detail-dialog"
@@ -799,7 +800,12 @@ export default function Page() {
     }
   }
 
+  // 캔버스 개수 한도 — 무료 플랜은 FREE_CANVAS_LIMIT 개까지. pro/마스터는 무제한 (유료화 대비).
+  const canCreateCanvas =
+    isMasterEmail(user?.email) || aiUsage?.plan === "pro" || canvases.length < FREE_CANVAS_LIMIT
+
   const handleCreateCanvas = (name: string) => {
+    if (!canCreateCanvas) return
     const sourceZones = zones.length > 0 ? zones : initialZones
     const zoneIdMap = new Map<string, string>()
     const newZones = sourceZones.map((zone) => {
@@ -1165,6 +1171,7 @@ export default function Page() {
         onRenameCanvas={handleRenameCanvas}
         onDeleteCanvas={handleDeleteCanvas}
         onCreateCanvas={handleCreateCanvas}
+        canCreate={canCreateCanvas}
         onExport={handleExportAll}
         user={user}
       />
