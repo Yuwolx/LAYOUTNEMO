@@ -8,6 +8,8 @@ import { ReflectionDialog } from "@/components/reflection-dialog"
 import { AreaManagementDialog } from "@/components/area-management-dialog"
 import { CanvasSelectorDialog } from "@/components/canvas-selector-dialog"
 import { AboutDialog } from "@/components/about-dialog"
+import dynamic from "next/dynamic"
+import { isMasterEmail } from "@/lib/constants/master"
 import { WelcomeDialog } from "@/components/welcome-dialog"
 import { BlockSearchDialog } from "@/components/block-search-dialog"
 import { BlockDetailDialog } from "@/components/block-detail-dialog"
@@ -22,6 +24,12 @@ import { deleteBlocks, deleteZones, deleteCanvas, loadUserCanvases, saveCanvas, 
 import { AI_LIMITS } from "@/lib/ai/quota"
 import { captureEvent } from "@/lib/supabase/events"
 import { toast } from "sonner"
+
+// recharts 를 메인 캔버스 번들에 넣지 않도록 열 때만 로드
+const InsightsDialog = dynamic(
+  () => import("@/components/insights-dialog").then((m) => m.InsightsDialog),
+  { ssr: false },
+)
 
 // 기본 결(Facet) 5종. 설계 문서 (ARCHITECTURE.md) 와 정합.
 // 참고: v1 은 이 배열을 첫 진입 시 seed 로 사용하고, 이후엔 사용자 편집 가능.
@@ -303,6 +311,7 @@ export default function Page() {
   const [isAreaManagementOpen, setIsAreaManagementOpen] = useState(false)
   const [isCanvasSelectorOpen, setIsCanvasSelectorOpen] = useState(false)
   const [isAboutOpen, setIsAboutOpen] = useState(false)
+  const [isInsightsOpen, setIsInsightsOpen] = useState(false)
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [focusRequest, setFocusRequest] = useState<{ blockId: string; nonce: number } | null>(null)
@@ -1088,6 +1097,7 @@ export default function Page() {
         lastSaved={lastSaved}
         onReset={handleReset}
         onOpenAbout={() => setIsAboutOpen(true)}
+        onOpenInsights={user ? () => setIsInsightsOpen(true) : undefined}
         aiUsage={aiUsage}
         isReflecting={isReflectionDialogOpen}
       />
@@ -1180,6 +1190,12 @@ export default function Page() {
       )}
 
       <AboutDialog open={isAboutOpen} onOpenChange={setIsAboutOpen} />
+      <InsightsDialog
+        open={isInsightsOpen}
+        onOpenChange={setIsInsightsOpen}
+        canvases={canvases}
+        isMaster={isMasterEmail(user?.email)}
+      />
 
       <WelcomeDialog
         open={isWelcomeOpen}

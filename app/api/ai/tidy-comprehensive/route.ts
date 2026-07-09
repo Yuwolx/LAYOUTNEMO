@@ -23,10 +23,12 @@ const errorResponse = (code: AIErrorPayload["code"], message: string, status: nu
 export async function POST(req: Request) {
   const supabase = await createSupabaseServerClient()
   let userId: string | null = null
+  let userEmail: string | null = null
   if (supabase) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return errorResponse("network_error", "Login required.", 401)
     userId = user.id
+    userEmail = user.email ?? null
   }
 
   let input: { blocks: WorkBlock[]; zones: Zone[]; language?: "ko" | "en" }
@@ -58,7 +60,7 @@ export async function POST(req: Request) {
   }
 
   // 월 사용량 한도 확인 + 크레딧 1 예약 (로그인 유저 한정). 호출 실패 시 아래에서 환불.
-  if (!(await reserveAICredit(supabase, userId, "tidy"))) {
+  if (!(await reserveAICredit(supabase, userId, "tidy", userEmail))) {
     return errorResponse(
       "quota_exceeded",
       "이번 달 정리하기 한도를 모두 사용했어요. 다음 달에 다시 충전돼요.",
@@ -129,7 +131,7 @@ export async function POST(req: Request) {
     if (!response.ok) {
       const text = await response.text().catch(() => "")
       console.error("OpenAI API Error:", response.status, text)
-      await refundAICredit(supabase, userId, "tidy")
+      await refundAICredit(supabase, userId, "tidy", userEmail)
       return errorResponse("upstream_error", `OpenAI returned ${response.status}.`, 502)
     }
 
@@ -139,14 +141,14 @@ export async function POST(req: Request) {
       raw = JSON.parse(data.choices?.[0]?.message?.content ?? "")
     } catch (err) {
       console.error("AI response not valid JSON:", err)
-      await refundAICredit(supabase, userId, "tidy")
+      await refundAICredit(supabase, userId, "tidy", userEmail)
       return errorResponse("invalid_response", "AI response was not valid JSON.", 502)
     }
 
     const parsed = tidyComprehensiveResponseSchema.safeParse(raw)
     if (!parsed.success) {
       console.error("Tidy response failed schema validation:", parsed.error.format())
-      await refundAICredit(supabase, userId, "tidy")
+      await refundAICredit(supabase, userId, "tidy", userEmail)
       return errorResponse(
         "invalid_response",
         "AI response did not match the expected shape.",
@@ -172,7 +174,7 @@ export async function POST(req: Request) {
     })
   } catch (err) {
     console.error("Comprehensive tidy fetch failed:", err)
-    await refundAICredit(supabase, userId, "tidy")
+    await refundAICredit(supabase, userId, "tidy", userEmail)
     return errorResponse("upstream_error", "Could not reach OpenAI.", 502)
   }
 }
