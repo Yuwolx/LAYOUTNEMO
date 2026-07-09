@@ -24,6 +24,7 @@ LAYOUTNEMO를 만들면서 마주친 문제, 선택, 삽질, 배운 것을 기�
 
 | 날짜 | 제목 | 상태 |
 |------|------|------|
+| 2026-07-09 | [헤더와 캔버스 사이, 세 가지 색 — 다크 이음새와 아이콘 은유]({{ site.baseurl }}/docs/devlog/2026-07-09-dark-seams-and-icons/) | ✅ 공개 |
 | 2026-07-09 | [완성해 놓고 잠가두기 — 개인 인사이트와 마스터 계정]({{ site.baseurl }}/docs/devlog/2026-07-09-personal-insights-and-master/) | ✅ 공개 |
 | 2026-07-09 | [숫자 4개짜리 대시보드를 분석 도구로 — 코호트, 퍼널, 그리고 KST 함정]({{ site.baseurl }}/docs/devlog/2026-07-09-admin-dashboard-analytics/) | ✅ 공개 |
 | 2026-07-08 | [다크 모드를 One Dark 로 — 원본을 베끼면 안 되는 이유]({{ site.baseurl }}/docs/devlog/2026-07-08-dark-mode-onedark/) | ✅ 공개 |
