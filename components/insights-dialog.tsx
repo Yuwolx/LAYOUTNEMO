@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Sparkles, Flame, CalendarCheck } from "lucide-react"
+import { BarChart3, Flame, CalendarCheck } from "lucide-react"
 import {
   LineChart, Line, BarChart, Bar, Cell,
   XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid,
@@ -151,7 +151,7 @@ export function InsightsDialog({ open, onOpenChange, canvases, isMaster }: Insig
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4" />
+            <BarChart3 className="w-4 h-4" />
             {info.title}
             {!isMaster && (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 font-normal">

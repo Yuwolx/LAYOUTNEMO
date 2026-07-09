@@ -1,7 +1,7 @@
 "use client"
 
 import { useLayoutEffect, useRef, useState } from "react"
-import { Eye, Moon, Sun, Undo2, Wand2, RotateCcw, Info, Sparkles } from "lucide-react"
+import { Eye, Moon, Sun, Undo2, Wand2, RotateCcw, Info, BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Zone } from "@/types"
 import { useLanguage } from "@/lib/i18n/context"
@@ -240,7 +240,7 @@ export function Header({
                     : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
-                <Sparkles className="w-4 h-4" />
+                <BarChart3 className="w-4 h-4" />
               </button>
             )}
             {/* About 은 모든 기기에서 접근 가능해야 한다 — PWA "앱으로 설치" 진입점이 여기 있다. */}
