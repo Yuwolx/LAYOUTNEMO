@@ -155,7 +155,7 @@ export function CanvasSelectorDialog({
           </div>
         ) : (
           <p className="mt-6 pt-4 border-t text-xs text-muted-foreground text-center">
-            로그인하면 여러 캔버스를 사용할 수 있어요
+            {language === "en" ? "Sign in to use multiple canvases" : "로그인하면 여러 캔버스를 사용할 수 있어요"}
           </p>
         )}
 

@@ -6,7 +6,7 @@ import { useRef, useState, useEffect } from "react"
 import { WorkBlockCard } from "@/components/work-block-card"
 import type { CanvasViewport, WorkBlock, Zone } from "@/types"
 import { URGENCY_KEYS, URGENCY_META, URGENCY_RGB, NOTICE_RGB } from "@/lib/constants/urgency"
-import { useT } from "@/lib/i18n/context"
+import { useLanguage } from "@/lib/i18n/context"
 import { Pin, X } from "lucide-react"
 
 interface CanvasProps {
@@ -65,7 +65,7 @@ export function Canvas({
   onOpenDetail,
   isReflecting = false,
 }: CanvasProps) {
-  const t = useT()
+  const { language, t } = useLanguage()
   const canvasRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
@@ -1077,7 +1077,7 @@ export function Canvas({
                   {previewBlock.title}
                 </p>
                 <p className={`text-xs ${isDarkMode ? "text-blue-400/70" : "text-blue-600/70"}`}>
-                  이 위치에 생성됩니다
+                  {language === "en" ? "It will be created here" : "이 위치에 생성됩니다"}
                 </p>
               </div>
             </div>
@@ -1119,7 +1119,7 @@ export function Canvas({
               <Pin className="h-4 w-4 -rotate-45" style={{ color: `rgb(${NOTICE_RGB})` }} />
             </span>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold leading-tight">{pinnedBlock.title || "제목 없음"}</div>
+              <div className="truncate text-sm font-semibold leading-tight">{pinnedBlock.title || (language === "en" ? "Untitled" : "제목 없음")}</div>
               {(pinnedBlock.detailedNotes || pinnedBlock.description) && (
                 <div className={`truncate text-xs leading-tight ${isDarkMode ? "text-[#98a0af]" : "text-gray-500"}`}>
                   {pinnedBlock.detailedNotes || pinnedBlock.description}
@@ -1134,8 +1134,8 @@ export function Canvas({
               className={`shrink-0 rounded-full p-1.5 transition-colors ${
                 isDarkMode ? "text-[#98a0af] hover:bg-white/10" : "text-gray-400 hover:bg-black/5"
               }`}
-              aria-label="고정 해제"
-              title="고정 해제"
+              aria-label={language === "en" ? "Unpin" : "고정 해제"}
+              title={language === "en" ? "Unpin" : "고정 해제"}
             >
               <X className="h-4 w-4" />
             </button>
@@ -1202,12 +1202,12 @@ export function Canvas({
               isDarkMode ? "border-[#3b414d] bg-[#333944] text-[#dfe3ea]" : "border-gray-200 bg-white text-gray-800"
             }`}
           >
-            <span>연결할 블럭을 탭하세요</span>
+            <span>{language === "en" ? "Tap a block to connect" : "연결할 블럭을 탭하세요"}</span>
             <button
               onClick={() => setConnectingId(null)}
               className="rounded-full px-2 py-0.5 font-medium text-violet-500 hover:bg-black/5 dark:hover:bg-white/10"
             >
-              취소
+              {t("action.cancel")}
             </button>
           </div>
         </div>
@@ -1234,15 +1234,15 @@ export function Canvas({
               isDarkMode ? "bg-[#333944] border-[#3b414d] text-[#dfe3ea]" : "bg-white border-gray-200 text-gray-800"
             }`}
           >
-            <span className="text-xs font-medium tabular-nums">{selectedIds.size}개 선택</span>
+            <span className="text-xs font-medium tabular-nums">{language === "en" ? `${selectedIds.size} selected` : `${selectedIds.size}개 선택`}</span>
             <span className={`h-4 w-px ${isDarkMode ? "bg-[#3d4450]" : "bg-gray-200"}`} />
             <div className="flex items-center gap-1">
               {URGENCY_KEYS.map((key) => (
                 <button
                   key={key}
                   onClick={() => applyUrgencyToSelection(key)}
-                  title={URGENCY_META[key].label}
-                  aria-label={URGENCY_META[key].label}
+                  title={t(`urgency.${key}`)}
+                  aria-label={t(`urgency.${key}`)}
                   className="h-5 w-5 rounded-full border border-black/10 transition-transform hover:scale-110"
                   style={{ backgroundColor: `rgb(${URGENCY_RGB[key]})` }}
                 />
@@ -1253,7 +1253,7 @@ export function Canvas({
               onClick={archiveSelection}
               className="rounded-full px-2 py-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/10"
             >
-              갈무리
+              {t("action.archive")}
             </button>
             <button
               onClick={() => setSelectedIds(new Set())}
@@ -1261,7 +1261,7 @@ export function Canvas({
                 isDarkMode ? "text-[#98a0af]" : "text-gray-400"
               }`}
             >
-              해제
+              {language === "en" ? "Clear" : "해제"}
             </button>
           </div>
         </div>

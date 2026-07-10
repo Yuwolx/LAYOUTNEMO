@@ -125,6 +125,14 @@ function packGridLayout(cluster: WorkBlock[]): Map<string, { x: number; y: numbe
 
 type Lang = "ko" | "en"
 
+// 제안 문구용 시급도 영어 라벨 — lib/i18n/dictionary.ts 의 urgency.* EN 값과 동일하게 유지.
+const URGENCY_LABEL_EN: Record<string, string> = {
+  thinking: "Undecided",
+  stable: "Flexible",
+  lingering: "In progress",
+  urgent: "Urgent",
+}
+
 /** 라우트에 있던 유사도 계산을 클라이언트로 이식 — 결 > 텍스트 키워드 > 상태 > 위치 근접 순 가중치. */
 function blockSimilarity(a: WorkBlock, b: WorkBlock): number {
   let similarity = 0
@@ -169,7 +177,7 @@ export function generateRuleSuggestions(
 
   dueSoon.forEach(({ block, days }) => {
     const current = block.urgency ?? "thinking"
-    const currentLabel = URGENCY_META[current]?.label ?? current
+    const currentLabel = language === "en" ? (URGENCY_LABEL_EN[current] ?? current) : (URGENCY_META[current]?.label ?? current)
     const dueText =
       language === "en"
         ? days < 0

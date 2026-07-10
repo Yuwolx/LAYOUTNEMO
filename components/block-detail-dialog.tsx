@@ -191,7 +191,7 @@ export function BlockDetailDialog({ open, onOpenChange, block, onUpdate, zones }
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-[760px] lg:max-w-[860px] max-h-[86vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
-          <DialogTitle className="text-2xl font-light">{isGuide ? (t("dialog.blockDetail.title") === "Block Details" ? "Guide" : "사용 설명서") : t("dialog.blockDetail.title")}</DialogTitle>
+          <DialogTitle className="text-2xl font-light">{isGuide ? (language === "en" ? "Guide" : "사용 설명서") : t("dialog.blockDetail.title")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5 pt-4">

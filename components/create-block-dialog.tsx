@@ -406,8 +406,10 @@ export function CreateBlockDialog({
         {step === "input" && !user && isAIEnabled && !showManual && (
           <div className="space-y-6">
             <div className="space-y-1">
-              <h2 className="text-lg font-normal">새 블럭 만들기</h2>
-              <p className="text-sm text-muted-foreground">AI 생성은 로그인 후 사용할 수 있어요.</p>
+              <h2 className="text-lg font-normal">{language === "en" ? "Create a block" : "새 블럭 만들기"}</h2>
+              <p className="text-sm text-muted-foreground">
+                {language === "en" ? "Sign in to use AI generation." : "AI 생성은 로그인 후 사용할 수 있어요."}
+              </p>
             </div>
             <div className="flex flex-col gap-3">
               <button
@@ -419,10 +421,12 @@ export function CreateBlockDialog({
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 text-sm font-medium">
-                    AI로 생성
+                    {language === "en" ? "Generate with AI" : "AI로 생성"}
                     <Lock className="w-3 h-3 text-muted-foreground" />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">Google 로그인 후 AI가 자동으로 정리해요</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {language === "en" ? "Sign in with Google and AI fills it in for you" : "Google 로그인 후 AI가 자동으로 정리해요"}
+                  </p>
                 </div>
               </button>
               <button
@@ -433,8 +437,10 @@ export function CreateBlockDialog({
                   <PenLine className="w-4 h-4 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-medium">직접 입력</div>
-                  <p className="text-xs text-muted-foreground mt-0.5">제목과 내용을 직접 작성해요</p>
+                  <div className="text-sm font-medium">{language === "en" ? "Write it myself" : "직접 입력"}</div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {language === "en" ? "Type the title and notes yourself" : "제목과 내용을 직접 작성해요"}
+                  </p>
                 </div>
               </button>
             </div>
@@ -445,9 +451,19 @@ export function CreateBlockDialog({
           <div className="space-y-6">
             <div className="space-y-2">
               <h2 className="text-lg font-normal">
-                {isAIEnabled && user ? "추가할 업무를 간단히 적어주세요." : "새 블럭 만들기"}
+                {isAIEnabled && user
+                  ? language === "en"
+                    ? "Briefly describe what you're adding."
+                    : "추가할 업무를 간단히 적어주세요."
+                  : language === "en"
+                    ? "Create a block"
+                    : "새 블럭 만들기"}
               </h2>
-              {(!isAIEnabled || !user) && <p className="text-sm text-muted-foreground">제목과 내용을 직접 입력하세요.</p>}
+              {(!isAIEnabled || !user) && (
+                <p className="text-sm text-muted-foreground">
+                  {language === "en" ? "Enter the title and notes yourself." : "제목과 내용을 직접 입력하세요."}
+                </p>
+              )}
               {isAIEnabled && user && (
                 <p className="text-sm text-muted-foreground">
                   {language === "en"
@@ -462,7 +478,7 @@ export function CreateBlockDialog({
                 <Input
                   value={initialInput}
                   onChange={(e) => setInitialInput(e.target.value)}
-                  placeholder="예: 디자인 시안 검토 요청 정리"
+                  placeholder={language === "en" ? "e.g. Review the design draft and send feedback" : "예: 디자인 시안 검토 요청 정리"}
                   className="text-base h-11"
                   maxLength={4000}
                   disabled={isLoading}
@@ -477,8 +493,10 @@ export function CreateBlockDialog({
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      AI가 정리하는 중...
+                      {language === "en" ? "AI is sorting it out..." : "AI가 정리하는 중..."}
                     </>
+                  ) : language === "en" ? (
+                    "Next"
                   ) : (
                     "다음"
                   )}
@@ -488,23 +506,23 @@ export function CreateBlockDialog({
               <>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="manual-title">제목</Label>
+                    <Label htmlFor="manual-title">{language === "en" ? "Title" : "제목"}</Label>
                     <Input
                       id="manual-title"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder="업무 제목을 입력하세요"
+                      placeholder={language === "en" ? "Enter a title" : "업무 제목을 입력하세요"}
                       className="text-base"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="manual-summary">내용 (선택)</Label>
+                    <Label htmlFor="manual-summary">{language === "en" ? "Notes (optional)" : "내용 (선택)"}</Label>
                     <Input
                       id="manual-summary"
                       value={initialInput}
                       onChange={(e) => setInitialInput(e.target.value)}
-                      placeholder="업무 내용을 입력하세요"
+                      placeholder={language === "en" ? "Add a short note" : "업무 내용을 입력하세요"}
                       className="text-base"
                     />
                   </div>
@@ -528,7 +546,7 @@ export function CreateBlockDialog({
 
                   <div className="space-y-2">
                     <Label htmlFor="manual-dueDate" className="text-sm font-normal">
-                      기한 (선택)
+                      {t("label.dueDate")} ({t("label.optional")})
                     </Label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -582,7 +600,7 @@ export function CreateBlockDialog({
                   disabled={!title.trim() || !selectedZone}
                   className="w-full"
                 >
-                  블럭 만들기
+                  {language === "en" ? "Create block" : "블럭 만들기"}
                 </Button>
               </>
             )}
@@ -626,13 +644,13 @@ export function CreateBlockDialog({
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="title" className="text-sm font-normal">
-                  업무 제목 {!isAIEnabled && "(필수)"}
+                  {language === "en" ? "Title" : "업무 제목"} {!isAIEnabled && (language === "en" ? "(required)" : "(필수)")}
                 </Label>
                 <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} className="text-base" />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-normal text-muted-foreground">1줄 요약</Label>
+                <Label className="text-sm font-normal text-muted-foreground">{language === "en" ? "One-line summary" : "1줄 요약"}</Label>
                 <p className="text-sm leading-relaxed text-foreground/80">{summary}</p>
               </div>
             </div>
@@ -663,7 +681,7 @@ export function CreateBlockDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="dueDate" className="text-sm font-normal">
-                  기한 (선택)
+                  {t("label.dueDate")} ({t("label.optional")})
                 </Label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -711,10 +729,10 @@ export function CreateBlockDialog({
 
             <div className="flex gap-3 pt-2">
               <Button variant="outline" onClick={() => setStep("input")} className="flex-1">
-                뒤로
+                {language === "en" ? "Back" : "뒤로"}
               </Button>
               <Button onClick={handleToPlacement} disabled={!selectedZone || !title.trim()} className="flex-1">
-                다음
+                {language === "en" ? "Next" : "다음"}
               </Button>
             </div>
           </div>
@@ -750,16 +768,16 @@ export function CreateBlockDialog({
                       : "다른 블럭들과 겹치지 않는 빈 공간에 배치할게요."
                   })()}
                 </p>
-                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">캔버스에서 미리보기를 확인하세요.</p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">{language === "en" ? "Check the preview on the canvas." : "캔버스에서 미리보기를 확인하세요."}</p>
               </div>
             </div>
 
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => handlePlacementConfirm(true)} className="flex-1">
-                직접 옮기기
+                {language === "en" ? "Place it myself" : "직접 옮기기"}
               </Button>
               <Button onClick={() => handlePlacementConfirm(false)} className="flex-1">
-                여기에 두기
+                {language === "en" ? "Keep it here" : "여기에 두기"}
               </Button>
             </div>
           </div>

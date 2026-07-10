@@ -295,6 +295,10 @@ const loadCurrentCanvasId = (): string => {
 
 export default function Page() {
   const { language } = useLanguage()
+  // 콜백/이펙트 안 토스트에서 최신 언어를 읽기 위한 ref 미러 (stale closure 방지).
+  const languageRef = useRef(language)
+  languageRef.current = language
+  const isEn = () => languageRef.current === "en"
   const t = useT()
   const { user, signInWithGoogle } = useAuth()
   const supabaseRef = useRef(createSupabaseBrowserClient())
@@ -477,8 +481,10 @@ export default function Page() {
           } catch (backupErr) {
             console.error("offline backup failed:", backupErr)
           }
-          toast.message("클라우드 내용을 불러왔어요", {
-            description: "로그아웃 중 이 기기에서 바꾼 내용은 덮어쓰기 전에 따로 백업해뒀어요.",
+          toast.message(isEn() ? "Loaded your cloud data" : "클라우드 내용을 불러왔어요", {
+            description: isEn()
+              ? "Changes made on this device while signed out were backed up before overwriting."
+              : "로그아웃 중 이 기기에서 바꾼 내용은 덮어쓰기 전에 따로 백업해뒀어요.",
             duration: 8000,
           })
         }
@@ -499,7 +505,7 @@ export default function Page() {
         const message = err instanceof Error ? err.message : "Unknown sync error"
         // remoteSyncReadyRef 는 false로 유지 — 불완전한 상태를 덮어쓰지 않도록 저장을 막는다.
         // 다만 사용자는 알아야 한다: 로컬 저장은 계속되지만 클라우드 동기화는 멈춘 상태.
-        toast.error("클라우드 동기화에 실패했어요. 이 기기에는 저장되지만 다른 기기에는 반영되지 않아요.", {
+        toast.error(isEn() ? "Cloud sync failed. Changes are saved on this device but won't reach your other devices." : "클라우드 동기화에 실패했어요. 이 기기에는 저장되지만 다른 기기에는 반영되지 않아요.", {
           description: message,
           duration: 8000,
         })
@@ -541,7 +547,7 @@ export default function Page() {
       .then(() => {
         if (syncSaveErrorShownRef.current) {
           syncSaveErrorShownRef.current = false
-          toast.success("클라우드 저장이 재개됐어요.")
+          toast.success(isEn() ? "Cloud saving resumed." : "클라우드 저장이 재개됐어요.")
         }
       })
       .catch((err) => {
@@ -553,7 +559,7 @@ export default function Page() {
         saveRetryTimer.current = setTimeout(() => flushCloudSave(), 10_000)
         if (!syncSaveErrorShownRef.current) {
           syncSaveErrorShownRef.current = true
-          toast.error("클라우드 저장에 실패했어요. 자동으로 다시 시도할게요.", {
+          toast.error(isEn() ? "Cloud save failed. Retrying automatically." : "클라우드 저장에 실패했어요. 자동으로 다시 시도할게요.", {
             description: err instanceof Error ? err.message : String(err),
             duration: 8000,
           })
@@ -739,7 +745,7 @@ export default function Page() {
     if (user && supabaseRef.current && remoteSyncReadyRef.current) {
       deleteBlocks(supabaseRef.current, [id]).catch((err) => {
         console.error("Supabase delete block error:", err)
-        toast.error("블럭 삭제를 클라우드에 반영하지 못했어요.", {
+        toast.error(isEn() ? "Couldn't sync the block deletion to the cloud." : "블럭 삭제를 클라우드에 반영하지 못했어요.", {
           description: err instanceof Error ? err.message : String(err),
         })
       })
@@ -749,7 +755,7 @@ export default function Page() {
 
   const handleClearArchivedBlocks = () => {
     if (archivedBlocks.length === 0) return
-    if (!confirm("갈무리함을 모두 비울까요? 이 작업은 되돌릴 수 없어요.")) return
+    if (!confirm(isEn() ? "Empty the archive? This cannot be undone." : "갈무리함을 모두 비울까요? 이 작업은 되돌릴 수 없어요.")) return
 
     const archivedIds = new Set(archivedBlocks.map((block) => block.id))
     const newBlocks = blocks
@@ -763,7 +769,7 @@ export default function Page() {
     if (user && supabaseRef.current && remoteSyncReadyRef.current) {
       deleteBlocks(supabaseRef.current, [...archivedIds]).catch((err) => {
         console.error("Supabase delete archived blocks error:", err)
-        toast.error("갈무리함 비우기를 클라우드에 반영하지 못했어요.", {
+        toast.error(isEn() ? "Couldn't sync emptying the archive to the cloud." : "갈무리함 비우기를 클라우드에 반영하지 못했어요.", {
           description: err instanceof Error ? err.message : String(err),
         })
       })
@@ -896,7 +902,7 @@ export default function Page() {
     if (removedIds.length > 0 && user && supabaseRef.current && remoteSyncReadyRef.current) {
       deleteZones(supabaseRef.current, removedIds).catch((err) => {
         console.error("Supabase delete zones error:", err)
-        toast.error("결 삭제를 클라우드에 반영하지 못했어요.", {
+        toast.error(isEn() ? "Couldn't sync the facet deletion to the cloud." : "결 삭제를 클라우드에 반영하지 못했어요.", {
           description: err instanceof Error ? err.message : String(err),
         })
       })
@@ -926,7 +932,7 @@ export default function Page() {
     if (user && supabaseRef.current && remoteSyncReadyRef.current) {
       deleteZones(supabaseRef.current, [zoneId]).catch((err) => {
         console.error("Supabase delete zones error:", err)
-        toast.error("결 삭제를 클라우드에 반영하지 못했어요.", {
+        toast.error(isEn() ? "Couldn't sync the facet deletion to the cloud." : "결 삭제를 클라우드에 반영하지 못했어요.", {
           description: err instanceof Error ? err.message : String(err),
         })
       })
@@ -986,7 +992,7 @@ export default function Page() {
         window.location.reload()
       } catch (error) {
         console.error("Failed to reset:", error)
-        alert("초기화에 실패했어요. 브라우저 콘솔의 Failed to reset 오류를 확인해 주세요.")
+        alert(isEn() ? "Reset failed. Check the 'Failed to reset' error in the browser console." : "초기화에 실패했어요. 브라우저 콘솔의 Failed to reset 오류를 확인해 주세요.")
       }
     }
   }
