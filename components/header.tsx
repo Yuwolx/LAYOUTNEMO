@@ -169,7 +169,7 @@ export function Header({
         {/* 폭이 모자라면 요소를 겹치게 두지 않고 가로 스크롤. (이전: 왼쪽 그룹이 min-w-0 로
             줄어드는데 자식은 shrink-0 라 상자를 뚫고 나와 오른쪽 버튼 밑에 깔렸다.)
             모든 기기 폭에 맞춰 숨기기로 대응하는 건 한계가 있어 스크롤을 안전망으로 둔다. */}
-        <div className="max-w-[2000px] mx-auto px-3 sm:px-5 lg:px-8 py-3 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="max-w-[2000px] mx-auto px-3 sm:px-5 lg:px-8 py-3 flex items-center gap-2 overflow-x-auto touch-pan-x overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex items-center gap-1.5 lg:gap-4 shrink-0">
             {/* 깃블로그(gh-pages) 헤더와 동일 톤 — 28px 마크 + LAYOUTNEMO 한 줄, gap 8px. */}
             <div
@@ -369,7 +369,7 @@ export function Header({
               : "bg-[#fafaf9] border-stone-300 border-b-[#fafaf9]"
         }`}
       >
-        <div className="max-w-[2000px] mx-auto px-3 sm:px-5 lg:px-8 py-2 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="max-w-[2000px] mx-auto px-3 sm:px-5 lg:px-8 py-2 flex items-center gap-2 overflow-x-auto touch-pan-x overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* 결 탭 + 갭 인디케이터. 시각 포인트는 결들 사이 갭. */}
           {zones.map((zone, idx) => {
             const isSelected = selectedZone === zone.id

@@ -96,6 +96,18 @@ export function Canvas({
   const [connectingId, setConnectingId] = useState<string | null>(null)
   // 그룹 드래그(선택 블럭 같이 이동) 진행 중일 때, 시작 시점의 각 블럭 좌표.
   const groupDragRef = useRef<{ starts: Map<string, { x: number; y: number }> } | null>(null)
+  // 선택 모드에서 누른 블럭 — pointer-up 시 안 움직였으면 선택 토글(탭), 움직였으면 드래그(이동).
+  const pendingToggleRef = useRef<string | null>(null)
+  // 선택 모드 down 시 "드래그 대기" 상태. 손가락이 움직이면 그때 실제 드래그로 승격한다
+  // (탭일 수 있어 down 에서 바로 draggingId 를 켜지 않는다 — 탭 시 카드가 순간 확대되는 것 방지).
+  const armedSelectRef = useRef<{
+    blockId: string
+    downX: number
+    downY: number
+    blockX: number
+    blockY: number
+    group: Map<string, { x: number; y: number }> | null
+  } | null>(null)
   // 진행 중인 포인터(마우스/터치/펜) id. 멀티터치에서 두 번째 손가락이 드래그를 방해하지 않게,
   // 그리고 한 번에 하나의 인터랙션만 돌도록 가드로 쓴다.
   const activePointerIdRef = useRef<number | null>(null)
@@ -212,6 +224,8 @@ export function Canvas({
       setDraggingId(null)
       setDragStartPos(null)
       groupDragRef.current = null
+      pendingToggleRef.current = null
+      armedSelectRef.current = null
       setMarquee(null)
       // 핀치 추적 상태도 초기화 — pointerup 을 못 받은 손가락이 남으면 다음 핀치 판정이 꼬인다.
       touchPointsRef.current.clear()
@@ -514,16 +528,23 @@ export function Canvas({
       return
     }
 
-    // 선택 토글: 마우스 Ctrl/Cmd 클릭 또는 터치 선택 모드 탭 (드래그하지 않음).
+    // 선택 모드(마우스 Ctrl/Cmd 또는 터치 선택 모드): 탭=선택 토글, 선택된 블럭 드래그=그룹 이동.
+    // 예전엔 여기서 바로 토글+return 했더니 선택된 블럭을 드래그해도 이동이 안 됐다(터치).
+    // 이제 down 에선 "대기"만 걸고(draggingId 안 켬 → 탭 시 확대 안 튐), 움직이면 move 에서 승격.
     if (e.ctrlKey || e.metaKey || (e.pointerType === "touch" && touchSelectMode)) {
       e.preventDefault()
-      setSelectedIds((prev) => {
-        const next = new Set(prev)
-        if (next.has(blockId)) next.delete(blockId)
-        else next.add(blockId)
-        return next
-      })
-      suppressClickRef.current = true // 선택 토글 탭이 상세 다이얼로그를 열지 않도록
+      const selBlock = blocks.find((b) => b.id === blockId)
+      if (!selBlock) return
+      pendingToggleRef.current = blockId
+      const group = selectedIds.has(blockId)
+        ? new Map(
+            blocks
+              .filter((b) => selectedIds.has(b.id) && !b.isCompleted && !b.isGuide)
+              .map((b) => [b.id, { x: b.x, y: b.y }] as const),
+          )
+        : null
+      armedSelectRef.current = { blockId, downX: e.clientX, downY: e.clientY, blockX: selBlock.x, blockY: selBlock.y, group }
+      activePointerIdRef.current = e.pointerId
       return
     }
 
@@ -573,6 +594,19 @@ export function Canvas({
 
     const handleMouseMove = (e: PointerEvent) => {
       if (e.pointerId !== activePointerIdRef.current) return
+      // 선택 모드 대기 중 움직임이 임계값을 넘으면 실제 드래그로 승격 (탭이 아니라 이동).
+      const armed = armedSelectRef.current
+      if (armed && !draggingId) {
+        if (Math.abs(e.clientX - armed.downX) > 5 || Math.abs(e.clientY - armed.downY) > 5) {
+          pendingToggleRef.current = null // 움직였으니 탭 아님
+          groupDragRef.current = armed.group ? { starts: armed.group } : null
+          setOffset({ x: armed.downX - (armed.blockX * scale + pan.x), y: armed.downY - (armed.blockY * scale + pan.y) })
+          setDragStartPos({ x: armed.blockX, y: armed.blockY })
+          setDraggingId(armed.blockId)
+          armedSelectRef.current = null
+        }
+        return
+      }
       if (draggingId) {
         const newX = (e.clientX - offset.x - pan.x) / scale
         const newY = (e.clientY - offset.y - pan.y) / scale
@@ -596,6 +630,20 @@ export function Canvas({
     const handleMouseUp = (e: PointerEvent) => {
       if (e.pointerId !== activePointerIdRef.current) return
       activePointerIdRef.current = null
+      // 선택 모드 대기 상태에서 드래그로 승격 안 된 채 뗐다 = 탭 → 선택 토글.
+      if (armedSelectRef.current && pendingToggleRef.current) {
+        const toggleId = pendingToggleRef.current
+        armedSelectRef.current = null
+        pendingToggleRef.current = null
+        setSelectedIds((prev) => {
+          const next = new Set(prev)
+          if (next.has(toggleId)) next.delete(toggleId)
+          else next.add(toggleId)
+          return next
+        })
+        suppressClickRef.current = true // 토글 탭이 상세 다이얼로그를 열지 않도록
+        return
+      }
       if (draggingId) {
         // 그룹 드래그 — 아카이브/연결 로직 없이 최종 위치만 한 번 히스토리에 커밋.
         if (groupDragRef.current) {
