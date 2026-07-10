@@ -24,6 +24,8 @@ LAYOUTNEMO를 만들면서 마주친 문제, 선택, 삽질, 배운 것을 기�
 
 | 날짜 | 제목 | 상태 |
 |------|------|------|
+| 2026-07-10 | [여덟 번 갈아엎은 정렬 — 재배치가 아니라 제자리 스냅이었다]({{ site.baseurl }}/docs/devlog/2026-07-10-tidy-position-saga/) | ✅ 공개 |
+| 2026-07-10 | [쿼터를 아끼는 버튼, 블러 안 되던 상단바, 태블릿 세 가지 — 잔손질 묶음]({{ site.baseurl }}/docs/devlog/2026-07-10-optin-blur-touch/) | ✅ 공개 |
 | 2026-07-09 | [헤더와 캔버스 사이, 세 가지 색 — 다크 이음새와 아이콘 은유]({{ site.baseurl }}/docs/devlog/2026-07-09-dark-seams-and-icons/) | ✅ 공개 |
 | 2026-07-09 | [완성해 놓고 잠가두기 — 개인 인사이트와 마스터 계정]({{ site.baseurl }}/docs/devlog/2026-07-09-personal-insights-and-master/) | ✅ 공개 |
 | 2026-07-09 | [숫자 4개짜리 대시보드를 분석 도구로 — 코호트, 퍼널, 그리고 KST 함정]({{ site.baseurl }}/docs/devlog/2026-07-09-admin-dashboard-analytics/) | ✅ 공개 |
