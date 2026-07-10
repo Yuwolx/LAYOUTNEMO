@@ -48,11 +48,14 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: "LAYOUTNEMO",
       locale: isKorean ? "ko_KR" : "en_US",
       type: "website",
+      // 링크 카드 미리보기 — 커뮤니티(GeekNews/HN/X) 공유 시 유일한 비주얼.
+      images: [{ url: "/og.png", width: 1200, height: 630, alt: "LAYOUTNEMO canvas" }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description: twitterDesc,
+      images: ["/og.png"],
     },
     // 주의: icons 필드를 명시하면 app/icon.svg 자동 등록이 "대체"된다 —
     // apple 만 적었다가 파비콘 링크가 통째로 사라진 적 있음. icon 도 반드시 함께 명시.
