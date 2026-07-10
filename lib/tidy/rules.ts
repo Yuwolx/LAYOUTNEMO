@@ -81,9 +81,10 @@ function clusterByProximity(items: WorkBlock[]): WorkBlock[][] {
 function packGridLayout(cluster: WorkBlock[]): Map<string, { x: number; y: number }> {
   const colWidth = Math.max(...cluster.map((b) => b.width)) + GRID_GAP
   const cellH = Math.max(...cluster.map((b) => b.height)) + GRID_GAP
-  // 읽기 순서: y 정렬 후 "같은 시각적 줄"(밴드, 반 셀 이내) 안에서는 x 순서 유지.
-  // y-then-x 단순 정렬은 같은 줄에서 y 가 살짝 어긋난 블럭의 좌우를 뒤바꿔
-  // 원래 왼쪽 블럭이 오른쪽 셀로 크게 이동했다("블럭이 너무 이동") — 밴딩으로 상대 위치 보존.
+
+  // "재배치"가 아니라 "제자리 스냅": 시각적 줄(밴드) = 격자 줄 그대로, 각 블럭은 원래 x 에서
+  // 가장 가까운 열 슬롯으로. 순서를 이어붙여 고정 열 수로 다시 자르면(이전 방식) 줄 길이가
+  // 제각각일 때 뒷줄 블럭이 엉뚱한 열로 넘어가 서로 가로질렀다 — 이 방식은 교차가 구조적으로 불가능.
   const byY = [...cluster].sort((a, b) => a.y - b.y || a.x - b.x)
   const bandTol = cellH / 2
   const bands: WorkBlock[][] = []
@@ -92,28 +93,26 @@ function packGridLayout(cluster: WorkBlock[]): Map<string, { x: number; y: numbe
     if (last && b.y - last[0].y <= bandTol) last.push(b)
     else bands.push([b])
   })
-  const ordered = bands.flatMap((band) => [...band].sort((a, b) => a.x - b.x))
-  // 열 수는 군집의 "원래 모양(가로세로 비율)"을 따른다 — 가로로 긴 줄은 줄로, 뭉친 blob 은 정사각형에
-  // 가깝게. (√n 고정이면 4개짜리 가로 줄이 2x2 로 변형돼 사용자가 만든 모양이 사라진다.)
-  const bw = Math.max(...ordered.map((b) => b.x + b.width)) - Math.min(...ordered.map((b) => b.x))
-  const bh = Math.max(...ordered.map((b) => b.y + b.height)) - Math.min(...ordered.map((b) => b.y))
-  const aspect = bw / Math.max(1, bh) / (colWidth / cellH) // 셀 비율로 정규화한 군집 가로세로비
-  const cols = Math.min(ordered.length, Math.max(1, Math.round(Math.sqrt(ordered.length * Math.max(0.1, aspect)))))
-  const rowHeights: number[] = []
-  for (let s = 0; s < ordered.length; s += cols) {
-    rowHeights.push(Math.max(...ordered.slice(s, s + cols).map((b) => b.height)))
-  }
-  const rowStarts: number[] = []
-  let acc = 0
-  rowHeights.forEach((h, r) => {
-    rowStarts[r] = acc
-    acc += h + GRID_GAP
+
+  const minX = Math.min(...cluster.map((b) => b.x))
+  const rel: Array<{ b: WorkBlock; rx: number; ry: number }> = []
+  let rowStart = 0
+  bands.forEach((band) => {
+    const row = [...band].sort((a, b) => a.x - b.x)
+    // 각 블럭을 원래 x 와 가장 가까운 열 슬롯에 — 단, 같은 줄 안에서는 열이 겹치지 않게 우측으로.
+    let prevCol = -1
+    row.forEach((b) => {
+      const ideal = Math.round((b.x - minX) / colWidth)
+      const col = Math.max(ideal, prevCol + 1)
+      prevCol = col
+      rel.push({ b, rx: col * colWidth, ry: rowStart })
+    })
+    rowStart += Math.max(...band.map((b) => b.height)) + GRID_GAP
   })
-  const rel = ordered.map((b, i) => ({ b, rx: (i % cols) * colWidth, ry: rowStarts[Math.floor(i / cols)] }))
 
   // 원래 무게중심 = 정돈 후 블럭 무게중심이 되도록 anchor 보정.
-  const cx = ordered.reduce((s, b) => s + b.x + b.width / 2, 0) / ordered.length
-  const cy = ordered.reduce((s, b) => s + b.y + b.height / 2, 0) / ordered.length
+  const cx = cluster.reduce((s, b) => s + b.x + b.width / 2, 0) / cluster.length
+  const cy = cluster.reduce((s, b) => s + b.y + b.height / 2, 0) / cluster.length
   const kx = rel.reduce((s, { b, rx }) => s + rx + b.width / 2, 0) / rel.length
   const ky = rel.reduce((s, { b, ry }) => s + ry + b.height / 2, 0) / rel.length
   const anchorX = Math.round(cx - kx)
