@@ -24,8 +24,8 @@ const MIN_GRID_MOVES = 2
 // k-means 로 찾을 최대 덩어리 수 / 덩어리를 나눌 최소 실루엣(분리도). 이보다 낮으면 전체 1덩어리.
 const MAX_K = 6
 const SILHOUETTE_MIN = 0.35
-// 이 개수 이상인 덩어리만 격자로 정돈(그보다 작은 덩어리는 건드리지 않음).
-const CLUSTER_MIN = 3
+// 군집 간 겹침 분리 시 군집 사각형 사이에 둘 최소 여백.
+const CLUSTER_MARGIN = 80
 
 type Rect = { x: number; y: number; width: number; height: number }
 
@@ -122,10 +122,10 @@ function clusterByKMeans(items: WorkBlock[]): WorkBlock[][] {
   return groups.filter((g) => g.length > 0)
 }
 
-/** 한 덩어리를 제자리(무게중심)에서 균일 격자로 재배치. 이동을 out 에 누적. 가이드 블럭은 피한다.
+/** 한 덩어리를 제자리(무게중심)에서 균일 격자로 배치한 "모든 블럭의 목표 좌표"를 돌려준다.
  *  anchor 를 "격자 기하 중심"이 아니라 "격자 블럭 무게중심 = 원래 무게중심"이 되게 보정한다 →
  *  부분 행이 있어도 정확히 제자리에 오고, 다시 정돈해도 안 움직인다(재적용 안정). */
-function packGridCluster(cluster: WorkBlock[], out: Map<string, { x: number; y: number }>) {
+function packGridLayout(cluster: WorkBlock[]): Map<string, { x: number; y: number }> {
   const ordered = [...cluster].sort((a, b) => a.y - b.y || a.x - b.x)
   const cols = Math.max(1, Math.round(Math.sqrt(ordered.length)))
   const colWidth = Math.max(...ordered.map((b) => b.width)) + GRID_GAP
@@ -133,7 +133,6 @@ function packGridCluster(cluster: WorkBlock[], out: Map<string, { x: number; y: 
   for (let s = 0; s < ordered.length; s += cols) {
     rowHeights.push(Math.max(...ordered.slice(s, s + cols).map((b) => b.height)))
   }
-  // 각 블럭의 격자 내 상대 위치(anchor 기준).
   const rowStarts: number[] = []
   let acc = 0
   rowHeights.forEach((h, r) => {
@@ -150,11 +149,9 @@ function packGridCluster(cluster: WorkBlock[], out: Map<string, { x: number; y: 
   const anchorX = Math.round(cx - kx)
   const anchorY = Math.round(cy - ky)
 
-  rel.forEach(({ b, rx, ry }) => {
-    const tx = anchorX + rx
-    const ty = anchorY + ry
-    if (b.x !== tx || b.y !== ty) out.set(b.id, { x: tx, y: ty })
-  })
+  const out = new Map<string, { x: number; y: number }>()
+  rel.forEach(({ b, rx, ry }) => out.set(b.id, { x: anchorX + rx, y: anchorY + ry }))
+  return out
 }
 
 type Lang = "ko" | "en"
@@ -283,18 +280,74 @@ export function generateRuleSuggestions(
       })
     })
 
-  // ── 3. 위치 정돈 — 덩어리(클러스터)별로 각각 제자리에서 균일 격자로 ──
-  // 이전의 "결 중심으로 모으기"는 사용자가 나눠둔 덩어리를 부숴 중앙으로 끌어당겨(=사용자
-  // 불만 "다 모아버려") 제거. 위치 정돈은 이 격자 하나로 통일한다.
-  // 공간적으로 가까운 블럭끼리 묶어(연결요소, CLUSTER_GAP), 각 덩어리를 무게중심 제자리에서
-  // 격자로 재배치 → 덩어리 간 위치 관계는 보존된다.
-  //  - 읽기 순서 유지 + 균일 셀 → 덩어리 안에서 겹칠 수 없음
-  //  - 가이드 블럭은 격자 밖 고정물 → 각 덩어리 격자가 걸치면 그 아래로 회피
+  // ── 3. 위치 정돈 파이프라인 ── ① 군집 분석 → ② 군집별 격자 정렬 → ③ 군집 간 겹침 분리
+  //  ① k-means 로 밀집 덩어리를 찾고(체이닝 없음), ② 각 덩어리를 무게중심 제자리에서 격자로
+  //     정돈한 뒤, ③ 정돈된 덩어리끼리 겹치면 덩어리 자체를 강체로 밀어 거리를 벌린다.
+  //     (덩어리 내부 배치는 ③에서 불변 — 통째로 평행이동만.)
   const gridBlocks = blocks
   const gridById = new Map(gridBlocks.map((b) => [b.id, b]))
+
+  // ① + ②: 각 덩어리를 격자로 배치하고, 덩어리 단위 bbox + 오프셋(초기 0) 을 준비.
+  const packs = clusterByKMeans(gridBlocks)
+    .filter((c) => c.length > 0)
+    .map((cluster) => {
+      const local = packGridLayout(cluster)
+      let minX = Infinity
+      let minY = Infinity
+      let maxX = -Infinity
+      let maxY = -Infinity
+      cluster.forEach((b) => {
+        const p = local.get(b.id)!
+        minX = Math.min(minX, p.x)
+        minY = Math.min(minY, p.y)
+        maxX = Math.max(maxX, p.x + b.width)
+        maxY = Math.max(maxY, p.y + b.height)
+      })
+      return { cluster, local, bbox: { x: minX, y: minY, w: maxX - minX, h: maxY - minY }, off: { x: 0, y: 0 } }
+    })
+
+  // ③: 덩어리 bbox 를 강체로 보고, 겹치면 관통이 작은 축으로 서로 반반씩 밀어낸다(거리 벌리기).
+  for (let iter = 0; iter < 40; iter++) {
+    let moved = false
+    for (let i = 0; i < packs.length; i++) {
+      for (let j = i + 1; j < packs.length; j++) {
+        const A = packs[i]
+        const B = packs[j]
+        const ax = A.bbox.x + A.off.x
+        const ay = A.bbox.y + A.off.y
+        const bx = B.bbox.x + B.off.x
+        const by = B.bbox.y + B.off.y
+        // 관통량(+여백): 두 축 모두 양수면 여백보다 가까워 겹친 것 → 작은 축으로 밀어낸다.
+        const penX = Math.min(ax + A.bbox.w, bx + B.bbox.w) - Math.max(ax, bx) + CLUSTER_MARGIN
+        const penY = Math.min(ay + A.bbox.h, by + B.bbox.h) - Math.max(ay, by) + CLUSTER_MARGIN
+        if (penX > 0 && penY > 0) {
+          if (penX <= penY) {
+            const push = penX / 2
+            const dir = ax + A.bbox.w / 2 <= bx + B.bbox.w / 2 ? -1 : 1
+            A.off.x += dir * push
+            B.off.x -= dir * push
+          } else {
+            const push = penY / 2
+            const dir = ay + A.bbox.h / 2 <= by + B.bbox.h / 2 ? -1 : 1
+            A.off.y += dir * push
+            B.off.y -= dir * push
+          }
+          moved = true
+        }
+      }
+    }
+    if (!moved) break
+  }
+
+  // 최종 이동 = 격자 로컬 좌표 + 덩어리 오프셋.
   const gridMoves = new Map<string, { x: number; y: number }>()
-  clusterByKMeans(gridBlocks).forEach((cluster) => {
-    if (cluster.length >= CLUSTER_MIN) packGridCluster(cluster, gridMoves)
+  packs.forEach(({ cluster, local, off }) => {
+    cluster.forEach((b) => {
+      const p = local.get(b.id)!
+      const tx = Math.round(p.x + off.x)
+      const ty = Math.round(p.y + off.y)
+      if (b.x !== tx || b.y !== ty) gridMoves.set(b.id, { x: tx, y: ty })
+    })
   })
 
   if (gridMoves.size >= MIN_GRID_MOVES) {
