@@ -11,7 +11,7 @@ import { URGENCY_META } from "@/lib/constants/urgency"
  * 카테고리가 겹치지 않으므로 중복 제안이 구조적으로 발생하지 않는다.
  */
 
-const SIMILARITY_THRESHOLD = 50
+const SIMILARITY_THRESHOLD = 60
 const MAX_CONNECTION_SUGGESTIONS = 4
 const MAX_URGENCY_SUGGESTIONS = 4
 // 기한이 이 일수 이내(또는 지남)인데 시급이 아니면 제안.
