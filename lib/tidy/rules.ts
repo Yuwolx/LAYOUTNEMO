@@ -79,13 +79,24 @@ function clusterByProximity(items: WorkBlock[]): WorkBlock[][] {
  *  anchor 를 "격자 기하 중심"이 아니라 "격자 블럭 무게중심 = 원래 무게중심"이 되게 보정한다 →
  *  부분 행이 있어도 정확히 제자리에 오고, 다시 정돈해도 안 움직인다(재적용 안정). */
 function packGridLayout(cluster: WorkBlock[]): Map<string, { x: number; y: number }> {
-  const ordered = [...cluster].sort((a, b) => a.y - b.y || a.x - b.x)
-  const colWidth = Math.max(...ordered.map((b) => b.width)) + GRID_GAP
+  const colWidth = Math.max(...cluster.map((b) => b.width)) + GRID_GAP
+  const cellH = Math.max(...cluster.map((b) => b.height)) + GRID_GAP
+  // 읽기 순서: y 정렬 후 "같은 시각적 줄"(밴드, 반 셀 이내) 안에서는 x 순서 유지.
+  // y-then-x 단순 정렬은 같은 줄에서 y 가 살짝 어긋난 블럭의 좌우를 뒤바꿔
+  // 원래 왼쪽 블럭이 오른쪽 셀로 크게 이동했다("블럭이 너무 이동") — 밴딩으로 상대 위치 보존.
+  const byY = [...cluster].sort((a, b) => a.y - b.y || a.x - b.x)
+  const bandTol = cellH / 2
+  const bands: WorkBlock[][] = []
+  byY.forEach((b) => {
+    const last = bands[bands.length - 1]
+    if (last && b.y - last[0].y <= bandTol) last.push(b)
+    else bands.push([b])
+  })
+  const ordered = bands.flatMap((band) => [...band].sort((a, b) => a.x - b.x))
   // 열 수는 군집의 "원래 모양(가로세로 비율)"을 따른다 — 가로로 긴 줄은 줄로, 뭉친 blob 은 정사각형에
   // 가깝게. (√n 고정이면 4개짜리 가로 줄이 2x2 로 변형돼 사용자가 만든 모양이 사라진다.)
   const bw = Math.max(...ordered.map((b) => b.x + b.width)) - Math.min(...ordered.map((b) => b.x))
   const bh = Math.max(...ordered.map((b) => b.y + b.height)) - Math.min(...ordered.map((b) => b.y))
-  const cellH = Math.max(...ordered.map((b) => b.height)) + GRID_GAP
   const aspect = bw / Math.max(1, bh) / (colWidth / cellH) // 셀 비율로 정규화한 군집 가로세로비
   const cols = Math.min(ordered.length, Math.max(1, Math.round(Math.sqrt(ordered.length * Math.max(0.1, aspect)))))
   const rowHeights: number[] = []
