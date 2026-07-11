@@ -17,6 +17,10 @@ export const viewport = {
   maximumScale: 2,
   userScalable: true,
   themeColor: "#fafaf9",
+  // iOS 홈 화면 앱(standalone)이 회전 시 상태 바 높이만큼 터치 좌표가 어긋나는
+  // 버그 대응 — 웹뷰가 처음부터 화면 전체를 덮게 해 어긋날 여지를 없앤다.
+  // 노치/홈 인디케이터 침범은 env(safe-area-inset-*) 패딩으로 각 컴포넌트에서 처리.
+  viewportFit: "cover" as const,
 }
 
 const TITLE = "LAYOUTNEMO — 캔버스 위 사고 공간"

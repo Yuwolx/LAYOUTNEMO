@@ -164,6 +164,11 @@ export function Header({
   return (
     <header
       className={`fixed top-0 left-0 right-0 backdrop-blur-sm transition-colors duration-700 ${isReflecting ? "z-30" : "z-50"} ${isDarkMode ? "bg-[#21252b]/95" : "bg-[#fafaf9]/95"}`}
+      style={{
+        // viewport-fit=cover 대응 — 가로 모드에서 노치 밑에 버튼이 깔리지 않게.
+        paddingLeft: "env(safe-area-inset-left)",
+        paddingRight: "env(safe-area-inset-right)",
+      }}
     >
       <div className={`border-b transition-colors duration-700 ${isDarkMode ? "border-[#1b1e24]" : "border-border/20"}`}>
         {/* 폭이 모자라면 요소를 겹치게 두지 않고 가로 스크롤. (이전: 왼쪽 그룹이 min-w-0 로

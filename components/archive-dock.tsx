@@ -23,7 +23,7 @@ export function ArchiveDock({ archivedCount, isDarkMode, onClick }: ArchiveDockP
       aria-label={t("archive.dock.label")}
       title={t("archive.dock.label")}
       className={`
-        fixed z-40 right-6 bottom-6
+        fixed z-40 right-[max(1.5rem,env(safe-area-inset-right))] bottom-[max(1.5rem,env(safe-area-inset-bottom))]
         h-14 w-14 rounded-2xl
         flex items-center justify-center
         transition-all duration-200

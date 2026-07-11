@@ -1144,7 +1144,7 @@ export function Canvas({
       )}
 
       {/* 좌하단 컨트롤 묶음: 배율 리셋(줌 상태일 때만) + 터치 선택 모드 토글 */}
-      <div className="absolute bottom-5 left-5 z-[75] flex flex-col items-start gap-2">
+      <div className="absolute bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-[max(1.25rem,env(safe-area-inset-left))] z-[75] flex flex-col items-start gap-2">
         {/* 배율 표시 + 탭/클릭으로 기본 배율 복귀. 핀치·휠로 배율이 바뀌었을 때만 노출. */}
         {Math.abs(scale - defaultScaleRef.current) > 0.01 && (
           <button
@@ -1196,7 +1196,7 @@ export function Canvas({
 
       {/* 연결 모드 안내 */}
       {connectingId && (
-        <div className="absolute bottom-5 left-1/2 z-[80] -translate-x-1/2">
+        <div className="absolute bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-[80] -translate-x-1/2">
           <div
             className={`flex items-center gap-3 rounded-full border px-4 py-2 text-xs shadow-md ${
               isDarkMode ? "border-[#3b414d] bg-[#333944] text-[#dfe3ea]" : "border-gray-200 bg-white text-gray-800"
