@@ -24,6 +24,7 @@ LAYOUTNEMO를 만들면서 마주친 문제, 선택, 삽질, 배운 것을 기�
 
 | 날짜 | 제목 | 상태 |
 |------|------|------|
+| 2026-07-12 | [인식 영역이 손가락보다 위에 있다 — PWA 가로 버그, 풀려버린 번역, 캔버스 1개]({{ site.baseurl }}/docs/devlog/2026-07-12-canvas-limit-i18n-pwa-touch/) | ✅ 공개 |
 | 2026-07-10 | [여덟 번 갈아엎은 정렬 — 재배치가 아니라 제자리 스냅이었다]({{ site.baseurl }}/docs/devlog/2026-07-10-tidy-position-saga/) | ✅ 공개 |
 | 2026-07-10 | [쿼터를 아끼는 버튼, 블러 안 되던 상단바, 태블릿 세 가지 — 잔손질 묶음]({{ site.baseurl }}/docs/devlog/2026-07-10-optin-blur-touch/) | ✅ 공개 |
 | 2026-07-09 | [헤더와 캔버스 사이, 세 가지 색 — 다크 이음새와 아이콘 은유]({{ site.baseurl }}/docs/devlog/2026-07-09-dark-seams-and-icons/) | ✅ 공개 |
