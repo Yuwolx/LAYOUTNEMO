@@ -51,7 +51,7 @@ export async function createBlockWithAI(input: CreateBlockAIInput): Promise<Crea
  * 키워드 기반의 그럴듯한 블럭 생성 추론. AI 가 실패했을 때 사용자가 빈 상태로 멈추지 않도록.
  * 무작위 zone 을 고르던 기존 mock 보다 의도를 반영한다.
  */
-export function mockCreateBlockOutput(input: CreateBlockAIInput): CreateBlockAIOutput {
+export function mockCreateBlockOutput(input: CreateBlockAIInput, language: "ko" | "en" = "ko"): CreateBlockAIOutput {
   const text = input.userInput.trim()
   const lower = text.toLowerCase()
 
@@ -59,7 +59,7 @@ export function mockCreateBlockOutput(input: CreateBlockAIInput): CreateBlockAIO
   const firstSentence = text.split(/[.!?\n]/)[0]
   const titleSource = firstSentence.length > 0 ? firstSentence : text
   const titleWords = titleSource.split(/\s+/).slice(0, 6).join(" ")
-  const title = titleWords.length > 30 ? titleWords.slice(0, 28) + "…" : titleWords || "새 블럭"
+  const title = titleWords.length > 30 ? titleWords.slice(0, 28) + "…" : titleWords || (language === "en" ? "New block" : "새 블럭")
 
   // 요약: 입력 그대로(짧으면) 또는 자른 버전
   const summary = text.length > 80 ? text.slice(0, 77) + "…" : text
@@ -127,7 +127,10 @@ export function mockCreateBlockOutput(input: CreateBlockAIInput): CreateBlockAIO
     title,
     summary,
     suggestedZone: suggestedZoneId,
-    zoneReason: "키워드를 보고 임시로 골랐어요. 필요하면 직접 바꿔주세요.",
+    zoneReason:
+      language === "en"
+        ? "Picked temporarily from keywords — change it if it doesn't fit."
+        : "키워드를 보고 임시로 골랐어요. 필요하면 직접 바꿔주세요.",
     suggestedDueDate,
     suggestedUrgency,
     suggestedUrl,

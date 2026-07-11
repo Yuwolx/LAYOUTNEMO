@@ -350,7 +350,7 @@ export function WorkBlockCard({
                 onPointerDown={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] text-card-foreground/60 hover:text-card-foreground hover:bg-foreground/5 transition-colors"
                 title={block.url}
-                aria-label="외부 링크 열기"
+                aria-label={language === "en" ? "Open external link" : "외부 링크 열기"}
               >
                 <ExternalLink className="w-3 h-3" />
               </a>

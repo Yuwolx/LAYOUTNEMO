@@ -79,13 +79,17 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // 문서 언어도 accept-language 기준으로 — 영어 유저에게 lang="ko" 고정은 스크린리더/SEO 오류.
+  // (런타임 토글은 LanguageProvider 가 관리하지만 초기 문서 속성은 서버에서 맞춰준다.)
+  const acceptLang = (await headers()).get("accept-language") ?? ""
+  const docLang = acceptLang.toLowerCase().startsWith("ko") ? "ko" : "en"
   return (
-    <html lang="ko">
+    <html lang={docLang}>
       <body className={`font-sans antialiased`}>
         <AuthProvider>
           <LanguageProvider>{children}</LanguageProvider>
