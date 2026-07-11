@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/Tailwind-v4-38bdf8?style=flat-square&logo=tailwindcss" />
 </p>
 
-LAYOUTNEMO 는 업무를 리스트·보드에 욱여넣는 대신, **캔버스 위에 자유롭게 펼쳐놓는 사고 공간**입니다.
+LAYOUTNEMO 는 업무를 리스트·보드의 틀에 맞추는 대신, **캔버스 위에 자유롭게 펼쳐놓는 사고 공간**입니다.
 네모난 블럭을 만들고, 가까이 놓아 잇고, 결(Facet)로 맥락을 나눠 정리합니다.
 
 > 업무가 정리되지 않는 이유는 개인의 관리 능력 문제가 아니라, **업무를 담아낼 구조가 사고 방식과 맞지 않기 때문**입니다.
