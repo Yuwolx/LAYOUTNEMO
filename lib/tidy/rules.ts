@@ -11,37 +11,127 @@ import { URGENCY_META } from "@/lib/constants/urgency"
  * 카테고리가 겹치지 않으므로 중복 제안이 구조적으로 발생하지 않는다.
  */
 
-const SIMILARITY_THRESHOLD = 50
+const SIMILARITY_THRESHOLD = 60
 const MAX_CONNECTION_SUGGESTIONS = 4
 const MAX_URGENCY_SUGGESTIONS = 4
 // 기한이 이 일수 이내(또는 지남)인데 시급이 아니면 제안.
 const DUE_SOON_DAYS = 3
-// 결 중심(centroid)에서 이보다 멀리 떨어진 블럭을 "흩어짐"으로 판정.
-const DISPERSION_THRESHOLD = 700
-// 모으기 제안 시 중심에서 이 반경의 링 위로 배치 (그대로 중심에 두면 블럭이 겹친다).
-const GATHER_RADIUS = 280
-const MAX_POSITION_ZONES = 2
-// (모으기 전용) 격자 스냅 간격 — 캔버스 배경 도트(48px)의 절반.
-const ALIGN_GRID = 24
-// 격자 정렬(#4): 셀 간 여백 / 격자 제안 최소 블럭 수 / 실제 이동 최소 수.
+// 격자 정렬: 셀 간 여백 / 실제 이동 최소 수.
 const GRID_GAP = 40
-const MIN_GRID_BLOCKS = 4
 const MIN_GRID_MOVES = 2
-// 모으기 배치 시 블럭 간 최소 간격. 겹치면 중심 반대 방향으로 이만큼씩 밀어낸다.
-const GATHER_GAP = 24
-const GATHER_STEP = 48
-
-const snapToGrid = (v: number) => Math.round(v / ALIGN_GRID) * ALIGN_GRID
+// 군집 판정: 사각형 간 여백이 이 이하인 이웃끼리 묶는다(단일 연결).
+// 사람 눈의 "뭉침"은 이웃 간격으로 지각되므로 단일 연결이 맞다. 예전 체이닝 문제는
+// 임계값 220 이 너무 커서 서로 다른 군집까지 이어진 것 — 타이트하게 잡는다.
+const CLUSTER_CUT = 160
+// 군집 간 겹침 분리 시 군집 사각형 사이에 둘 최소 여백.
+const CLUSTER_MARGIN = 80
+// 분리 반복 상한. 이 안에 수렴 못 하면(그리고 최종 겹침이 남으면) 제안을 내지 않는다.
+const SEPARATE_ITERS = 60
 
 type Rect = { x: number; y: number; width: number; height: number }
 
-const rectsOverlap = (a: Rect, b: Rect) =>
-  a.x < b.x + b.width + GATHER_GAP &&
-  a.x + a.width + GATHER_GAP > b.x &&
-  a.y < b.y + b.height + GATHER_GAP &&
-  a.y + a.height + GATHER_GAP > b.y
+/** 두 사각형이 margin 이내로 겹치거나 붙어 있나. margin=0 이면 순수 겹침 검사. */
+function rectsIntersect(a: Rect, b: Rect, margin: number): boolean {
+  return (
+    a.x < b.x + b.width + margin &&
+    a.x + a.width + margin > b.x &&
+    a.y < b.y + b.height + margin &&
+    a.y + a.height + margin > b.y
+  )
+}
+
+/** 두 블럭 사각형 간 최단 여백(겹치면 0). */
+function edgeGap(a: WorkBlock, b: WorkBlock): number {
+  const hg = Math.max(0, b.x - (a.x + a.width), a.x - (b.x + b.width))
+  const vg = Math.max(0, b.y - (a.y + a.height), a.y - (b.y + b.height))
+  return Math.hypot(hg, vg)
+}
+
+/** 근접 군집(단일 연결): 여백 CLUSTER_CUT 이하인 이웃끼리 union-find 로 묶는다.
+ *  사람 눈의 "뭉침"(게슈탈트 근접)과 일치 — 긴 줄도 한 군집으로 본다.
+ *  (평균 연결은 긴 줄을 쪼개서 폐기, k-means 는 모양·개수 가정 때문에 폐기.) */
+function clusterByProximity(items: WorkBlock[]): WorkBlock[][] {
+  if (items.length <= 1) return items.length ? [items] : []
+  const parent = items.map((_, i) => i)
+  const find = (i: number): number => {
+    while (parent[i] !== i) {
+      parent[i] = parent[parent[i]]
+      i = parent[i]
+    }
+    return i
+  }
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      if (edgeGap(items[i], items[j]) <= CLUSTER_CUT) parent[find(i)] = find(j)
+    }
+  }
+  const groups = new Map<number, WorkBlock[]>()
+  items.forEach((b, i) => {
+    const root = find(i)
+    const g = groups.get(root)
+    if (g) g.push(b)
+    else groups.set(root, [b])
+  })
+  return Array.from(groups.values())
+}
+
+/** 한 덩어리를 제자리(무게중심)에서 균일 격자로 배치한 "모든 블럭의 목표 좌표"를 돌려준다.
+ *  anchor 를 "격자 기하 중심"이 아니라 "격자 블럭 무게중심 = 원래 무게중심"이 되게 보정한다 →
+ *  부분 행이 있어도 정확히 제자리에 오고, 다시 정돈해도 안 움직인다(재적용 안정). */
+function packGridLayout(cluster: WorkBlock[]): Map<string, { x: number; y: number }> {
+  const colWidth = Math.max(...cluster.map((b) => b.width)) + GRID_GAP
+  const cellH = Math.max(...cluster.map((b) => b.height)) + GRID_GAP
+
+  // "재배치"가 아니라 "제자리 스냅": 시각적 줄(밴드) = 격자 줄 그대로, 각 블럭은 원래 x 에서
+  // 가장 가까운 열 슬롯으로. 순서를 이어붙여 고정 열 수로 다시 자르면(이전 방식) 줄 길이가
+  // 제각각일 때 뒷줄 블럭이 엉뚱한 열로 넘어가 서로 가로질렀다 — 이 방식은 교차가 구조적으로 불가능.
+  const byY = [...cluster].sort((a, b) => a.y - b.y || a.x - b.x)
+  const bandTol = cellH / 2
+  const bands: WorkBlock[][] = []
+  byY.forEach((b) => {
+    const last = bands[bands.length - 1]
+    if (last && b.y - last[0].y <= bandTol) last.push(b)
+    else bands.push([b])
+  })
+
+  const minX = Math.min(...cluster.map((b) => b.x))
+  const rel: Array<{ b: WorkBlock; rx: number; ry: number }> = []
+  let rowStart = 0
+  bands.forEach((band) => {
+    const row = [...band].sort((a, b) => a.x - b.x)
+    // 각 블럭을 원래 x 와 가장 가까운 열 슬롯에 — 단, 같은 줄 안에서는 열이 겹치지 않게 우측으로.
+    let prevCol = -1
+    row.forEach((b) => {
+      const ideal = Math.round((b.x - minX) / colWidth)
+      const col = Math.max(ideal, prevCol + 1)
+      prevCol = col
+      rel.push({ b, rx: col * colWidth, ry: rowStart })
+    })
+    rowStart += Math.max(...band.map((b) => b.height)) + GRID_GAP
+  })
+
+  // 원래 무게중심 = 정돈 후 블럭 무게중심이 되도록 anchor 보정.
+  const cx = cluster.reduce((s, b) => s + b.x + b.width / 2, 0) / cluster.length
+  const cy = cluster.reduce((s, b) => s + b.y + b.height / 2, 0) / cluster.length
+  const kx = rel.reduce((s, { b, rx }) => s + rx + b.width / 2, 0) / rel.length
+  const ky = rel.reduce((s, { b, ry }) => s + ry + b.height / 2, 0) / rel.length
+  const anchorX = Math.round(cx - kx)
+  const anchorY = Math.round(cy - ky)
+
+  const out = new Map<string, { x: number; y: number }>()
+  rel.forEach(({ b, rx, ry }) => out.set(b.id, { x: anchorX + rx, y: anchorY + ry }))
+  return out
+}
 
 type Lang = "ko" | "en"
+
+// 제안 문구용 시급도 영어 라벨 — lib/i18n/dictionary.ts 의 urgency.* EN 값과 동일하게 유지.
+const URGENCY_LABEL_EN: Record<string, string> = {
+  thinking: "Undecided",
+  stable: "Flexible",
+  lingering: "In progress",
+  urgent: "Urgent",
+}
 
 /** 라우트에 있던 유사도 계산을 클라이언트로 이식 — 결 > 텍스트 키워드 > 상태 > 위치 근접 순 가중치. */
 function blockSimilarity(a: WorkBlock, b: WorkBlock): number {
@@ -76,7 +166,6 @@ export function generateRuleSuggestions(
 ): TidyDetailedSuggestion[] {
   const blocks = allBlocks.filter((b) => !b.isGuide && !b.isCompleted && !b.isDeleted)
   const suggestions: TidyDetailedSuggestion[] = []
-  const zoneLabel = (id: string) => zones.find((z) => z.id === id)?.label ?? id
 
   // ── 1. 기한 임박인데 시급이 아님 ─────────────────────────
   const dueSoon = blocks
@@ -88,7 +177,7 @@ export function generateRuleSuggestions(
 
   dueSoon.forEach(({ block, days }) => {
     const current = block.urgency ?? "thinking"
-    const currentLabel = URGENCY_META[current]?.label ?? current
+    const currentLabel = language === "en" ? (URGENCY_LABEL_EN[current] ?? current) : (URGENCY_META[current]?.label ?? current)
     const dueText =
       language === "en"
         ? days < 0
@@ -168,154 +257,131 @@ export function generateRuleSuggestions(
       })
     })
 
-  // ── 3. 같은 결 블럭이 흩어짐 ─────────────────────────────
-  const byZone = new Map<string, WorkBlock[]>()
-  blocks.forEach((b) => {
-    if (!b.zone) return
-    const list = byZone.get(b.zone) ?? []
-    list.push(b)
-    byZone.set(b.zone, list)
-  })
-
-  const scattered: Array<{ zoneId: string; outliers: Array<{ block: WorkBlock; dist: number }>; cx: number; cy: number }> = []
-  byZone.forEach((zoneBlocks, zoneId) => {
-    if (zoneBlocks.length < 3) return
-    const cx = zoneBlocks.reduce((s, b) => s + b.x + b.width / 2, 0) / zoneBlocks.length
-    const cy = zoneBlocks.reduce((s, b) => s + b.y + b.height / 2, 0) / zoneBlocks.length
-    const outliers = zoneBlocks
-      .map((block) => ({ block, dist: Math.hypot(block.x + block.width / 2 - cx, block.y + block.height / 2 - cy) }))
-      .filter(({ dist }) => dist > DISPERSION_THRESHOLD)
-      .sort((a, b) => b.dist - a.dist)
-      .slice(0, 3)
-    if (outliers.length > 0) scattered.push({ zoneId, outliers, cx, cy })
-  })
-
-  // 모으기 대상 블럭은 아래 격자 정렬에서 제외 — 두 제안이 같은 블럭의 좌표를
-  // 서로 덮어쓰면 나중 것이 이기면서 앞의 제안이 조용히 무효가 된다.
-  const gatheredIds = new Set<string>()
-  const gatherTargets = scattered
-    .sort((a, b) => b.outliers[0].dist - a.outliers[0].dist)
-    .slice(0, MAX_POSITION_ZONES)
-  gatherTargets.forEach(({ outliers }) => outliers.forEach(({ block }) => gatheredIds.add(block.id)))
-
-  // 충돌 회피 장애물: 캔버스에 "보이는" 모든 블럭 — 규칙 대상이 아닌 가이드 블럭도
-  // 실재하는 장애물이므로 포함해야 한다(빼면 사용 설명서 위에 얹힌다). 이동 대상만 제외.
-  // 목록은 모든 결이 공유 — 결 A 가 배치한 목표 위에 결 B 가 얹히지 않도록.
-  const occupied: Rect[] = allBlocks
-    .filter((b) => !b.isCompleted && !b.isDeleted && !gatheredIds.has(b.id))
+  // ── 3. 위치 정돈 파이프라인 ──
+  //  ① 군집 분석(응집 클러스터링) → ② 군집별 격자 정렬 → ③ 군집 간 겹침 분리(가이드는 고정
+  //  장애물) → ④ 최종 안전망: 모든 보이는 블럭과 전수 겹침 검사, 하나라도 겹치면 제안을 내지 않는다.
+  //  겹친 결과를 캔버스에 쓰는 것보다 "오늘은 제안 없음"이 낫다.
+  const gridBlocks = blocks
+  const gridById = new Map(gridBlocks.map((b) => [b.id, b]))
+  // 가이드 블럭(사용설명서 등)은 정돈 대상이 아니지만 화면에 실재 — 고정 장애물로 취급.
+  const guideRects: Rect[] = allBlocks
+    .filter((b) => b.isGuide && !b.isCompleted && !b.isDeleted)
     .map((b) => ({ x: b.x, y: b.y, width: b.width, height: b.height }))
 
-  gatherTargets.forEach(({ zoneId, outliers, cx, cy }) => {
-      const label = zoneLabel(zoneId)
-
-      const changes = outliers.flatMap(({ block, dist }) => {
-        const dirX = (block.x + block.width / 2 - cx) / dist
-        const dirY = (block.y + block.height / 2 - cy) / dist
-        let radius = GATHER_RADIUS
-        let target: Rect = { x: 0, y: 0, width: block.width, height: block.height }
-        for (let step = 0; step < 24; step++) {
-          target = {
-            x: snapToGrid(cx + dirX * radius - block.width / 2),
-            y: snapToGrid(cy + dirY * radius - block.height / 2),
-            width: block.width,
-            height: block.height,
-          }
-          if (!occupied.some((r) => rectsOverlap(target, r))) break
-          radius += GATHER_STEP
-        }
-        occupied.push(target)
-        const reason =
-          language === "en"
-            ? `${Math.round(dist)}px from the ${label} cluster center`
-            : `${label} 결 중심에서 ${Math.round(dist)}px 떨어짐`
-        return [
-          { blockId: block.id, field: "x", currentValue: block.x, suggestedValue: target.x, reason },
-          { blockId: block.id, field: "y", currentValue: block.y, suggestedValue: target.y, reason },
-        ]
-      })
-
-      suggestions.push({
-        id: `rule-position-${zoneId}`,
-        type: "position",
-        priority: "medium",
-        blockIds: outliers.map(({ block }) => block.id),
-        question:
-          language === "en"
-            ? `${outliers.length} "${label}" block(s) drifted far from the rest. Gather them?`
-            : `'${label}' 결 블럭 ${outliers.length}개가 멀리 떨어져 있어요. 근처로 모아둘까요?`,
-        changes,
-      })
+  // ① + ②: 각 덩어리를 격자로 배치하고, 덩어리 단위 bbox + 오프셋(초기 0) 을 준비.
+  const packs = clusterByProximity(gridBlocks).map((cluster) => {
+    const local = packGridLayout(cluster)
+    let minX = Infinity
+    let minY = Infinity
+    let maxX = -Infinity
+    let maxY = -Infinity
+    cluster.forEach((b) => {
+      const p = local.get(b.id)!
+      minX = Math.min(minX, p.x)
+      minY = Math.min(minY, p.y)
+      maxX = Math.max(maxX, p.x + b.width)
+      maxY = Math.max(maxY, p.y + b.height)
     })
+    return { cluster, local, bbox: { x: minX, y: minY, w: maxX - minX, h: maxY - minY }, off: { x: 0, y: 0 } }
+  })
 
-  // ── 4. 격자 정렬 — 캔버스 전체 블럭을 균일 격자로 재배치 (겹침 구조적 불가) ──
-  // 라인 정렬(제자리 근처 미세 조정)로는 "안 보임 ↔ 겹침"을 못 벗어나 3회 실패 →
-  // 전면 재배치(그리드 패킹)로 전환. 사용자 합의: 캔버스 전체 하나의 격자, 옵트인.
-  //  - 읽기 순서(위→아래·좌→우) 유지 → 블럭이 엉뚱하게 뒤섞이지 않음
-  //  - 균일 셀(열=최대폭, 각 행 높이=그 행 최대높이 + 여백) → 서로 겹칠 수가 없음(구조적 보장)
-  //  - 가이드 블럭(사용설명서·단축키)은 격자 밖 고정물 → 격자 x 범위에 걸치면 그 아래에서 시작
-  const gridBlocks = blocks.filter((b) => !gatheredIds.has(b.id))
-  if (gridBlocks.length >= MIN_GRID_BLOCKS) {
-    const gridById = new Map(gridBlocks.map((b) => [b.id, b]))
-    const ordered = [...gridBlocks].sort((a, b) => a.y - b.y || a.x - b.x)
-    const cols = Math.max(1, Math.round(Math.sqrt(ordered.length)))
-    const colWidth = Math.max(...ordered.map((b) => b.width)) + GRID_GAP
-    // 행별 높이 미리 계산 → 격자 전체 크기 산출(중심 배치에 필요).
-    const rowHeights: number[] = []
-    for (let s = 0; s < ordered.length; s += cols) {
-      rowHeights.push(Math.max(...ordered.slice(s, s + cols).map((b) => b.height)))
+  // ③: 덩어리 bbox 를 강체로 보고 겹치면 관통이 작은 축으로 밀어낸다.
+  //    덩어리끼리는 반반씩, 고정 장애물(가이드)과 겹치면 덩어리만 전량 밀림.
+  for (let iter = 0; iter < SEPARATE_ITERS; iter++) {
+    let moved = false
+    for (let i = 0; i < packs.length; i++) {
+      const A = packs[i]
+      const ax = () => A.bbox.x + A.off.x
+      const ay = () => A.bbox.y + A.off.y
+      // 덩어리 vs 덩어리 — 반반씩.
+      for (let j = i + 1; j < packs.length; j++) {
+        const B = packs[j]
+        const bx = B.bbox.x + B.off.x
+        const by = B.bbox.y + B.off.y
+        const penX = Math.min(ax() + A.bbox.w, bx + B.bbox.w) - Math.max(ax(), bx) + CLUSTER_MARGIN
+        const penY = Math.min(ay() + A.bbox.h, by + B.bbox.h) - Math.max(ay(), by) + CLUSTER_MARGIN
+        if (penX > 0 && penY > 0) {
+          if (penX <= penY) {
+            const push = penX / 2
+            const dir = ax() + A.bbox.w / 2 <= bx + B.bbox.w / 2 ? -1 : 1
+            A.off.x += dir * push
+            B.off.x -= dir * push
+          } else {
+            const push = penY / 2
+            const dir = ay() + A.bbox.h / 2 <= by + B.bbox.h / 2 ? -1 : 1
+            A.off.y += dir * push
+            B.off.y -= dir * push
+          }
+          moved = true
+        }
+      }
+      // 덩어리 vs 고정 가이드 — 덩어리만 밀림 (여백은 격자 간격 수준이면 충분).
+      for (const g of guideRects) {
+        const penX = Math.min(ax() + A.bbox.w, g.x + g.width) - Math.max(ax(), g.x) + GRID_GAP
+        const penY = Math.min(ay() + A.bbox.h, g.y + g.height) - Math.max(ay(), g.y) + GRID_GAP
+        if (penX > 0 && penY > 0) {
+          if (penX <= penY) {
+            A.off.x += (ax() + A.bbox.w / 2 <= g.x + g.width / 2 ? -1 : 1) * penX
+          } else {
+            A.off.y += (ay() + A.bbox.h / 2 <= g.y + g.height / 2 ? -1 : 1) * penY
+          }
+          moved = true
+        }
+      }
     }
-    const gridWidth = cols * colWidth - GRID_GAP
-    const gridHeight = rowHeights.reduce((a, b) => a + b, 0) + (rowHeights.length - 1) * GRID_GAP
+    if (!moved) break
+  }
 
-    // 기존 위치 고수: 격자를 좌상단 구석이 아니라 블럭들 무게중심에 맞춰 배치한다.
-    // (전면 재배치라 개별 블럭은 셀로 가지만, 정돈된 격자가 "있던 자리 근처"에 생긴다.)
-    const cx = ordered.reduce((s, b) => s + b.x + b.width / 2, 0) / ordered.length
-    const cy = ordered.reduce((s, b) => s + b.y + b.height / 2, 0) / ordered.length
-    const anchorX = Math.round(cx - gridWidth / 2)
-    let anchorY = Math.round(cy - gridHeight / 2)
+  // 최종 이동 = 격자 로컬 좌표 + 덩어리 오프셋.
+  const gridMoves = new Map<string, { x: number; y: number }>()
+  packs.forEach(({ cluster, local, off }) => {
+    cluster.forEach((b) => {
+      const p = local.get(b.id)!
+      const tx = Math.round(p.x + off.x)
+      const ty = Math.round(p.y + off.y)
+      if (b.x !== tx || b.y !== ty) gridMoves.set(b.id, { x: tx, y: ty })
+    })
+  })
 
-    // 가이드 블럭이 격자의 가로 범위에 걸치면, 격자를 그 아래로 밀어 안 겹치게 한다.
-    const gridSpanRight = anchorX + gridWidth
-    const guideBottoms = allBlocks
-      .filter((b) => b.isGuide && !b.isCompleted && !b.isDeleted)
-      .filter((b) => b.x < gridSpanRight && b.x + b.width > anchorX)
-      .map((b) => b.y + b.height + GRID_GAP)
-    if (guideBottoms.length) anchorY = Math.max(anchorY, ...guideBottoms)
-
-    const gridMoves = new Map<string, { x: number; y: number }>()
-    let rowY = anchorY
-    let rowIdx = 0
-    for (let start = 0; start < ordered.length; start += cols) {
-      const rowBlocks = ordered.slice(start, start + cols)
-      rowBlocks.forEach((b, c) => {
-        const tx = anchorX + c * colWidth
-        if (b.x !== tx || b.y !== rowY) gridMoves.set(b.id, { x: tx, y: rowY })
-      })
-      rowY += rowHeights[rowIdx] + GRID_GAP
-      rowIdx++
+  // ④ 최종 안전망: 정돈 결과의 "모든 보이는 사각형"(정돈 블럭 최종 좌표 + 가이드) 전수 겹침 검사.
+  //   하나라도 겹치면 이 제안은 폐기 — 겹침을 캔버스에 쓰지 않는 것을 구조적으로 보장.
+  const finalRects: Rect[] = [
+    ...gridBlocks.map((b) => {
+      const mv = gridMoves.get(b.id)
+      return { x: mv?.x ?? b.x, y: mv?.y ?? b.y, width: b.width, height: b.height }
+    }),
+    ...guideRects,
+  ]
+  let hasOverlap = false
+  outer: for (let i = 0; i < finalRects.length; i++) {
+    for (let j = i + 1; j < finalRects.length; j++) {
+      if (rectsIntersect(finalRects[i], finalRects[j], 0)) {
+        hasOverlap = true
+        break outer
+      }
     }
+  }
 
-    if (gridMoves.size >= MIN_GRID_MOVES) {
-      const reason = language === "en" ? "Repack into a clean grid" : "격자로 재배치"
-      suggestions.unshift({
-        id: "rule-align",
-        type: "position",
-        priority: "medium",
-        blockIds: Array.from(gridMoves.keys()),
-        question:
-          language === "en"
-            ? `Repack ${gridMoves.size} block(s) into a tidy grid? (positions change)`
-            : `블럭 ${gridMoves.size}개를 격자로 깔끔하게 재배치할까요? (자리가 바뀌어요)`,
-        changes: Array.from(gridMoves.entries()).flatMap(([id, move]) => {
-          const block = gridById.get(id)
-          if (!block) return []
-          return [
-            { blockId: id, field: "x", currentValue: block.x, suggestedValue: move.x, reason },
-            { blockId: id, field: "y", currentValue: block.y, suggestedValue: move.y, reason },
-          ]
-        }),
-      })
-    }
+  if (!hasOverlap && gridMoves.size >= MIN_GRID_MOVES) {
+    const reason = language === "en" ? "Tidy each cluster into a grid" : "덩어리별 격자 정돈"
+    suggestions.unshift({
+      id: "rule-align",
+      type: "position",
+      priority: "medium",
+      blockIds: Array.from(gridMoves.keys()),
+      question:
+        language === "en"
+          ? `Tidy ${gridMoves.size} block(s) into grids, keeping your clusters? (positions shift)`
+          : `블럭 ${gridMoves.size}개를 덩어리별로 격자 정돈할까요? (자리가 조금 바뀌어요)`,
+      changes: Array.from(gridMoves.entries()).flatMap(([id, move]) => {
+        const block = gridById.get(id)
+        if (!block) return []
+        return [
+          { blockId: id, field: "x", currentValue: block.x, suggestedValue: move.x, reason },
+          { blockId: id, field: "y", currentValue: block.y, suggestedValue: move.y, reason },
+        ]
+      }),
+    })
   }
 
   return suggestions

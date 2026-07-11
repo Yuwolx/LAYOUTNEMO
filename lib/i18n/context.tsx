@@ -21,7 +21,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return
     const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY)
-    if (saved === "ko" || saved === "en") setLanguageState(saved)
+    if (saved === "ko" || saved === "en") {
+      setLanguageState(saved)
+      return
+    }
+    // 첫 방문(저장값 없음): OS/브라우저 언어를 따른다 — 한국어 계열이 아니면 영어.
+    // (해외 방문자가 한국어 화면을 만나지 않도록. 명시 저장은 안 해 이후 OS 변경도 반영.)
+    const prefersKorean = (navigator.languages ?? [navigator.language]).some((l) => l?.toLowerCase().startsWith("ko"))
+    if (!prefersKorean) setLanguageState("en")
   }, [])
 
   const setLanguage = (lang: Language) => {

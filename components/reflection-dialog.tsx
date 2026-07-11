@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import type { Urgency, WorkBlock } from "@/types"
 import type { TidyComprehensiveAnalysis, TidyDetailedSuggestion } from "@/lib/ai/types"
 import { generateRuleSuggestions } from "@/lib/tidy/rules"
+import { translateSeedBlockField } from "@/lib/i18n/seed"
 import { URGENCY_KEYS } from "@/lib/constants/urgency"
 import { useLanguage, useT } from "@/lib/i18n/context"
 import type { AIErrorCode } from "@/lib/ai/schemas"
@@ -57,7 +58,11 @@ export function ReflectionDialog({
       setAiErrorMessage(null)
       setInsight(null)
       setAppliedCount(0)
-      const rules = generateRuleSuggestions(blocks, zones, language)
+      const rules = generateRuleSuggestions(
+        blocks.map((b) => ({ ...b, title: translateSeedBlockField(b, "title", language) ?? b.title })),
+        zones,
+        language,
+      )
       setRuleSuggestions(rules)
       setChecked(new Set(rules.map((s) => s.id)))
       setView("review")
@@ -67,7 +72,11 @@ export function ReflectionDialog({
 
   const startReview = () => {
     // 1) 룰베이스 — 즉시, 로컬 계산.
-    const rules = generateRuleSuggestions(blocks, zones, language)
+    const rules = generateRuleSuggestions(
+        blocks.map((b) => ({ ...b, title: translateSeedBlockField(b, "title", language) ?? b.title })),
+        zones,
+        language,
+      )
     setRuleSuggestions(rules)
     setChecked(new Set(rules.map((s) => s.id)))
     setView("review")
@@ -253,7 +262,7 @@ export function ReflectionDialog({
         <DialogContent className="sm:max-w-[480px] border-none shadow-2xl">
           <div className="text-center py-8">
             <Sparkles className="w-8 h-8 mx-auto mb-4 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground leading-relaxed">AI 보조를 켜면 사용할 수 있습니다.</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{language === "en" ? "Turn on AI assist to use this." : "AI 보조를 켜면 사용할 수 있습니다."}</p>
           </div>
           <Button onClick={() => onOpenChange(false)} variant="ghost" className="w-full mt-2">
             {t("action.close")}
@@ -269,7 +278,7 @@ export function ReflectionDialog({
         <DialogContent className="sm:max-w-[480px] border-none shadow-2xl">
           <div className="text-center py-8">
             <Sparkles className="w-8 h-8 mx-auto mb-4 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground leading-relaxed">정리할 블럭이 없습니다.</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{language === "en" ? "No blocks to tidy yet." : "정리할 블럭이 없습니다."}</p>
           </div>
           <Button onClick={() => onOpenChange(false)} variant="ghost" className="w-full mt-2">
             {t("action.close")}

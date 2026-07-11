@@ -126,7 +126,7 @@ export function InsightsDialog({ open, onOpenChange, canvases, isMaster }: Insig
     const completed = real.filter((b) => b.isCompleted).length
     const urgencyDist = URGENCY_KEYS.map((key) => ({
       key,
-      label: URGENCY_META[key].label,
+      label: language === "en" ? ({ thinking: "Undecided", stable: "Flexible", lingering: "In progress", urgent: "Urgent" })[key] : URGENCY_META[key].label,
       count: real.filter((b) => !b.isCompleted && (b.urgency ?? "thinking") === key).length,
     }))
     const byCanvas = canvases
@@ -142,7 +142,7 @@ export function InsightsDialog({ open, onOpenChange, canvases, isMaster }: Insig
       urgencyDist,
       byCanvas,
     }
-  }, [canvases])
+  }, [canvases, language])
 
   const heatmapMax = stats ? Math.max(1, ...stats.heatmap.flat()) : 1
 
