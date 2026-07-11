@@ -10,6 +10,7 @@ import { CanvasSelectorDialog } from "@/components/canvas-selector-dialog"
 import { AboutDialog } from "@/components/about-dialog"
 import dynamic from "next/dynamic"
 import { isMasterEmail } from "@/lib/constants/master"
+import { FREE_CANVAS_LIMIT } from "@/lib/constants/plans"
 import { WelcomeDialog } from "@/components/welcome-dialog"
 import { BlockSearchDialog } from "@/components/block-search-dialog"
 import { BlockDetailDialog } from "@/components/block-detail-dialog"
@@ -227,7 +228,11 @@ const LEGACY_ZONE_ID_MAP: Record<string, string> = {
 const migrateGuideBlock = (block: WorkBlock): WorkBlock => {
   if (!block.isGuide) return block
 
-  const template = GUIDE_BLOCK_TEMPLATES.get(block.id)
+  // 새 캔버스로 복제된 가이드는 id 가 UUID 라 id 매칭이 안 된다.
+  // 가이드는 편집 불가이고 제목("사용 설명서"/"단축키")은 불변이므로 제목으로도 찾는다.
+  const template =
+    GUIDE_BLOCK_TEMPLATES.get(block.id) ??
+    initialBlocks.find((t) => t.isGuide && t.title === block.title)
   if (!template) return block
 
   return {
@@ -495,7 +500,9 @@ export default function Page() {
           ? storedCanvasId
           : orderedRemote[0]?.id ?? "main"
 
-        setCanvases(orderedRemote)
+        // 원격 데이터도 가이드 블럭 최신화(migrateCanvas)를 거친다 — 안 거치면 옛 버전의
+        // 한국어 가이드 본문이 seed 원문과 달라져 영어 모드에서 번역이 풀린다(편집으로 오판).
+        setCanvases(orderedRemote.map(migrateCanvas))
         setCurrentCanvasId(activeId)
         localStorage.removeItem("layout_last_synced_at")
         captureEvent(supabase, userId, "session_start")
@@ -805,7 +812,12 @@ export default function Page() {
     }
   }
 
+  // 캔버스 개수 한도 — 무료 플랜은 FREE_CANVAS_LIMIT 개까지. pro/마스터는 무제한 (유료화 대비).
+  const canCreateCanvas =
+    isMasterEmail(user?.email) || aiUsage?.plan === "pro" || canvases.length < FREE_CANVAS_LIMIT
+
   const handleCreateCanvas = (name: string) => {
+    if (!canCreateCanvas) return
     const sourceZones = zones.length > 0 ? zones : initialZones
     const zoneIdMap = new Map<string, string>()
     const newZones = sourceZones.map((zone) => {
@@ -1171,6 +1183,7 @@ export default function Page() {
         onRenameCanvas={handleRenameCanvas}
         onDeleteCanvas={handleDeleteCanvas}
         onCreateCanvas={handleCreateCanvas}
+        canCreate={canCreateCanvas}
         onExport={handleExportAll}
         user={user}
       />

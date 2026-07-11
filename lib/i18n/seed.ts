@@ -290,11 +290,17 @@ export function translateSeedBlockField(
     title?: string
     description?: string
     detailedNotes?: string
+    isGuide?: boolean
   },
   field: "title" | "description" | "detailedNotes",
   language: Language,
 ): string | undefined {
-  const seed = SEED_BLOCK_STRINGS[block.id]
+  let seed: (typeof SEED_BLOCK_STRINGS)[string] | undefined = SEED_BLOCK_STRINGS[block.id]
+  // 새 캔버스로 복제된 가이드 블럭은 id 가 UUID 라 id 로 못 찾는다.
+  // 가이드는 편집 불가 + 한국어 제목 불변이므로 제목으로 찾는다.
+  if (!seed && block.isGuide && block.title) {
+    seed = Object.values(SEED_BLOCK_STRINGS).find((s) => s.title.ko === block.title)
+  }
   const currentValue = block[field]
   if (!seed) return currentValue
   const pair = seed[field]

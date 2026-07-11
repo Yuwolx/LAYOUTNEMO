@@ -27,6 +27,10 @@ Thumbs.db
 
 # Claude Code per-user settings (개인 권한 / 환경)
 .claude/settings.local.json
+.claude/settings.json
+
+# 내부 문서 (경쟁 분석 등 — 공개 repo에 올리지 않음)
+reports/
 
 # TypeScript build cache
 tsconfig.tsbuildinfo
