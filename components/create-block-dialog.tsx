@@ -132,7 +132,7 @@ export function CreateBlockDialog({
       }
       toast.warning(messages[code] ?? messages.network_error)
 
-      const fallback = mockCreateBlockOutput(aiInput)
+      const fallback = mockCreateBlockOutput(aiInput, language)
       setTitle(fallback.title)
       setSummary(fallback.summary)
       setSelectedZone(fallback.suggestedZone)
@@ -402,7 +402,7 @@ export function CreateBlockDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleReset}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-[480px] max-h-[86vh] overflow-y-auto">
         {step === "input" && !user && isAIEnabled && !showManual && (
           <div className="space-y-6">
             <div className="space-y-1">

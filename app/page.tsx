@@ -815,6 +815,15 @@ export default function Page() {
   // 캔버스 개수 한도 — 무료 플랜은 FREE_CANVAS_LIMIT 개까지. pro/마스터는 무제한 (유료화 대비).
   const canCreateCanvas =
     isMasterEmail(user?.email) || aiUsage?.plan === "pro" || canvases.length < FREE_CANVAS_LIMIT
+  // 프로필(plan) 로딩 전에는 잠금 문구를 띄우지 않는다 —
+  // pro 유저가 로딩 창에서 "유료 플랜에서 열려요"를 보는 사고 방지 (fetch 실패 시에도 중립 상태 유지).
+  const planReady = !user || aiUsage !== null
+  // 한도 초과분(기존 다중 캔버스) 삭제는 비가역 — 지우면 무료 한도 때문에 다시 못 만든다는 경고용.
+  const deleteLosesSlot =
+    Boolean(user) &&
+    !isMasterEmail(user?.email) &&
+    aiUsage?.plan !== "pro" &&
+    canvases.length > FREE_CANVAS_LIMIT
 
   const handleCreateCanvas = (name: string) => {
     if (!canCreateCanvas) return
@@ -1184,6 +1193,8 @@ export default function Page() {
         onDeleteCanvas={handleDeleteCanvas}
         onCreateCanvas={handleCreateCanvas}
         canCreate={canCreateCanvas}
+        planReady={planReady}
+        deleteLosesSlot={deleteLosesSlot}
         onExport={handleExportAll}
         user={user}
       />
