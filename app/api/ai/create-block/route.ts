@@ -59,12 +59,14 @@ export async function POST(req: Request) {
   }
 
   const today = new Date().toISOString().split("T")[0]
-  const areaList = input.zones.map((z) => z.label).join(", ")
+  // id(라벨) 쌍으로 — suggestedZone 은 id 여야 하므로, 커스텀 결도 모델이 정확한 id 를 고를 수 있게.
+  const areaList = input.zones.map((z) => `${z.id}(${z.label})`).join(", ")
   const language = input.language ?? "ko"
 
   const prompt = CREATE_BLOCK_PROMPT.replace("{USER_INPUT}", input.userInput)
-    .replace("{TODAY_DATE}", today)
-    .replace("{AREA_LIST}", areaList)
+    .replaceAll("{TODAY_DATE}", today)
+    .replaceAll("{AREA_LIST}", areaList)
+    .replaceAll("{LANGUAGE}", language === "en" ? "English" : "한국어")
 
   const languageDirective =
     language === "en"
