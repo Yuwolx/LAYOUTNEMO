@@ -490,8 +490,10 @@ export function Canvas({
     // 아래(마퀴/팬/선택 해제)는 블럭이 아닌 빈 캔버스에서 시작할 때만.
     if ((e.target as HTMLElement).closest?.("[data-block-card]")) return
 
-    // Ctrl/Cmd + 드래그 → 마퀴(박스) 선택 (마우스). 터치 선택 모드는 아래 touchMarqueeMode.
-    if (e.ctrlKey || e.metaKey || (e.pointerType === "touch" && touchSelectMode)) {
+    // Ctrl/Cmd + 드래그 → 마퀴(박스) 선택. 선택 모드가 켜져 있으면 포인터 종류 불문 —
+    // 선택 버튼은 "마우스만 연결된 태블릿"(Ctrl 없음)을 위해서도 존재하므로(아래 주석 참조)
+    // touch 로 한정하면 그 사용자는 모드를 켜도 여전히 상세가 열린다.
+    if (e.ctrlKey || e.metaKey || touchSelectMode) {
       const rect = canvasRef.current?.getBoundingClientRect()
       if (!rect) return
       e.preventDefault()
@@ -541,10 +543,11 @@ export function Canvas({
       return
     }
 
-    // 선택 모드(마우스 Ctrl/Cmd 또는 터치 선택 모드): 탭=선택 토글, 선택된 블럭 드래그=그룹 이동.
+    // 선택 모드(마우스 Ctrl/Cmd 또는 선택 모드 토글): 탭=선택 토글, 선택된 블럭 드래그=그룹 이동.
     // 예전엔 여기서 바로 토글+return 했더니 선택된 블럭을 드래그해도 이동이 안 됐다(터치).
     // 이제 down 에선 "대기"만 걸고(draggingId 안 켬 → 탭 시 확대 안 튐), 움직이면 move 에서 승격.
-    if (e.ctrlKey || e.metaKey || (e.pointerType === "touch" && touchSelectMode)) {
+    // 선택 모드는 포인터 종류 불문 — touch 한정이면 마우스만 연결된 태블릿에서 모드가 무력화된다.
+    if (e.ctrlKey || e.metaKey || touchSelectMode) {
       e.preventDefault()
       const selBlock = blocks.find((b) => b.id === blockId)
       if (!selBlock) return
