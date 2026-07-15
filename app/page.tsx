@@ -270,6 +270,27 @@ const migrateCanvas = (canvas: CanvasType): CanvasType => ({
   }),
 })
 
+// soft-delete 된 블럭(tombstone)의 하드 정리 유예기간. 이 기간 안에는 어떤 기기/탭의
+// 전량 upsert 도 tombstone 을 그대로 upsert 할 뿐이라 부활이 불가능하고,
+// 지난 뒤에는 로그인 시점에 실제 행을 지운다.
+const DELETED_BLOCK_TTL_MS = 30 * 24 * 60 * 60 * 1000
+
+const pruneOldDeletedBlocks = (
+  canvases: CanvasType[],
+): { canvases: CanvasType[]; prunedIds: string[] } => {
+  const prunedIds: string[] = []
+  const cutoff = Date.now() - DELETED_BLOCK_TTL_MS
+  const next = canvases.map((canvas) => {
+    const kept = canvas.blocks.filter((b) => {
+      const expired = b.isDeleted && (b.deletedAt ?? 0) < cutoff
+      if (expired) prunedIds.push(b.id)
+      return !expired
+    })
+    return kept.length === canvas.blocks.length ? canvas : { ...canvas, blocks: kept }
+  })
+  return { canvases: next, prunedIds }
+}
+
 const loadCanvases = (): CanvasType[] => {
   if (typeof window === "undefined") return [getDefaultCanvas()]
 
@@ -277,10 +298,19 @@ const loadCanvases = (): CanvasType[] => {
     const storedCanvases = localStorage.getItem(STORAGE_KEY)
     if (storedCanvases) {
       const parsed = JSON.parse(storedCanvases) as CanvasType[]
-      return parsed.map(migrateCanvas)
+      // 유예기간 지난 삭제 tombstone 은 로컬에서도 정리 (클라우드 행은 로그인 병합이 정리).
+      return pruneOldDeletedBlocks(parsed.map(migrateCanvas)).canvases
     }
   } catch (error) {
     console.error("Failed to load canvases:", error)
+    // 파싱 실패한 원본을 대피 — 이대로 default 로 부팅하면 400ms 뒤 debounce 저장이
+    // (수동 복구 가능했을) 원본을 default 캔버스로 영구히 덮어쓴다.
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) localStorage.setItem("layout_corrupt_backup", raw)
+    } catch {
+      /* 백업조차 실패하면 어쩔 수 없음 */
+    }
   }
 
   return [getDefaultCanvas()]
@@ -438,15 +468,30 @@ export default function Page() {
     if (!isClient || !user || !supabaseRef.current) return
     const supabase = supabaseRef.current
     const userId = user.id
+    // 계정 전환 레이스 가드: A 로드가 진행 중일 때 B 로 바뀌면, 늦게 끝난 A 로드가
+    // B 세션의 canvases 를 덮고 remoteSyncReadyRef 를 되돌려 A 데이터가 B 계정으로
+    // 저장될 수 있다. cancelled 면 어떤 setState/ref 복원도 하지 않는다.
+    let cancelled = false
 
     ;(async () => {
       try {
         const remoteCanvases = await loadUserCanvases(supabase, userId)
+        if (cancelled) return
         // 로컬 캐시가 지금 로그인한 계정 것이 아니면(다른 계정이 쓰던 것 / 게스트 데이터가 아닌 남의 계정)
         // 절대 병합/마이그레이션 대상으로 쓰지 않는다 — 안 그러면 이전 계정의 캔버스가
         // 지금 로그인한 계정으로 그대로 복제되어 들어간다.
         const storedOwner = localStorage.getItem(LOCAL_OWNER_KEY)
         const localBelongsHere = storedOwner === userId || (storedOwner === null && remoteCanvases.length === 0)
+        // 다른 계정(또는 미확정 소유)의 로컬 캐시는 병합 대상이 아니지만, 곧 이 계정의
+        // 데이터로 덮어써 사라지므로 지우기 전에 백업해 둔다 — 이전 계정의 오프라인 편집 대피.
+        if (hadStoredCanvasesAtBootRef.current && !localBelongsHere) {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY)
+            if (raw) localStorage.setItem("layout_prev_account_backup", raw)
+          } catch (backupErr) {
+            console.error("prev account backup failed:", backupErr)
+          }
+        }
         const localCanvases = hadStoredCanvasesAtBootRef.current && localBelongsHere ? loadCanvases() : []
         // 모든 캔버스에 zones도 blocks도 없고, 로컬에 실제 데이터가 있을 때만 "깨진 것"으로 판단.
         // 빈 캔버스를 일부러 만들었거나 네트워크 부분 실패 시 오탐 방지.
@@ -462,8 +507,14 @@ export default function Page() {
           }
           const canvasesToMigrate = localCanvases.length > 0 ? localCanvases : [getDefaultCanvas()]
           const migrated = await migrateLocalToSupabase(supabase, userId, canvasesToMigrate)
+          if (cancelled) return
           setCanvases(migrated)
           setCurrentCanvasId(migrated[0]?.id ?? "main")
+          // 마이그레이션 결과로 히스토리 리셋 — 부트 시점 로컬 스냅샷이 history[0] 에 남아
+          // 있으면 Undo 한 번에 마이그레이션 이전 상태로 되돌아가 그대로 재업로드된다.
+          setHistory([{ canvasId: migrated[0]?.id ?? "main", blocks: migrated[0]?.blocks ?? [] }])
+          setHistoryIndex(0)
+          localStorage.setItem("layout_last_synced_at", Date.now().toString())
           remoteSyncReadyRef.current = true
           return
         }
@@ -502,12 +553,28 @@ export default function Page() {
 
         // 원격 데이터도 가이드 블럭 최신화(migrateCanvas)를 거친다 — 안 거치면 옛 버전의
         // 한국어 가이드 본문이 seed 원문과 달라져 영어 모드에서 번역이 풀린다(편집으로 오판).
-        setCanvases(orderedRemote.map(migrateCanvas))
+        // 유예기간 지난 삭제 tombstone 은 이 시점에 하드 정리 (실패해도 다음 로그인에 재시도).
+        const pruned = pruneOldDeletedBlocks(orderedRemote.map(migrateCanvas))
+        const mergedCanvases = pruned.canvases
+        if (pruned.prunedIds.length > 0) {
+          deleteBlocks(supabase, pruned.prunedIds).catch((err) =>
+            console.error("tombstone prune failed:", err),
+          )
+        }
+        setCanvases(mergedCanvases)
         setCurrentCanvasId(activeId)
-        localStorage.removeItem("layout_last_synced_at")
+        // 병합 결과로 히스토리 리셋 — 부트 시점 로컬 스냅샷이 history[0] 에 남아 있으면
+        // Undo 한 번에 동기화 이전 로컬 상태로 롤백되고 그게 클라우드로 재업로드된다.
+        const activeCanvas = mergedCanvases.find((c) => c.id === activeId)
+        setHistory([{ canvasId: activeId, blocks: activeCanvas?.blocks ?? [] }])
+        setHistoryIndex(0)
+        // "지금 클라우드와 일치" 시각 기록. 예전엔 여기서 지우고 signOut 에서만 기록해서,
+        // 탭을 그냥 닫으면(로그아웃 안 함) 다음 로그인 때 오프라인 편집 감지가 불가능했다.
+        localStorage.setItem("layout_last_synced_at", Date.now().toString())
         captureEvent(supabase, userId, "session_start")
         remoteSyncReadyRef.current = true
       } catch (err) {
+        if (cancelled) return
         console.error("Supabase load error:", err)
         const message = err instanceof Error ? err.message : "Unknown sync error"
         // remoteSyncReadyRef 는 false로 유지 — 불완전한 상태를 덮어쓰지 않도록 저장을 막는다.
@@ -518,6 +585,9 @@ export default function Page() {
         })
       }
     })()
+    return () => {
+      cancelled = true
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isClient])
 
@@ -600,6 +670,13 @@ export default function Page() {
     cloudDirtyRef.current = false
     Promise.all(snapshot.map((c, i) => saveCanvas(supabase, userId, c, i)))
       .then(() => {
+        // 클라우드와 일치한 시각 — 다음 로그인의 오프라인 편집 감지(백업 여부 판단) 기준.
+        // signOut 에서만 기록하면 탭을 그냥 닫은 세션의 편집은 감지가 안 된다.
+        try {
+          localStorage.setItem("layout_last_synced_at", Date.now().toString())
+        } catch {
+          /* 기록 실패는 감지 정확도만 낮출 뿐 — 무시 */
+        }
         if (syncSaveErrorShownRef.current) {
           syncSaveErrorShownRef.current = false
           toast.success(isEn() ? "Cloud saving resumed." : "클라우드 저장이 재개됐어요.")
@@ -778,46 +855,36 @@ export default function Page() {
   }
 
   const handleDeleteArchivedBlock = (id: string) => {
-    // 삭제 대상을 제거하고, 살아남은 블럭의 relatedTo 에서 죽은 참조도 함께 정리한다.
-    const newBlocks = blocks
-      .filter((block) => block.id !== id)
-      .map((block) =>
-        block.relatedTo?.includes(id)
-          ? { ...block, relatedTo: block.relatedTo.filter((rid) => rid !== id) }
-          : block,
-      )
+    // soft-delete: 배열에서 빼지 않고 isDeleted 마킹만. 하드 삭제(deleteBlocks)는 삭제
+    // 사실을 모르는 다른 탭/기기의 전량 upsert 가 행을 되살렸다(부활 버그). 마킹은 일반
+    // 저장 경로(upsert is_deleted)로 전파되고, 오프라인/저장 실패여도 나중에 함께 동기화
+    // 된다. 오래된 tombstone 은 로그인 시 pruneOldDeletedBlocks 가 하드 정리.
+    const newBlocks = blocks.map((block) => {
+      if (block.id === id) return { ...block, isDeleted: true, deletedAt: Date.now() }
+      return block.relatedTo?.includes(id)
+        ? { ...block, relatedTo: block.relatedTo.filter((rid) => rid !== id) }
+        : block
+    })
     saveToHistory(newBlocks)
-    if (user && supabaseRef.current && remoteSyncReadyRef.current) {
-      deleteBlocks(supabaseRef.current, [id]).catch((err) => {
-        console.error("Supabase delete block error:", err)
-        toast.error(isEn() ? "Couldn't sync the block deletion to the cloud." : "블럭 삭제를 클라우드에 반영하지 못했어요.", {
-          description: err instanceof Error ? err.message : String(err),
-        })
-      })
+    if (user && supabaseRef.current) {
       captureEvent(supabaseRef.current, user.id, "block_deleted")
     }
   }
 
   const handleClearArchivedBlocks = () => {
     if (archivedBlocks.length === 0) return
-    if (!confirm(isEn() ? "Empty the archive? This cannot be undone." : "갈무리함을 모두 비울까요? 이 작업은 되돌릴 수 없어요.")) return
+    if (!confirm(isEn() ? "Empty the archive?" : "갈무리함을 모두 비울까요?")) return
 
     const archivedIds = new Set(archivedBlocks.map((block) => block.id))
-    const newBlocks = blocks
-      .filter((block) => !archivedIds.has(block.id))
-      .map((block) =>
-        block.relatedTo?.some((rid) => archivedIds.has(rid))
-          ? { ...block, relatedTo: block.relatedTo.filter((rid) => !archivedIds.has(rid)) }
-          : block,
-      )
+    const now = Date.now()
+    const newBlocks = blocks.map((block) => {
+      if (archivedIds.has(block.id)) return { ...block, isDeleted: true, deletedAt: now }
+      return block.relatedTo?.some((rid) => archivedIds.has(rid))
+        ? { ...block, relatedTo: block.relatedTo.filter((rid) => !archivedIds.has(rid)) }
+        : block
+    })
     saveToHistory(newBlocks)
-    if (user && supabaseRef.current && remoteSyncReadyRef.current) {
-      deleteBlocks(supabaseRef.current, [...archivedIds]).catch((err) => {
-        console.error("Supabase delete archived blocks error:", err)
-        toast.error(isEn() ? "Couldn't sync emptying the archive to the cloud." : "갈무리함 비우기를 클라우드에 반영하지 못했어요.", {
-          description: err instanceof Error ? err.message : String(err),
-        })
-      })
+    if (user && supabaseRef.current) {
       captureEvent(supabaseRef.current, user.id, "block_deleted", { count: archivedIds.size })
     }
   }
