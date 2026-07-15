@@ -279,8 +279,21 @@ export async function migrateLocalToSupabase(
   const isUUID = (id: string) =>
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
 
+  // 로컬 캔버스 id 가 원격에 tombstone(metadata.deleted) 행으로 이미 존재하면 새 UUID 를
+  // 발급한다. saveCanvas 는 metadata 를 건드리지 않으므로(tombstone 생존 조건) 같은 id 로
+  // upsert 하면 deleted=true 가 남아 — 이 기기에선 보이는데 클라우드에선 영구히 안 보이는
+  // 캔버스가 된다 (초기화한 계정에 옛 기기가 재로그인하는 시나리오).
+  const localIds = localCanvases.map((c) => c.id).filter(isUUID)
+  const tombstonedIds = new Set<string>()
+  if (localIds.length > 0) {
+    const { data } = await supabase.from("canvases").select("id, metadata").in("id", localIds)
+    for (const row of (data ?? []) as Array<{ id: string; metadata: { deleted?: boolean } | null }>) {
+      if (row.metadata?.deleted) tombstonedIds.add(row.id)
+    }
+  }
+
   const migrated: Canvas[] = localCanvases.map((canvas) => {
-    const canvasId = isUUID(canvas.id) ? canvas.id : crypto.randomUUID()
+    const canvasId = isUUID(canvas.id) && !tombstonedIds.has(canvas.id) ? canvas.id : crypto.randomUUID()
 
     // zone ID 매핑
     const zoneIdMap = new Map<string, string>()
