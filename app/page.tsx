@@ -544,6 +544,52 @@ export default function Page() {
     canvasesRef.current = canvases
   }, [canvases])
 
+  // localStorage 저장 debounce. 예전엔 canvases 가 바뀔 때마다 즉시 전체 stringify + 동기 쓰기를
+  // 했는데, 블럭 드래그는 매 pointermove 마다 canvases 를 갱신하므로 폰에서 프레임이 밀렸다.
+  // 쓰기는 조용해진 뒤 한 번으로 모으고, 탭 이탈(pagehide/hidden) 시엔 즉시 flush 해 유실을 막는다.
+  const localSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const localDirtyRef = useRef(false)
+  const currentCanvasIdRef = useRef(currentCanvasId)
+  useEffect(() => {
+    currentCanvasIdRef.current = currentCanvasId
+  }, [currentCanvasId])
+
+  const flushLocalSave = useCallback(() => {
+    if (localSaveTimer.current) {
+      clearTimeout(localSaveTimer.current)
+      localSaveTimer.current = null
+    }
+    if (!localDirtyRef.current) return
+    localDirtyRef.current = false
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(canvasesRef.current))
+      localStorage.setItem(CURRENT_CANVAS_KEY, currentCanvasIdRef.current)
+      // 동기화가 끝나 이 canvases가 실제로 이 계정 것이라고 확정된 뒤에만 소유자 표시.
+      // 로그아웃 상태에서는 절대 건드리지 않음 — 마지막 로그인 계정 표시가 남아있어야
+      // 같은 계정 재로그인 시 오프라인 변경 병합이 정상 동작한다.
+      if (user && remoteSyncReadyRef.current) {
+        localStorage.setItem(LOCAL_OWNER_KEY, user.id)
+      }
+      setLastSaved(new Date())
+    } catch (error) {
+      console.error("Failed to save to localStorage:", error)
+    }
+  }, [user])
+
+  // 탭을 벗어나면(홈으로, 앱 전환, 닫기) 대기 중인 로컬 저장을 즉시 커밋.
+  useEffect(() => {
+    const flush = () => flushLocalSave()
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flushLocalSave()
+    }
+    window.addEventListener("pagehide", flush)
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => {
+      window.removeEventListener("pagehide", flush)
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
+  }, [flushLocalSave])
+
   const flushCloudSave = useCallback(() => {
     if (!user || !supabaseRef.current || !remoteSyncReadyRef.current) return
     const supabase = supabaseRef.current
@@ -601,20 +647,10 @@ export default function Page() {
       supabaseSaveTimer.current = null
     }
 
-    // localStorage 즉시 저장
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(canvases))
-      localStorage.setItem(CURRENT_CANVAS_KEY, currentCanvasId)
-      // 동기화가 끝나 이 canvases가 실제로 이 계정 것이라고 확정된 뒤에만 소유자 표시.
-      // 로그아웃 상태에서는 절대 건드리지 않음 — 마지막 로그인 계정 표시가 남아있어야
-      // 같은 계정 재로그인 시 오프라인 변경 병합이 정상 동작한다.
-      if (user && remoteSyncReadyRef.current) {
-        localStorage.setItem(LOCAL_OWNER_KEY, user.id)
-      }
-      setLastSaved(new Date())
-    } catch (error) {
-      console.error("Failed to save to localStorage:", error)
-    }
+    // localStorage 저장 (400ms debounce — 드래그 중엔 쓰지 않고 손을 뗀 뒤 한 번)
+    localDirtyRef.current = true
+    if (localSaveTimer.current) clearTimeout(localSaveTimer.current)
+    localSaveTimer.current = setTimeout(flushLocalSave, 400)
 
     // Supabase 저장 (로그인 상태일 때만, 2초 debounce)
     if (!user || !supabaseRef.current) return
@@ -629,7 +665,7 @@ export default function Page() {
         supabaseSaveTimer.current = null
       }
     }
-  }, [canvases, currentCanvasId, isClient, user, flushCloudSave])
+  }, [canvases, currentCanvasId, isClient, user, flushCloudSave, flushLocalSave])
 
   // AI 사용량(쿼터) 헤더 표시용. 로그인 시 + AI 다이얼로그가 닫힐 때마다 최신화.
   useEffect(() => {
