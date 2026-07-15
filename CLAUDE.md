@@ -9,8 +9,8 @@
 ## 개발 환경 (Windows)
 
 - 셸은 PowerShell. **Node가 PATH에 없다** — 명령 앞에 붙일 것: `$env:Path = "C:\Program Files\nodejs;" + $env:Path`
-- 검증: `npx tsc --noEmit` → `npm run lint` → `npm run build`. 커밋 전 항상. (기존 lint warning 2개 = page.tsx unused eslint-disable, 무시 가능)
-- **런타임 상호작용(터치·드래그·제스처)은 로컬에서 검증 불가** — tsc/lint/build까지만 보장. 실제 감각은 배포 후 기기 테스트.
+- 검증: `npx tsc --noEmit` → `npm run lint` → `npm test` → `npm run build`. 커밋 전 항상. (기존 lint warning 2개 = page.tsx unused eslint-disable, 무시 가능)
+- **런타임 상호작용(터치·드래그·제스처)의 "감각"은 로컬에서 검증 불가**, 그러나 포인터 **상태 머신 로직**은 vitest(jsdom)로 선제 검증된다 — `tests/canvas-select-mode.test.tsx`. 터치 로직을 고치면 테스트도 같이 추가할 것. 실제 감각은 배포 후 기기 테스트.
 
 ## Git & 배포 워크플로
 

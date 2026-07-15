@@ -108,6 +108,10 @@ export function Canvas({
     blockY: number
     group: Map<string, { x: number; y: number }> | null
   } | null>(null)
+  // armedSelectRef 의 state 미러. ref 만으론 리렌더가 없어 아래 pointermove/up 리스너
+  // 등록 effect 가 안 돌았고, 그 결과 선택 탭이 토글 대신 상세를 열고 activePointerIdRef 가
+  // 영구히 남아 이후 모든 터치가 먹통이 되는 버그가 있었다. 리스너 부착 트리거 전용.
+  const [isArmedSelect, setIsArmedSelect] = useState(false)
   // 진행 중인 포인터(마우스/터치/펜) id. 멀티터치에서 두 번째 손가락이 드래그를 방해하지 않게,
   // 그리고 한 번에 하나의 인터랙션만 돌도록 가드로 쓴다.
   const activePointerIdRef = useRef<number | null>(null)
@@ -226,6 +230,7 @@ export function Canvas({
       groupDragRef.current = null
       pendingToggleRef.current = null
       armedSelectRef.current = null
+      setIsArmedSelect(false)
       setMarquee(null)
       // 핀치 추적 상태도 초기화 — pointerup 을 못 받은 손가락이 남으면 다음 핀치 판정이 꼬인다.
       touchPointsRef.current.clear()
@@ -235,10 +240,15 @@ export function Canvas({
     window.addEventListener("keydown", handleKeyDown)
     window.addEventListener("keyup", handleKeyUp)
     window.addEventListener("blur", handleBlur)
+    // 화면 회전 시에도 blur 와 동일하게 전체 리셋. 회전 중 pointercancel 이 유실되면
+    // touchPointsRef 에 유령 손가락이 남아 다음 한 손가락 터치가 핀치로 오판되고,
+    // 그 핀치가 유령에게 팬을 넘기며 activePointerIdRef 가 잠겨 터치 전체가 죽는다.
+    window.addEventListener("orientationchange", handleBlur)
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("keyup", handleKeyUp)
       window.removeEventListener("blur", handleBlur)
+      window.removeEventListener("orientationchange", handleBlur)
     }
   }, [])
 
@@ -283,10 +293,13 @@ export function Canvas({
       const rect = canvasRef.current?.getBoundingClientRect()
       if (!rect) return
       const [[idA, ptA], [idB, ptB]] = Array.from(touchPointsRef.current.entries())
-      // 첫 손가락이 시작한 팬/마퀴는 종료하고 핀치로 전환.
+      // 첫 손가락이 시작한 팬/마퀴/선택 대기는 종료하고 핀치로 전환.
       setIsPanning(false)
       panStartRef.current = null
       setMarquee(null)
+      armedSelectRef.current = null
+      pendingToggleRef.current = null
+      setIsArmedSelect(false)
       activePointerIdRef.current = null
       const midX = (ptA.x + ptB.x) / 2 - rect.left
       const midY = (ptA.y + ptB.y) / 2 - rect.top
@@ -477,8 +490,10 @@ export function Canvas({
     // 아래(마퀴/팬/선택 해제)는 블럭이 아닌 빈 캔버스에서 시작할 때만.
     if ((e.target as HTMLElement).closest?.("[data-block-card]")) return
 
-    // Ctrl/Cmd + 드래그 → 마퀴(박스) 선택 (마우스). 터치 선택 모드는 아래 touchMarqueeMode.
-    if (e.ctrlKey || e.metaKey || (e.pointerType === "touch" && touchSelectMode)) {
+    // Ctrl/Cmd + 드래그 → 마퀴(박스) 선택. 선택 모드가 켜져 있으면 포인터 종류 불문 —
+    // 선택 버튼은 "마우스만 연결된 태블릿"(Ctrl 없음)을 위해서도 존재하므로(아래 주석 참조)
+    // touch 로 한정하면 그 사용자는 모드를 켜도 여전히 상세가 열린다.
+    if (e.ctrlKey || e.metaKey || touchSelectMode) {
       const rect = canvasRef.current?.getBoundingClientRect()
       if (!rect) return
       e.preventDefault()
@@ -528,10 +543,11 @@ export function Canvas({
       return
     }
 
-    // 선택 모드(마우스 Ctrl/Cmd 또는 터치 선택 모드): 탭=선택 토글, 선택된 블럭 드래그=그룹 이동.
+    // 선택 모드(마우스 Ctrl/Cmd 또는 선택 모드 토글): 탭=선택 토글, 선택된 블럭 드래그=그룹 이동.
     // 예전엔 여기서 바로 토글+return 했더니 선택된 블럭을 드래그해도 이동이 안 됐다(터치).
     // 이제 down 에선 "대기"만 걸고(draggingId 안 켬 → 탭 시 확대 안 튐), 움직이면 move 에서 승격.
-    if (e.ctrlKey || e.metaKey || (e.pointerType === "touch" && touchSelectMode)) {
+    // 선택 모드는 포인터 종류 불문 — touch 한정이면 마우스만 연결된 태블릿에서 모드가 무력화된다.
+    if (e.ctrlKey || e.metaKey || touchSelectMode) {
       e.preventDefault()
       const selBlock = blocks.find((b) => b.id === blockId)
       if (!selBlock) return
@@ -544,6 +560,7 @@ export function Canvas({
           )
         : null
       armedSelectRef.current = { blockId, downX: e.clientX, downY: e.clientY, blockX: selBlock.x, blockY: selBlock.y, group }
+      setIsArmedSelect(true)
       activePointerIdRef.current = e.pointerId
       return
     }
@@ -604,6 +621,7 @@ export function Canvas({
           setDragStartPos({ x: armed.blockX, y: armed.blockY })
           setDraggingId(armed.blockId)
           armedSelectRef.current = null
+          setIsArmedSelect(false)
         }
         return
       }
@@ -635,12 +653,16 @@ export function Canvas({
         const toggleId = pendingToggleRef.current
         armedSelectRef.current = null
         pendingToggleRef.current = null
-        setSelectedIds((prev) => {
-          const next = new Set(prev)
-          if (next.has(toggleId)) next.delete(toggleId)
-          else next.add(toggleId)
-          return next
-        })
+        setIsArmedSelect(false)
+        // pointercancel(회전·시스템 제스처로 중단된 탭)은 토글하지 않고 상태만 정리.
+        if (e.type !== "pointercancel") {
+          setSelectedIds((prev) => {
+            const next = new Set(prev)
+            if (next.has(toggleId)) next.delete(toggleId)
+            else next.add(toggleId)
+            return next
+          })
+        }
         suppressClickRef.current = true // 토글 탭이 상세 다이얼로그를 열지 않도록
         return
       }
@@ -788,7 +810,9 @@ export function Canvas({
       setDragStartPos(null)
     }
 
-    if (draggingId) {
+    // 드래그 중뿐 아니라 선택 모드 "대기(armed)" 중에도 리스너가 필요하다 —
+    // 안 붙이면 탭 토글/드래그 승격이 못 돌고 activePointerIdRef 가 남아 터치가 영구 잠긴다.
+    if (draggingId || isArmedSelect) {
       window.addEventListener("pointermove", handleMouseMove)
       window.addEventListener("pointerup", handleMouseUp)
       window.addEventListener("pointercancel", handleMouseUp)
@@ -799,7 +823,7 @@ export function Canvas({
       window.removeEventListener("pointerup", handleMouseUp)
       window.removeEventListener("pointercancel", handleMouseUp)
     }
-  }, [draggingId, offset, pan, scale, dragStartPos, onUpdateBlock, onBatchUpdateBlocks, blocks])
+  }, [draggingId, isArmedSelect, offset, pan, scale, dragStartPos, onUpdateBlock, onBatchUpdateBlocks, blocks])
 
   const getBlockVisibility = (block: WorkBlock) => {
     if (!selectedZone) return "normal"
