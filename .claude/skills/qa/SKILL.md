@@ -1,6 +1,6 @@
 ---
 name: qa
-description: Verify the LAYOUTNEMO build before committing or shipping — runs TypeScript typecheck, ESLint, production build, and a dev-server boot check, then reports pass/fail. Use whenever the user says "QA", "검증", "확인해줘", "빌드 되나 봐", or before any commit/merge/push.
+description: Verify the LAYOUTNEMO build before committing or shipping — runs TypeScript typecheck, ESLint, unit/regression tests (vitest), production build, and a dev-server boot check, then reports pass/fail. Use whenever the user says "QA", "검증", "확인해줘", "빌드 되나 봐", or before any commit/merge/push.
 ---
 
 # QA 검증
@@ -13,8 +13,9 @@ Node가 PATH에 없을 수 있으므로 항상 앞에 붙인다: `$env:Path = "C
 
 1. **타입 체크** — `npx tsc --noEmit` → 에러 0 이어야 통과
 2. **린트** — `npm run lint` → 에러 0 (기존 warning 2개는 무시 가능: page.tsx unused eslint-disable)
-3. **프로덕션 빌드** — `npm run build` → 성공해야 함 (가장 확실한 검증)
-4. **부팅 확인** — dev 서버가 이미 떠 있으면 `Invoke-WebRequest http://localhost:3000` 로 HTTP 200 확인. 안 떠 있으면 이 단계는 생략하고 빌드 성공으로 갈음.
+3. **테스트** — `npm test` (vitest) → 전부 통과. 캔버스 포인터 상태 머신(선택 모드 탭/드래그/포인터 잠금) 회귀 테스트가 여기 있다 — 터치 로직을 건드렸다면 이 단계가 실기기 전 1차 방어선.
+4. **프로덕션 빌드** — `npm run build` → 성공해야 함 (가장 확실한 검증)
+5. **부팅 확인** — dev 서버가 이미 떠 있으면 `Invoke-WebRequest http://localhost:3000` 로 HTTP 200 확인. 안 떠 있으면 이 단계는 생략하고 빌드 성공으로 갈음.
 
 ## 보고 형식
 
