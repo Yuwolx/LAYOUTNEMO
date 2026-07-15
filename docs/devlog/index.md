@@ -24,6 +24,7 @@ LAYOUTNEMO를 만들면서 마주친 문제, 선택, 삽질, 배운 것을 기�
 
 | 날짜 | 제목 | 상태 |
 |------|------|------|
+| 2026-07-15 | ["잘 됨 근데 왜이리 버벅대지" — 드래그가 매 프레임 저장하고 있었다]({{ site.baseurl }}/docs/devlog/2026-07-15-localstorage-per-frame/) | ✅ 공개 |
 | 2026-07-15 | [지난 글에서 자랑한 코드가 터치를 죽이고 있었다 — 회귀, 그리고 처음 생긴 테스트]({{ site.baseurl }}/docs/devlog/2026-07-15-touch-select-regression-tests/) | ✅ 공개 |
 | 2026-07-12 | [진상 유저 시뮬레이션 — 배포 직후 걸리는 것들을 먼저 걸어보기]({{ site.baseurl }}/docs/devlog/2026-07-12-user-audit-batch/) | ✅ 공개 |
 | 2026-07-12 | [인식 영역이 손가락보다 위에 있다 — PWA 가로 버그, 풀려버린 번역, 캔버스 1개]({{ site.baseurl }}/docs/devlog/2026-07-12-canvas-limit-i18n-pwa-touch/) | ✅ 공개 |
