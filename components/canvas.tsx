@@ -2,7 +2,7 @@
 
 import type React from "react"
 import type { JSX } from "react"
-import { useRef, useState, useEffect } from "react"
+import { memo, useMemo, useRef, useState, useEffect } from "react"
 import { WorkBlockCard } from "@/components/work-block-card"
 import type { CanvasViewport, WorkBlock, Zone } from "@/types"
 import { URGENCY_KEYS, URGENCY_META, URGENCY_RGB, NOTICE_RGB } from "@/lib/constants/urgency"
@@ -49,6 +49,68 @@ type ArchiveFlight = {
   restoreY: number
 }
 
+type BlockCardHandlers = {
+  onPointerDown: (e: React.PointerEvent, id: string) => void
+  onUpdate: (id: string, updates: Partial<WorkBlock>, skipHistory?: boolean) => void
+  onTogglePin: (id: string) => void
+  onCopy: (id: string) => void
+  onStartConnect: (id: string) => void
+}
+
+// 카드 메모 경계. Canvas 가 팬/드래그로 매 프레임 리렌더돼도 자기 block/플래그가 안 바뀐
+// 카드는 여기서 멈춘다 — 카드 수에 비례하던 프레임 비용 제거. 콜백은 identity 안정적인
+// handlers 객체 하나로 받고, blockId 클로저는 이 경계 안쪽에서만 만든다.
+const MemoBlockCard = memo(function MemoBlockCard({
+  block,
+  isDragging,
+  visibility,
+  suppressClickRef,
+  zones,
+  isDarkMode,
+  isCopyMode,
+  isTossingBack,
+  isSelected,
+  dimmed,
+  archiveFlight,
+  hasTogglePin,
+  handlers,
+}: {
+  block: WorkBlock
+  isDragging: boolean
+  visibility: "normal" | "emphasized" | "dimmed"
+  suppressClickRef: React.MutableRefObject<boolean>
+  zones: Array<{ id: string; label: string }>
+  isDarkMode: boolean
+  isCopyMode: boolean
+  isTossingBack: boolean
+  isSelected: boolean
+  dimmed: boolean
+  archiveFlight: { targetX: number; targetY: number } | null
+  hasTogglePin: boolean
+  handlers: BlockCardHandlers
+}) {
+  return (
+    <WorkBlockCard
+      block={block}
+      isDragging={isDragging}
+      visibility={visibility}
+      onPointerDown={(e) => handlers.onPointerDown(e, block.id)}
+      suppressClickRef={suppressClickRef}
+      onUpdate={(updates, skipHistory) => handlers.onUpdate(block.id, updates, skipHistory)}
+      zones={zones}
+      isDarkMode={isDarkMode}
+      isCopyMode={isCopyMode}
+      isTossingBack={isTossingBack}
+      isSelected={isSelected}
+      dimmed={dimmed}
+      onTogglePin={hasTogglePin ? () => handlers.onTogglePin(block.id) : undefined}
+      onCopy={() => handlers.onCopy(block.id)}
+      onStartConnect={() => handlers.onStartConnect(block.id)}
+      archiveFlight={archiveFlight}
+    />
+  )
+})
+
 export function Canvas({
   blocks,
   zones,
@@ -68,9 +130,11 @@ export function Canvas({
   const { language, t } = useLanguage()
   const canvasRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
-  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  // 드래그 오프셋/시작좌표는 렌더에 안 쓰이므로 ref — state 로 두면 드래그 시작마다
+  // 불필요한 리렌더가 나고, 리스너 effect deps 에 들어가 매 프레임 재구독을 유발했다.
+  const offsetRef = useRef({ x: 0, y: 0 })
   // 드래그 시작 시점의 블럭 좌표. Shift 토스/갈무리 드롭 시 원래 자리로 돌려놓는 데 쓴다.
-  const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null)
+  const dragStartPosRef = useRef<{ x: number; y: number } | null>(null)
   const [isCopyMode, setIsCopyMode] = useState(false)
   // Shift 토스 — 연결 + 원위치 복귀 시 해당 블럭만 일시적으로 left/top transition 켠다.
   const [tossingBackId, setTossingBackId] = useState<string | null>(null)
@@ -122,6 +186,14 @@ export function Canvas({
   const scaleRef = useRef(scale)
   const panRef = useRef(pan)
   const draggingIdRef = useRef<string | null>(null)
+  // 드래그/마퀴 리스너가 매 프레임 재구독되지 않도록(deps 최소화) 최신값을 ref 로 읽는다.
+  // 렌더 중 직접 대입 — effect 미러는 커밋 뒤에 돌아 이벤트가 한 프레임 stale 값을 볼 수 있다.
+  const blocksRef = useRef(blocks)
+  blocksRef.current = blocks
+  const onUpdateBlockRef = useRef(onUpdateBlock)
+  onUpdateBlockRef.current = onUpdateBlock
+  const onBatchUpdateBlocksRef = useRef(onBatchUpdateBlocks)
+  onBatchUpdateBlocksRef.current = onBatchUpdateBlocks
   useEffect(() => {
     scaleRef.current = scale
   }, [scale])
@@ -167,24 +239,46 @@ export function Canvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRequest?.nonce])
 
+  // 뷰포트 보고(새 블럭 위치 제안용 — 실시간성 불필요)는 150ms 모아서.
+  // 매 프레임 부모 setState 를 하면 팬/핀치 중 페이지 전체가 프레임마다 리렌더돼
+  // 캔버스 로컬 state(pan/scale) 격리가 무력화된다.
+  const onViewportChangeRef = useRef(onViewportChange)
+  onViewportChangeRef.current = onViewportChange
   useEffect(() => {
     if (!onViewportChange) return
-
-    const reportViewport = () => {
+    const report = () => {
       const rect = canvasRef.current?.getBoundingClientRect()
       if (!rect) return
-      onViewportChange({
-        x: -pan.x / scale,
-        y: -pan.y / scale,
-        width: rect.width / scale,
-        height: rect.height / scale,
+      const p = panRef.current
+      const s = scaleRef.current
+      onViewportChangeRef.current?.({
+        x: -p.x / s,
+        y: -p.y / s,
+        width: rect.width / s,
+        height: rect.height / s,
       })
     }
-
-    reportViewport()
-    window.addEventListener("resize", reportViewport)
-    return () => window.removeEventListener("resize", reportViewport)
+    const t = window.setTimeout(report, 150)
+    return () => window.clearTimeout(t)
   }, [onViewportChange, pan.x, pan.y, scale])
+
+  // 창 크기 변경 시에도 보고 (마운트 1회 등록, 최신값은 ref 로).
+  useEffect(() => {
+    const onResize = () => {
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const p = panRef.current
+      const s = scaleRef.current
+      onViewportChangeRef.current?.({
+        x: -p.x / s,
+        y: -p.y / s,
+        width: rect.width / s,
+        height: rect.height / s,
+      })
+    }
+    window.addEventListener("resize", onResize)
+    return () => window.removeEventListener("resize", onResize)
+  }, [])
 
   useEffect(() => {
     const isEditable = (target: EventTarget | null) => {
@@ -229,7 +323,7 @@ export function Canvas({
       // 영구 잠기고, draggingId 가 남으면 복귀 시 블럭이 커서에 붙는다.
       activePointerIdRef.current = null
       setDraggingId(null)
-      setDragStartPos(null)
+      dragStartPosRef.current = null
       groupDragRef.current = null
       pendingToggleRef.current = null
       armedSelectRef.current = null
@@ -408,8 +502,13 @@ export function Canvas({
   }, [])
 
   // Ctrl/Cmd + 드래그(또는 터치 선택 모드) 마퀴 선택.
+  // 최신 사각형은 ref 로 읽어 리스너를 마퀴 시작/종료 시에만 구독한다 —
+  // marquee state 를 deps 에 두면 매 pointermove(setMarquee)마다 재구독됐다.
+  const marqueeRef = useRef(marquee)
+  marqueeRef.current = marquee
+  const marqueeActive = marquee !== null
   useEffect(() => {
-    if (!marquee) return
+    if (!marqueeActive) return
     const handleMove = (e: PointerEvent) => {
       if (e.pointerId !== activePointerIdRef.current) return
       const rect = canvasRef.current?.getBoundingClientRect()
@@ -418,6 +517,8 @@ export function Canvas({
     }
     const handleUp = (e: PointerEvent) => {
       if (e.pointerId !== activePointerIdRef.current) return
+      const m = marqueeRef.current
+      if (!m) return
       // 시스템 제스처 등으로 끊긴(pointercancel) 마퀴는 부분 사각형으로 선택을 확정하지
       // 않고 정리만 한다 — armed 탭의 cancel 처리와 동일한 원칙.
       if (e.type === "pointercancel") {
@@ -425,18 +526,20 @@ export function Canvas({
         activePointerIdRef.current = null
         return
       }
-      const x0 = Math.min(marquee.startX, marquee.curX)
-      const x1 = Math.max(marquee.startX, marquee.curX)
-      const y0 = Math.min(marquee.startY, marquee.curY)
-      const y1 = Math.max(marquee.startY, marquee.curY)
+      const x0 = Math.min(m.startX, m.curX)
+      const x1 = Math.max(m.startX, m.curX)
+      const y0 = Math.min(m.startY, m.curY)
+      const y1 = Math.max(m.startY, m.curY)
       // 클릭 수준의 작은 드래그는 무시.
       if (x1 - x0 >= 4 || y1 - y0 >= 4) {
         // 화면(캔버스 기준) → 월드 좌표 (transformOrigin 0 0: screen = pan + world*scale)
-        const wx0 = (x0 - pan.x) / scale
-        const wx1 = (x1 - pan.x) / scale
-        const wy0 = (y0 - pan.y) / scale
-        const wy1 = (y1 - pan.y) / scale
-        const hits = blocks
+        const p = panRef.current
+        const s = scaleRef.current
+        const wx0 = (x0 - p.x) / s
+        const wx1 = (x1 - p.x) / s
+        const wy0 = (y0 - p.y) / s
+        const wy1 = (y1 - p.y) / s
+        const hits = blocksRef.current
           .filter(
             (b) =>
               !b.isCompleted &&
@@ -460,7 +563,7 @@ export function Canvas({
       window.removeEventListener("pointerup", handleUp)
       window.removeEventListener("pointercancel", handleUp)
     }
-  }, [marquee, pan.x, pan.y, scale, blocks])
+  }, [marqueeActive])
 
   // 선택 상태 키보드: Esc 해제 / Delete·Backspace 로 선택 블럭 일괄 갈무리.
   useEffect(() => {
@@ -615,30 +718,34 @@ export function Canvas({
     setDraggingId(blockId)
     // 블럭은 transform 된 wrapper 안에 그려지므로 화면상 위치는 block.x * scale + pan.x.
     // offset 을 화면좌표 기준으로 잡고, move 시점에 다시 pan/scale 을 빼서 world 좌표로 환원.
-    setOffset({
+    offsetRef.current = {
       x: e.clientX - (block.x * scale + pan.x),
       y: e.clientY - (block.y * scale + pan.y),
-    })
-    setDragStartPos({ x: block.x, y: block.y })
+    }
+    dragStartPosRef.current = { x: block.x, y: block.y }
   }
 
   useEffect(() => {
-    const hasMovedFromStart = (block: WorkBlock) =>
-      Boolean(
-        dragStartPos &&
-          (Math.abs(block.x - dragStartPos.x) > 0.5 || Math.abs(block.y - dragStartPos.y) > 0.5),
-      )
+    const hasMovedFromStart = (block: WorkBlock) => {
+      const start = dragStartPosRef.current
+      return Boolean(start && (Math.abs(block.x - start.x) > 0.5 || Math.abs(block.y - start.y) > 0.5))
+    }
 
     const handleMouseMove = (e: PointerEvent) => {
       if (e.pointerId !== activePointerIdRef.current) return
+      const scaleNow = scaleRef.current
+      const panNow = panRef.current
       // 선택 모드 대기 중 움직임이 임계값을 넘으면 실제 드래그로 승격 (탭이 아니라 이동).
       const armed = armedSelectRef.current
       if (armed && !draggingId) {
         if (Math.abs(e.clientX - armed.downX) > 5 || Math.abs(e.clientY - armed.downY) > 5) {
           pendingToggleRef.current = null // 움직였으니 탭 아님
           groupDragRef.current = armed.group ? { starts: armed.group } : null
-          setOffset({ x: armed.downX - (armed.blockX * scale + pan.x), y: armed.downY - (armed.blockY * scale + pan.y) })
-          setDragStartPos({ x: armed.blockX, y: armed.blockY })
+          offsetRef.current = {
+            x: armed.downX - (armed.blockX * scaleNow + panNow.x),
+            y: armed.downY - (armed.blockY * scaleNow + panNow.y),
+          }
+          dragStartPosRef.current = { x: armed.blockX, y: armed.blockY }
           setDraggingId(armed.blockId)
           armedSelectRef.current = null
           setIsArmedSelect(false)
@@ -646,21 +753,22 @@ export function Canvas({
         return
       }
       if (draggingId) {
-        const newX = (e.clientX - offset.x - pan.x) / scale
-        const newY = (e.clientY - offset.y - pan.y) / scale
+        const newX = (e.clientX - offsetRef.current.x - panNow.x) / scaleNow
+        const newY = (e.clientY - offsetRef.current.y - panNow.y) / scaleNow
 
         const group = groupDragRef.current
-        if (group && dragStartPos) {
+        const start = dragStartPosRef.current
+        if (group && start) {
           // 앵커 블럭이 움직인 만큼 선택 전체를 같이 이동 (드래그 중엔 히스토리 없이).
-          const dx = newX - dragStartPos.x
-          const dy = newY - dragStartPos.y
+          const dx = newX - start.x
+          const dy = newY - start.y
           const updates = Array.from(group.starts.entries()).map(([id, s]) => ({
             id,
             updates: { x: s.x + dx, y: s.y + dy },
           }))
-          onBatchUpdateBlocks(updates, true)
+          onBatchUpdateBlocksRef.current(updates, true)
         } else {
-          onUpdateBlock(draggingId, { x: newX, y: newY }, true)
+          onUpdateBlockRef.current(draggingId, { x: newX, y: newY }, true)
         }
       }
     }
@@ -690,28 +798,31 @@ export function Canvas({
         return
       }
       if (draggingId) {
+        const blocksNow = blocksRef.current
+        const scaleNow = scaleRef.current
+        const panNow = panRef.current
         // 그룹 드래그 — 아카이브/연결 로직 없이 최종 위치만 한 번 히스토리에 커밋.
         if (groupDragRef.current) {
-          const anchor = blocks.find((b) => b.id === draggingId)
+          const anchor = blocksNow.find((b) => b.id === draggingId)
           if (anchor && hasMovedFromStart(anchor)) {
             const finalUpdates = Array.from(groupDragRef.current.starts.keys())
               .map((id) => {
-                const b = blocks.find((x) => x.id === id)
+                const b = blocksNow.find((x) => x.id === id)
                 return b ? { id, updates: { x: b.x, y: b.y } } : null
               })
               .filter((u): u is { id: string; updates: { x: number; y: number } } => u !== null)
-            onBatchUpdateBlocks(finalUpdates, false)
+            onBatchUpdateBlocksRef.current(finalUpdates, false)
           }
           groupDragRef.current = null
           setDraggingId(null)
-          setDragStartPos(null)
+          dragStartPosRef.current = null
           return
         }
 
-        const block = blocks.find((b) => b.id === draggingId)
+        const block = blocksNow.find((b) => b.id === draggingId)
         if (!block) {
           setDraggingId(null)
-          setDragStartPos(null)
+          dragStartPosRef.current = null
           return
         }
 
@@ -720,10 +831,10 @@ export function Canvas({
           const dockEl = typeof document !== "undefined" ? document.querySelector("[data-archive-dock]") : null
           const dockRect = dockEl?.getBoundingClientRect()
           const blockRect = {
-            left: (canvasRect?.left ?? 0) + block.x * scale + pan.x,
-            right: (canvasRect?.left ?? 0) + (block.x + block.width) * scale + pan.x,
-            top: (canvasRect?.top ?? 0) + block.y * scale + pan.y,
-            bottom: (canvasRect?.top ?? 0) + (block.y + block.height) * scale + pan.y,
+            left: (canvasRect?.left ?? 0) + block.x * scaleNow + panNow.x,
+            right: (canvasRect?.left ?? 0) + (block.x + block.width) * scaleNow + panNow.x,
+            top: (canvasRect?.top ?? 0) + block.y * scaleNow + panNow.y,
+            bottom: (canvasRect?.top ?? 0) + (block.y + block.height) * scaleNow + panNow.y,
           }
           const droppedOnArchiveDock = Boolean(
             dockRect &&
@@ -736,17 +847,17 @@ export function Canvas({
           )
 
           if (droppedOnArchiveDock) {
-            const restoreX = dragStartPos?.x ?? block.x
-            const restoreY = dragStartPos?.y ?? block.y
+            const restoreX = dragStartPosRef.current?.x ?? block.x
+            const restoreY = dragStartPosRef.current?.y ?? block.y
             const nextFlight: ArchiveFlight = {
               id: draggingId,
               targetX:
-                ((dockRect?.left ?? 0) + (dockRect?.width ?? 0) / 2 - (canvasRect?.left ?? 0) - pan.x) /
-                  scale -
+                ((dockRect?.left ?? 0) + (dockRect?.width ?? 0) / 2 - (canvasRect?.left ?? 0) - panNow.x) /
+                  scaleNow -
                 block.width / 2,
               targetY:
-                ((dockRect?.top ?? 0) + (dockRect?.height ?? 0) / 2 - (canvasRect?.top ?? 0) - pan.y) /
-                  scale -
+                ((dockRect?.top ?? 0) + (dockRect?.height ?? 0) / 2 - (canvasRect?.top ?? 0) - panNow.y) /
+                  scaleNow -
                 block.height / 2,
               restoreX,
               restoreY,
@@ -758,10 +869,10 @@ export function Canvas({
 
             setArchiveFlight(nextFlight)
             setDraggingId(null)
-            setDragStartPos(null)
+            dragStartPosRef.current = null
 
             archiveFlightTimerRef.current = window.setTimeout(() => {
-              onUpdateBlock(nextFlight.id, {
+              onUpdateBlockRef.current(nextFlight.id, {
                 isCompleted: true,
                 x: nextFlight.restoreX,
                 y: nextFlight.restoreY,
@@ -775,7 +886,7 @@ export function Canvas({
           // 연결은 Shift 누른 채 드롭한 경우에만. 그 외 드롭은 단순 위치 이동(쌓기 가능).
           if (e.shiftKey) {
             // Shift 드롭 = 토스 — 겹친 블럭과 연결 형성 + 원위치로 부드럽게 복귀.
-            const overlappingBlocks = blocks.filter((b) => {
+            const overlappingBlocks = blocksNow.filter((b) => {
               if (b.id === draggingId || b.isCompleted || b.isGuide) return false
               const horizontalOverlap = block.x + block.width > b.x && block.x < b.x + b.width
               const verticalOverlap = block.y + block.height > b.y && block.y < b.y + b.height
@@ -789,10 +900,11 @@ export function Canvas({
                 : []
 
             // 드래그된 블럭 — 무조건 원위치로 복귀 (Shift 의 의도). 연결 페어가 있으면 같이 갱신.
-            if (dragStartPos) {
+            const startPos = dragStartPosRef.current
+            if (startPos) {
               const draggingUpdates: Partial<WorkBlock> = {
-                x: dragStartPos.x,
-                y: dragStartPos.y,
+                x: startPos.x,
+                y: startPos.y,
               }
               if (newConnections.length > 0) {
                 draggingUpdates.relatedTo = [...currentRelations, ...newConnections]
@@ -815,9 +927,9 @@ export function Canvas({
               // 부드러운 복귀 애니메이션 — wrapper 의 transition 을 잠시 켠다.
               setTossingBackId(draggingId)
               window.setTimeout(() => setTossingBackId(null), 480)
-              onBatchUpdateBlocks(updates)
+              onBatchUpdateBlocksRef.current(updates)
               setDraggingId(null)
-              setDragStartPos(null)
+              dragStartPosRef.current = null
               return
             }
           }
@@ -826,11 +938,11 @@ export function Canvas({
         // 평범한 드롭은 드래그 중 skipHistory 로 위치만 갱신하고,
         // 마우스를 놓는 순간 최종 좌표 하나만 히스토리에 남긴다.
         if (hasMovedFromStart(block)) {
-          onUpdateBlock(draggingId, { x: block.x, y: block.y })
+          onUpdateBlockRef.current(draggingId, { x: block.x, y: block.y })
         }
       }
       setDraggingId(null)
-      setDragStartPos(null)
+      dragStartPosRef.current = null
     }
 
     // 드래그 중뿐 아니라 선택 모드 "대기(armed)" 중에도 리스너가 필요하다 —
@@ -846,12 +958,41 @@ export function Canvas({
       window.removeEventListener("pointerup", handleMouseUp)
       window.removeEventListener("pointercancel", handleMouseUp)
     }
-  }, [draggingId, isArmedSelect, offset, pan, scale, dragStartPos, onUpdateBlock, onBatchUpdateBlocks, blocks])
+    // deps 는 리스너 on/off 를 결정하는 두 state 만. 나머지(blocks/pan/scale/offset/콜백)는
+    // ref 로 읽는다 — deps 에 넣으면 드래그 중 매 pointermove 마다 리스너 3개를 재구독했다.
+  }, [draggingId, isArmedSelect])
 
   const getBlockVisibility = (block: WorkBlock) => {
-    if (!selectedZone) return "normal"
-    return block.zone === selectedZone ? "emphasized" : "dimmed"
+    if (!selectedZone) return "normal" as const
+    return block.zone === selectedZone ? ("emphasized" as const) : ("dimmed" as const)
   }
+
+  // MemoBlockCard 에 내려줄 안정 identity 콜백 묶음. 최신 구현은 렌더마다 ref 에 갱신하고,
+  // 바깥 함수 껍데기는 마운트 1회 생성 — 카드 memo 가 콜백 때문에 깨지지 않게.
+  const cardImplRef = useRef({
+    onPointerDown: handlePointerDown,
+    onUpdate: onUpdateBlock,
+    onTogglePin,
+    onCopy: onCopyBlock,
+    onStartConnect: (id: string) => setConnectingId(id),
+  })
+  cardImplRef.current = {
+    onPointerDown: handlePointerDown,
+    onUpdate: onUpdateBlock,
+    onTogglePin,
+    onCopy: onCopyBlock,
+    onStartConnect: (id: string) => setConnectingId(id),
+  }
+  const cardHandlers = useMemo<BlockCardHandlers>(
+    () => ({
+      onPointerDown: (e, id) => cardImplRef.current.onPointerDown(e, id),
+      onUpdate: (id, updates, skipHistory) => cardImplRef.current.onUpdate(id, updates, skipHistory),
+      onTogglePin: (id) => cardImplRef.current.onTogglePin?.(id),
+      onCopy: (id) => cardImplRef.current.onCopy(id),
+      onStartConnect: (id) => cardImplRef.current.onStartConnect(id),
+    }),
+    [],
+  )
 
   const handleLineClick = (e: React.MouseEvent, blockId: string, relatedId: string) => {
     e.stopPropagation()
@@ -994,7 +1135,12 @@ export function Canvas({
   }
 
   const activeBlocks = blocks.filter((b) => !b.isCompleted)
-  const zonesArray = zones.map((z) => ({ id: z.id, label: z.label }))
+  // 카드 memo 가 zones prop 때문에 깨지지 않도록 identity 유지.
+  const zonesArray = useMemo(() => zones.map((z) => ({ id: z.id, label: z.label })), [zones])
+  // 관계선은 팬/핀치 프레임마다 다시 계산할 필요가 없다 — 입력이 바뀔 때만.
+  // (드래그 중엔 blocks 가 바뀌므로 선이 블럭을 따라오는 것은 그대로 동작)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const relationshipLines = useMemo(() => renderRelationshipLines(), [blocks, showRelationships, selectedZone, isDarkMode])
   // 대표(공지) 블럭 — 캔버스당 1개. 캔버스 상단 배너로 노출.
   const pinnedBlock = blocks.find((b) => b.isPinned && !b.isCompleted && !b.isDeleted)
 
@@ -1070,28 +1216,25 @@ export function Canvas({
             </feMerge>
           </filter>
         </defs>
-        <g style={{ pointerEvents: "auto" }}>{renderRelationshipLines()}</g>
+        <g style={{ pointerEvents: "auto" }}>{relationshipLines}</g>
       </svg>
 
       <div className="relative" style={{ zIndex: 10 }}>
         {activeBlocks.map((block) => (
-          <WorkBlockCard
+          <MemoBlockCard
             key={block.id}
             block={block}
             isDragging={draggingId === block.id}
             visibility={getBlockVisibility(block)}
-            onPointerDown={(e) => handlePointerDown(e, block.id)}
             suppressClickRef={suppressClickRef}
-            onUpdate={(updates, skipHistory) => onUpdateBlock(block.id, updates, skipHistory)}
             zones={zonesArray}
             isDarkMode={isDarkMode}
             isCopyMode={isCopyMode}
             isTossingBack={tossingBackId === block.id}
             isSelected={selectedIds.has(block.id) || block.id === connectingId}
             dimmed={selectedIds.size > 0 && !selectedIds.has(block.id)}
-            onTogglePin={onTogglePin ? () => onTogglePin(block.id) : undefined}
-            onCopy={() => onCopyBlock(block.id)}
-            onStartConnect={() => setConnectingId(block.id)}
+            hasTogglePin={Boolean(onTogglePin)}
+            handlers={cardHandlers}
             archiveFlight={
               archiveFlight?.id === block.id
                 ? {
