@@ -100,7 +100,10 @@ export function WorkBlockCard({
     if (!cardRef.current || isCompleted) return
     const el = cardRef.current
     const measure = () => {
-      const measured = Math.round(el.getBoundingClientRect().height)
+      // offsetHeight = layout 높이. getBoundingClientRect().height 는 조상 transform(scale)이
+      // 곱해진 시각적 높이라, 폰(0.6배)에선 실제의 60%가 저장되고 DB 동기화로 기기 간에
+      // 퍼졌다 — 겹침 검사·연결선·드롭 판정이 전부 이 값을 신뢰하므로 world 단위여야 한다.
+      const measured = Math.round(el.offsetHeight)
       if (measured > 0 && Math.abs(measured - latestHeightRef.current) > 1) {
         onUpdateRef.current({ height: measured }, true)
       }

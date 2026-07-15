@@ -560,7 +560,6 @@ export default function Page() {
       localSaveTimer.current = null
     }
     if (!localDirtyRef.current) return
-    localDirtyRef.current = false
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(canvasesRef.current))
       localStorage.setItem(CURRENT_CANVAS_KEY, currentCanvasIdRef.current)
@@ -570,6 +569,9 @@ export default function Page() {
       if (user && remoteSyncReadyRef.current) {
         localStorage.setItem(LOCAL_OWNER_KEY, user.id)
       }
+      // 쓰기가 전부 성공한 뒤에만 dirty 해제 — 쿼터 초과 등으로 실패하면 dirty 를 유지해
+      // 다음 flush(다음 변경 or pagehide)가 재시도한다.
+      localDirtyRef.current = false
       setLastSaved(new Date())
     } catch (error) {
       console.error("Failed to save to localStorage:", error)
@@ -1044,6 +1046,13 @@ export default function Page() {
           return
         }
 
+        // reload 가 일으키는 pagehide flush 가 방금 지운 데이터를 되살리지 않도록,
+        // 대기 중인 debounce 저장을 먼저 무효화한다.
+        localDirtyRef.current = false
+        if (localSaveTimer.current) {
+          clearTimeout(localSaveTimer.current)
+          localSaveTimer.current = null
+        }
         localStorage.removeItem(STORAGE_KEY)
         localStorage.removeItem(CURRENT_CANVAS_KEY)
         window.location.reload()

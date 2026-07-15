@@ -28,7 +28,7 @@ const makeBlock = (id: string, title: string, x: number): WorkBlock => ({
 // React(루트 위임)와 window 리스너 모두 bubbles 로 도달한다.
 const pointer = (
   type: "pointerdown" | "pointermove" | "pointerup" | "pointercancel",
-  opts: { pointerId: number; pointerType?: string; clientX?: number; clientY?: number },
+  opts: { pointerId: number; pointerType?: string; clientX?: number; clientY?: number; button?: number },
 ) => {
   const ev = new Event(type, { bubbles: true, cancelable: true })
   Object.assign(ev, { button: 0, pointerType: "touch", clientX: 0, clientY: 0, ...opts })
@@ -141,5 +141,46 @@ describe("선택 모드 탭", () => {
     fireEvent(window, pointer("pointerup", { pointerId: 10, clientX: 360, clientY: 300 }))
 
     expect(onUpdateBlock).toHaveBeenCalledWith("b", expect.objectContaining({ x: expect.any(Number) }), true)
+  })
+})
+
+describe("포인터 잠금 회귀", () => {
+  it("블럭 우클릭이 포인터를 점유하지 않는다 — 이후 드래그 정상", () => {
+    const { card, onUpdateBlock } = setup()
+
+    // 우클릭(button 2): 맥 계열은 contextmenu 가 mousedown 시점에 떠서 pointerup 이 안 온다.
+    fireEvent(card("블럭 A"), pointer("pointerdown", { pointerId: 3, pointerType: "mouse", button: 2, clientX: 10, clientY: 10 }))
+    // pointerup 없이 곧바로 다른 포인터로 드래그 시도 — 잠겼다면 이동이 전혀 안 된다.
+    const b = card("블럭 B")
+    fireEvent(b, pointer("pointerdown", { pointerId: 4, clientX: 300, clientY: 300 }))
+    fireEvent(window, pointer("pointermove", { pointerId: 4, clientX: 340, clientY: 300 }))
+    fireEvent(window, pointer("pointerup", { pointerId: 4, clientX: 340, clientY: 300 }))
+
+    expect(onUpdateBlock).toHaveBeenCalledWith("b", expect.objectContaining({ x: expect.any(Number) }), true)
+  })
+
+  it("드래그 중 Space 탭이 드래그를 죽이지 않는다", () => {
+    const { card, onUpdateBlock } = setup()
+
+    const b = card("블럭 B")
+    fireEvent(b, pointer("pointerdown", { pointerId: 6, pointerType: "mouse", clientX: 300, clientY: 300 }))
+    fireEvent(window, pointer("pointermove", { pointerId: 6, clientX: 340, clientY: 300 }))
+    const callsBefore = onUpdateBlock.mock.calls.length
+    expect(callsBefore).toBeGreaterThan(0)
+
+    // 드래그 도중 스페이스를 눌렀다 뗌 (피그마 팬 습관) — 예전엔 여기서 포인터 점유가
+    // 무조건 비워져 이후 move/up 이 전부 무시되는 좀비 드래그가 됐다.
+    fireEvent.keyDown(window, { code: "Space" })
+    fireEvent.keyUp(window, { code: "Space" })
+
+    fireEvent(window, pointer("pointermove", { pointerId: 6, clientX: 380, clientY: 300 }))
+    expect(onUpdateBlock.mock.calls.length).toBeGreaterThan(callsBefore) // 계속 따라옴
+
+    fireEvent(window, pointer("pointerup", { pointerId: 6, clientX: 380, clientY: 300 }))
+    // up 이 정상 처리됐다면 새 드래그도 시작된다.
+    fireEvent(b, pointer("pointerdown", { pointerId: 7, clientX: 380, clientY: 300 }))
+    fireEvent(window, pointer("pointermove", { pointerId: 7, clientX: 420, clientY: 300 }))
+    fireEvent(window, pointer("pointerup", { pointerId: 7, clientX: 420, clientY: 300 }))
+    expect(onUpdateBlock.mock.calls.length).toBeGreaterThan(callsBefore + 1)
   })
 })

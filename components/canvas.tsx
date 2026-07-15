@@ -209,11 +209,14 @@ export function Canvas({
       }
       if (e.code === "Space") {
         setIsSpacePressed(false)
-        setIsPanning(false)
-        panStartRef.current = null
         // 팬이 pointerup 없이 끝나도(스페이스를 버튼보다 먼저 뗀 경우) 진행중 포인터를
-        // 비워준다. 안 그러면 activePointerIdRef 가 남아 이후 모든 인터랙션이 막힌다.
-        activePointerIdRef.current = null
+        // 비워준다. 단 "실제 팬 중"일 때만(panStartRef 존재) — 무조건 비우면 블럭 드래그나
+        // 마퀴 도중 스페이스 탭 한 번에 up 핸들러가 pointerId 불일치로 죽어 좀비가 된다.
+        if (panStartRef.current) {
+          setIsPanning(false)
+          panStartRef.current = null
+          activePointerIdRef.current = null
+        }
       }
     }
     const handleBlur = () => {
@@ -231,6 +234,7 @@ export function Canvas({
       pendingToggleRef.current = null
       armedSelectRef.current = null
       setIsArmedSelect(false)
+      suppressClickRef.current = false // 미소비 클릭 억제 플래그도 청소
       setMarquee(null)
       // 핀치 추적 상태도 초기화 — pointerup 을 못 받은 손가락이 남으면 다음 핀치 판정이 꼬인다.
       touchPointsRef.current.clear()
@@ -301,6 +305,8 @@ export function Canvas({
       pendingToggleRef.current = null
       setIsArmedSelect(false)
       activePointerIdRef.current = null
+      // 핀치로 전환된 손가락들의 후속 click 이 카드 상세를 열지 않도록 소비 표시.
+      suppressClickRef.current = true
       const midX = (ptA.x + ptB.x) / 2 - rect.left
       const midY = (ptA.y + ptB.y) / 2 - rect.top
       const s = scaleRef.current
@@ -412,6 +418,13 @@ export function Canvas({
     }
     const handleUp = (e: PointerEvent) => {
       if (e.pointerId !== activePointerIdRef.current) return
+      // 시스템 제스처 등으로 끊긴(pointercancel) 마퀴는 부분 사각형으로 선택을 확정하지
+      // 않고 정리만 한다 — armed 탭의 cancel 처리와 동일한 원칙.
+      if (e.type === "pointercancel") {
+        setMarquee(null)
+        activePointerIdRef.current = null
+        return
+      }
       const x0 = Math.min(marquee.startX, marquee.curX)
       const x1 = Math.max(marquee.startX, marquee.curX)
       const y0 = Math.min(marquee.startY, marquee.curY)
@@ -517,9 +530,16 @@ export function Canvas({
   }
 
   const handlePointerDown = (e: React.PointerEvent, blockId: string) => {
+    // 우클릭/중클릭 무시 — 맥 계열은 contextmenu 가 mousedown 시점에 떠서 pointerup 이
+    // 안 오므로, 여기서 잡아버리면 activePointerIdRef 가 영구 점유돼 캔버스가 잠긴다.
+    if (e.button !== 0) return
     if (isSpacePressed) return // 스페이스 누른 상태면 블럭이 아니라 캔버스 팬을 우선.
-    if (pinchRef.current) return // 핀치 진행 중 — 두 번째 손가락이 블럭 드래그를 시작하지 않게
-    if (activePointerIdRef.current !== null) return // 이미 다른 포인터가 인터랙션 중
+    if (pinchRef.current || activePointerIdRef.current !== null) {
+      // 핀치/다른 포인터 진행 중의 손가락은 무시하되, 이 탭의 후속 click 이 상세를 열지
+      // 않도록 소비 표시 — 안 하면 핀치 중 카드에 걸친 손가락이 다이얼로그를 띄운다.
+      suppressClickRef.current = true
+      return
+    }
 
     // 연결 모드: 다른 블럭을 탭하면 두 블럭을 이어주고 모드 종료 (같은 블럭이면 취소).
     if (connectingId) {
@@ -655,6 +675,9 @@ export function Canvas({
         pendingToggleRef.current = null
         setIsArmedSelect(false)
         // pointercancel(회전·시스템 제스처로 중단된 탭)은 토글하지 않고 상태만 정리.
+        // suppress 도 cancel 땐 세우지 않는다 — cancel 뒤엔 click 이 안 와서 플래그가
+        // 미소비로 남고, 다음 탭이 ⋮ 버튼 등 stopPropagation 자식에서 시작하면 리셋도
+        // 안 돼 탭 하나를 조용히 삼킨다.
         if (e.type !== "pointercancel") {
           setSelectedIds((prev) => {
             const next = new Set(prev)
@@ -662,8 +685,8 @@ export function Canvas({
             else next.add(toggleId)
             return next
           })
+          suppressClickRef.current = true // 토글 탭이 상세 다이얼로그를 열지 않도록
         }
-        suppressClickRef.current = true // 토글 탭이 상세 다이얼로그를 열지 않도록
         return
       }
       if (draggingId) {
