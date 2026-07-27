@@ -659,8 +659,18 @@ export default function Page() {
     }
   }, [user])
 
+  // 클라우드 저장 직렬화 — 진행 중 저장이 있는데 또 호출되면(debounce·pagehide·online·재시도 경합)
+  // 스냅샷이 뒤섞여 늦게 뜬 옛 스냅샷이 새 스냅샷을 덮을 수 있다. 한 번에 하나만, 겹치면 끝나고 재실행.
+  const cloudSaveInFlightRef = useRef(false)
+  const cloudSaveQueuedRef = useRef(false)
+
   const flushCloudSave = useCallback(() => {
     if (!user || !supabaseRef.current || !remoteSyncReadyRef.current) return
+    if (cloudSaveInFlightRef.current) {
+      cloudSaveQueuedRef.current = true
+      return
+    }
+    cloudSaveInFlightRef.current = true
     const supabase = supabaseRef.current
     const userId = user.id
     const snapshot = canvasesRef.current
@@ -668,17 +678,20 @@ export default function Page() {
     setSyncStatus("syncing")
     Promise.all(snapshot.map((c, i) => saveCanvas(supabase, userId, c, i)))
       .then(() => {
-        // 클라우드와 일치한 시각 — 다음 로그인의 오프라인 편집 감지(백업 여부 판단) 기준.
-        // signOut 에서만 기록하면 탭을 그냥 닫은 세션의 편집은 감지가 안 된다.
-        try {
-          localStorage.setItem("layout_last_synced_at", Date.now().toString())
-        } catch {
-          /* 기록 실패는 감지 정확도만 낮출 뿐 — 무시 */
-        }
         // 복구 알림은 토스트 대신 헤더 아이콘이 앰버→회색으로 돌아오는 것으로 충분.
         syncSaveErrorShownRef.current = false
         // 저장이 도는 사이 새 편집이 생겼으면(dirty) 아직 synced 가 아니다 — 다음 저장이 내린다.
+        // last_synced_at 도 이때는 찍지 않는다: 찍어버리면 그 편집의 updatedAt 이 last_synced_at
+        // 보다 과거가 되어, 후속 저장이 죽었을 때 다음 부트가 "이미 동기화됨"으로 오판해
+        // 백업 없이 덮어쓴다(침묵 유실). 시각이 낡은 쪽의 비용은 불필요한 백업 하나뿐.
         if (!cloudDirtyRef.current) {
+          // 클라우드와 일치한 시각 — 다음 로그인의 오프라인 편집 감지(백업 여부 판단) 기준.
+          // signOut 에서만 기록하면 탭을 그냥 닫은 세션의 편집은 감지가 안 된다.
+          try {
+            localStorage.setItem("layout_last_synced_at", Date.now().toString())
+          } catch {
+            /* 기록 실패는 감지 정확도만 낮출 뿐 — 무시 */
+          }
           setSyncStatus("synced")
           setLastSyncedAt(new Date())
         }
@@ -697,6 +710,13 @@ export default function Page() {
             description: err instanceof Error ? err.message : String(err),
             duration: 8000,
           })
+        }
+      })
+      .finally(() => {
+        cloudSaveInFlightRef.current = false
+        if (cloudSaveQueuedRef.current) {
+          cloudSaveQueuedRef.current = false
+          flushCloudSave()
         }
       })
   }, [user])

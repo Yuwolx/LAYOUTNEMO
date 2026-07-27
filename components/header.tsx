@@ -172,15 +172,18 @@ export function Header({
     formatRelative(lastSaved, language === "en" ? "just now" : "방금 저장됨")
 
   // 동기화 아이콘 라벨 — 데스크톱은 title 툴팁, 터치는 탭하면 짧은 토스트로 같은 내용.
-  const syncLabel = !syncStatus
-    ? null
-    : syncStatus === "error"
-      ? t("header.syncError")
-      : syncStatus === "syncing"
-        ? t("header.syncSyncing")
-        : lastSyncedAt
-          ? `${t("header.syncSynced")} · ${formatRelative(lastSyncedAt, language === "en" ? "just now" : "방금 전")}`
-          : t("header.syncSynced")
+  // 함수인 이유: 탭 시점의 상대시간을 보여줘야 해서 (렌더 시점 캡처면 10분 방치 후에도 "방금 전").
+  const getSyncLabel = () =>
+    !syncStatus
+      ? null
+      : syncStatus === "error"
+        ? t("header.syncError")
+        : syncStatus === "syncing"
+          ? t("header.syncSyncing")
+          : lastSyncedAt
+            ? `${t("header.syncSynced")} · ${formatRelative(lastSyncedAt, language === "en" ? "just now" : "방금 전")}`
+            : t("header.syncSynced")
+  const syncLabel = getSyncLabel()
 
   return (
     <header
@@ -382,7 +385,10 @@ export function Header({
             {/* 동기화 상태 — 성공은 이 아이콘으로만 조용히. 펄스=동기화 중, 정지=완료, 앰버=연결 문제. */}
             {syncStatus && syncLabel && (
               <button
-                onClick={() => toast.message(syncLabel, { duration: 2000 })}
+                onClick={() => {
+                  const label = getSyncLabel()
+                  if (label) toast.message(label, { duration: 2000 })
+                }}
                 aria-label={syncLabel}
                 title={syncLabel}
                 className={`inline-flex shrink-0 p-1.5 rounded-lg transition-colors ${
