@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Canvas } from "@/components/canvas"
-import { Header } from "@/components/header"
+import { Header, type SyncStatus } from "@/components/header"
 import { CreateBlockDialog } from "@/components/create-block-dialog"
 import { ReflectionDialog } from "@/components/reflection-dialog"
 import { AreaManagementDialog } from "@/components/area-management-dialog"
@@ -342,6 +342,9 @@ export default function Page() {
   const [canvases, setCanvases] = useState<CanvasType[]>([getDefaultCanvas()])
   const [currentCanvasId, setCurrentCanvasId] = useState<string>("main")
   const [lastSaved, setLastSaved] = useState<Date>(new Date())
+  // 헤더 동기화 상태 아이콘용. 성공은 조용히(아이콘), 예외만 토스트.
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("synced")
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null)
   const [isClient, setIsClient] = useState(false)
   const [selectedZone, setSelectedZone] = useState<string | null>(null)
   const [showRelationships, setShowRelationships] = useState(true)
@@ -473,6 +476,7 @@ export default function Page() {
     // 저장될 수 있다. cancelled 면 어떤 setState/ref 복원도 하지 않는다.
     let cancelled = false
 
+    setSyncStatus("syncing")
     ;(async () => {
       try {
         const remoteCanvases = await loadUserCanvases(supabase, userId)
@@ -515,6 +519,8 @@ export default function Page() {
           setHistory([{ canvasId: migrated[0]?.id ?? "main", blocks: migrated[0]?.blocks ?? [] }])
           setHistoryIndex(0)
           localStorage.setItem("layout_last_synced_at", Date.now().toString())
+          setSyncStatus("synced")
+          setLastSyncedAt(new Date())
           remoteSyncReadyRef.current = true
           return
         }
@@ -537,11 +543,13 @@ export default function Page() {
           } catch (backupErr) {
             console.error("offline backup failed:", backupErr)
           }
+          // 예외 상황에만 알림 — 클라우드에 못 올라간 편집을 덮어쓰기 전에 백업했다는 사실.
+          // (평상시 동기화 성공은 헤더 아이콘으로만 조용히 표시)
           toast.message(isEn() ? "Loaded your cloud data" : "클라우드 내용을 불러왔어요", {
             description: isEn()
-              ? "Changes made on this device while signed out were backed up before overwriting."
-              : "로그아웃 중 이 기기에서 바꾼 내용은 덮어쓰기 전에 따로 백업해뒀어요.",
-            duration: 8000,
+              ? "Some changes on this device hadn't reached the cloud, so they were backed up before overwriting."
+              : "이 기기의 변경 중 클라우드에 못 올라간 게 있어, 덮어쓰기 전에 따로 백업해뒀어요.",
+            duration: 5000,
           })
         }
 
@@ -571,11 +579,14 @@ export default function Page() {
         // "지금 클라우드와 일치" 시각 기록. 예전엔 여기서 지우고 signOut 에서만 기록해서,
         // 탭을 그냥 닫으면(로그아웃 안 함) 다음 로그인 때 오프라인 편집 감지가 불가능했다.
         localStorage.setItem("layout_last_synced_at", Date.now().toString())
+        setSyncStatus("synced")
+        setLastSyncedAt(new Date())
         captureEvent(supabase, userId, "session_start")
         remoteSyncReadyRef.current = true
       } catch (err) {
         if (cancelled) return
         console.error("Supabase load error:", err)
+        setSyncStatus("error")
         const message = err instanceof Error ? err.message : "Unknown sync error"
         // remoteSyncReadyRef 는 false로 유지 — 불완전한 상태를 덮어쓰지 않도록 저장을 막는다.
         // 다만 사용자는 알아야 한다: 로컬 저장은 계속되지만 클라우드 동기화는 멈춘 상태.
@@ -648,43 +659,47 @@ export default function Page() {
     }
   }, [user])
 
-  // 탭을 벗어나면(홈으로, 앱 전환, 닫기) 대기 중인 로컬 저장을 즉시 커밋.
-  useEffect(() => {
-    const flush = () => flushLocalSave()
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") flushLocalSave()
-    }
-    window.addEventListener("pagehide", flush)
-    document.addEventListener("visibilitychange", onVisibility)
-    return () => {
-      window.removeEventListener("pagehide", flush)
-      document.removeEventListener("visibilitychange", onVisibility)
-    }
-  }, [flushLocalSave])
+  // 클라우드 저장 직렬화 — 진행 중 저장이 있는데 또 호출되면(debounce·pagehide·online·재시도 경합)
+  // 스냅샷이 뒤섞여 늦게 뜬 옛 스냅샷이 새 스냅샷을 덮을 수 있다. 한 번에 하나만, 겹치면 끝나고 재실행.
+  const cloudSaveInFlightRef = useRef(false)
+  const cloudSaveQueuedRef = useRef(false)
 
   const flushCloudSave = useCallback(() => {
     if (!user || !supabaseRef.current || !remoteSyncReadyRef.current) return
+    if (cloudSaveInFlightRef.current) {
+      cloudSaveQueuedRef.current = true
+      return
+    }
+    cloudSaveInFlightRef.current = true
     const supabase = supabaseRef.current
     const userId = user.id
     const snapshot = canvasesRef.current
     cloudDirtyRef.current = false
+    setSyncStatus("syncing")
     Promise.all(snapshot.map((c, i) => saveCanvas(supabase, userId, c, i)))
       .then(() => {
-        // 클라우드와 일치한 시각 — 다음 로그인의 오프라인 편집 감지(백업 여부 판단) 기준.
-        // signOut 에서만 기록하면 탭을 그냥 닫은 세션의 편집은 감지가 안 된다.
-        try {
-          localStorage.setItem("layout_last_synced_at", Date.now().toString())
-        } catch {
-          /* 기록 실패는 감지 정확도만 낮출 뿐 — 무시 */
-        }
-        if (syncSaveErrorShownRef.current) {
-          syncSaveErrorShownRef.current = false
-          toast.success(isEn() ? "Cloud saving resumed." : "클라우드 저장이 재개됐어요.")
+        // 복구 알림은 토스트 대신 헤더 아이콘이 앰버→회색으로 돌아오는 것으로 충분.
+        syncSaveErrorShownRef.current = false
+        // 저장이 도는 사이 새 편집이 생겼으면(dirty) 아직 synced 가 아니다 — 다음 저장이 내린다.
+        // last_synced_at 도 이때는 찍지 않는다: 찍어버리면 그 편집의 updatedAt 이 last_synced_at
+        // 보다 과거가 되어, 후속 저장이 죽었을 때 다음 부트가 "이미 동기화됨"으로 오판해
+        // 백업 없이 덮어쓴다(침묵 유실). 시각이 낡은 쪽의 비용은 불필요한 백업 하나뿐.
+        if (!cloudDirtyRef.current) {
+          // 클라우드와 일치한 시각 — 다음 로그인의 오프라인 편집 감지(백업 여부 판단) 기준.
+          // signOut 에서만 기록하면 탭을 그냥 닫은 세션의 편집은 감지가 안 된다.
+          try {
+            localStorage.setItem("layout_last_synced_at", Date.now().toString())
+          } catch {
+            /* 기록 실패는 감지 정확도만 낮출 뿐 — 무시 */
+          }
+          setSyncStatus("synced")
+          setLastSyncedAt(new Date())
         }
       })
       .catch((err) => {
         console.error("Supabase save error:", err)
         cloudDirtyRef.current = true
+        setSyncStatus("error")
         // 10초 뒤 자동 재시도 (변경이 새로 생기면 debounce 경로가 먼저 저장할 수도 있다 — 무해).
         // 네트워크 복귀 시엔 아래 online 리스너가 즉시 재시도.
         if (saveRetryTimer.current) clearTimeout(saveRetryTimer.current)
@@ -697,7 +712,39 @@ export default function Page() {
           })
         }
       })
+      .finally(() => {
+        cloudSaveInFlightRef.current = false
+        if (cloudSaveQueuedRef.current) {
+          cloudSaveQueuedRef.current = false
+          flushCloudSave()
+        }
+      })
   }, [user])
+
+  // 탭을 벗어나면(홈으로, 앱 전환, 닫기) 대기 중인 저장을 즉시 커밋 — 로컬과 클라우드 둘 다.
+  // 클라우드 flush 를 빼면, 폰에서 편집 직후 앱을 닫을 때 2초 debounce 가 못 돌아
+  // last_synced_at 이 안 갱신되고, 다음 부트가 "오프라인 편집"으로 오판해 백업 토스트를 띄운다.
+  useEffect(() => {
+    const flush = () => {
+      flushLocalSave()
+      if (cloudDirtyRef.current) {
+        if (supabaseSaveTimer.current) {
+          clearTimeout(supabaseSaveTimer.current)
+          supabaseSaveTimer.current = null
+        }
+        flushCloudSave()
+      }
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush()
+    }
+    window.addEventListener("pagehide", flush)
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => {
+      window.removeEventListener("pagehide", flush)
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
+  }, [flushLocalSave, flushCloudSave])
 
   // 네트워크 복귀 시 미반영 변경 즉시 재저장.
   useEffect(() => {
@@ -736,6 +783,8 @@ export default function Page() {
     if (!remoteSyncReadyRef.current) return
 
     cloudDirtyRef.current = true
+    // 편집 즉시 "동기화 중" — Google Docs 의 "저장 중..." 과 같은 타이밍.
+    setSyncStatus("syncing")
     supabaseSaveTimer.current = setTimeout(flushCloudSave, 2000)
 
     return () => {
@@ -1234,6 +1283,8 @@ export default function Page() {
         currentCanvasName={currentCanvas ? translateSeedCanvasName(currentCanvas, language) : (language === "en" ? "Main Canvas" : "메인 캔버스")}
         onOpenCanvasSelector={() => setIsCanvasSelectorOpen(true)}
         lastSaved={lastSaved}
+        syncStatus={user ? syncStatus : null}
+        lastSyncedAt={lastSyncedAt}
         onReset={handleReset}
         onOpenAbout={() => setIsAboutOpen(true)}
         onOpenInsights={user ? () => setIsInsightsOpen(true) : undefined}
