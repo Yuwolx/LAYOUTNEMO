@@ -1,13 +1,17 @@
 "use client"
 
 import { useLayoutEffect, useRef, useState } from "react"
-import { Eye, Moon, Sun, Undo2, Wand2, RotateCcw, Info, BarChart3 } from "lucide-react"
+import { Cloud, CloudOff, Eye, Moon, Sun, Undo2, Wand2, RotateCcw, Info, BarChart3 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import type { Zone } from "@/types"
 import { useLanguage } from "@/lib/i18n/context"
 import { translateSeedZoneLabel } from "@/lib/i18n/seed"
 import { AuthButton } from "@/components/auth-button"
 import { AI_LIMITS } from "@/lib/ai/quota"
+
+/** 헤더 동기화 아이콘 상태. 성공은 조용히(아이콘), 예외만 토스트 — 알림 대신 상태 표시. */
+export type SyncStatus = "syncing" | "synced" | "error"
 
 interface HeaderProps {
   onCreateBlock: () => void
@@ -31,6 +35,9 @@ interface HeaderProps {
   currentCanvasName: string
   onOpenCanvasSelector: () => void
   lastSaved: Date
+  /** 클라우드 동기화 상태 — null 이면(로그아웃) 아이콘 숨김 */
+  syncStatus?: SyncStatus | null
+  lastSyncedAt?: Date | null
   onReset: () => void
   onOpenAbout: () => void
   /** 인사이트 다이얼로그 — 로그인 유저에게만 버튼 노출 (미전달 시 숨김) */
@@ -60,6 +67,8 @@ export function Header({
   currentCanvasName,
   onOpenCanvasSelector,
   lastSaved,
+  syncStatus,
+  lastSyncedAt,
   onReset,
   onOpenAbout,
   onOpenInsights,
@@ -139,13 +148,12 @@ export function Header({
     resetZoneDrag()
   }
   const { language, toggleLanguage, t } = useLanguage()
-  const formatLastSaved = () => {
-    const now = new Date()
-    const diff = now.getTime() - lastSaved.getTime()
-    const seconds = Math.floor(diff / 1000)
+  // 상대시간 포맷 — 마지막 저장 표시와 동기화 아이콘 라벨이 공유.
+  const formatRelative = (date: Date, justNowLabel: string) => {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
 
     if (language === "en") {
-      if (seconds < 10) return "just now"
+      if (seconds < 10) return justNowLabel
       if (seconds < 60) return `${seconds}s ago`
       const minutes = Math.floor(seconds / 60)
       if (minutes < 60) return `${minutes}m ago`
@@ -153,13 +161,26 @@ export function Header({
       return `${hours}h ago`
     }
 
-    if (seconds < 10) return "방금 저장됨"
+    if (seconds < 10) return justNowLabel
     if (seconds < 60) return `${seconds}초 전`
     const minutes = Math.floor(seconds / 60)
     if (minutes < 60) return `${minutes}분 전`
     const hours = Math.floor(minutes / 60)
     return `${hours}시간 전`
   }
+  const formatLastSaved = () =>
+    formatRelative(lastSaved, language === "en" ? "just now" : "방금 저장됨")
+
+  // 동기화 아이콘 라벨 — 데스크톱은 title 툴팁, 터치는 탭하면 짧은 토스트로 같은 내용.
+  const syncLabel = !syncStatus
+    ? null
+    : syncStatus === "error"
+      ? t("header.syncError")
+      : syncStatus === "syncing"
+        ? t("header.syncSyncing")
+        : lastSyncedAt
+          ? `${t("header.syncSynced")} · ${formatRelative(lastSyncedAt, language === "en" ? "just now" : "방금 전")}`
+          : t("header.syncSynced")
 
   return (
     <header
@@ -357,6 +378,26 @@ export function Header({
             <Button onClick={onReflect} className="text-sm px-3 lg:px-4 min-w-0 lg:min-w-[96px] shrink-0 bg-foreground text-background hover:bg-foreground/90">
               {t("header.reflect")}
             </Button>
+
+            {/* 동기화 상태 — 성공은 이 아이콘으로만 조용히. 펄스=동기화 중, 정지=완료, 앰버=연결 문제. */}
+            {syncStatus && syncLabel && (
+              <button
+                onClick={() => toast.message(syncLabel, { duration: 2000 })}
+                aria-label={syncLabel}
+                title={syncLabel}
+                className={`inline-flex shrink-0 p-1.5 rounded-lg transition-colors ${
+                  isDarkMode
+                    ? "text-[#98a0af] hover:text-[#dfe3ea] hover:bg-[#333944]"
+                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                }`}
+              >
+                {syncStatus === "error" ? (
+                  <CloudOff className={`w-4 h-4 ${isDarkMode ? "text-amber-400" : "text-amber-600"}`} />
+                ) : (
+                  <Cloud className={`w-4 h-4 ${syncStatus === "syncing" ? "animate-pulse" : ""}`} />
+                )}
+              </button>
+            )}
 
             <AuthButton isDarkMode={isDarkMode} />
           </div>
