@@ -75,10 +75,12 @@ AI 가 응답한 뒤 8초 동안 손대지 않으면 자동으로 블럭이 생�
 • 시급 (빨강): 바로 처리해야 하는 일
 
 7) 캔버스 이동
-스페이스바를 누른 채 마우스로 드래그하면 캔버스 전체가 따라옵니다 (피그마 방식).
+스페이스바를 누른 채 드래그하거나, 마우스 휠(가운데 버튼)을 누른 채 드래그하면 캔버스 전체가 따라옵니다 (피그마 방식).
 
 8) 갈무리
-지금 안 보고 싶은 블럭은 블럭 메뉴나 상세 화면의 '갈무리'로 치워두세요. 우하단 갈무리함에서 다시 꺼내면 원래 자리로 돌아옵니다.
+지금 안 보고 싶은 블럭은 블럭 메뉴나 상세 화면의 '갈무리'로 치워두세요. 블럭을 우하단 갈무리함 위로 끌어다 놓아도 됩니다. 갈무리함에서 다시 꺼내면 원래 자리로 돌아옵니다.
+Shift 를 누른 채 갈무리함에 놓으면 갈무리를 거치지 않고 바로 삭제됩니다 (Cmd/Ctrl + Z 로 되돌릴 수 있어요).
+이 설명서와 단축키 블럭도 갈무리할 수 있고, 헤더의 ? 버튼으로 언제든 다시 불러올 수 있습니다.
 
 9) AI 보조 / 정리하기
 헤더의 'AI 보조' 토글로 켜고 끕니다. AI 가 켜져 있을 때 '정리하기' 버튼으로 캔버스 상태에 대한 제안을 받을 수 있습니다. 우선순위는 같은 결 → 내용 유사도 → 위치 순서. 한 번에 하나씩 보여주고, 수락한 변경만 적용됩니다.
@@ -122,10 +124,12 @@ The shadow color reflects mental weight. Size doesn't change.
 • Urgent (red): needs immediate action
 
 7) Canvas Pan
-Hold Spacebar and drag to pan the entire canvas (Figma-style).
+Hold Spacebar and drag, or drag with the middle mouse button (wheel click), to pan the entire canvas (Figma-style).
 
 8) Archive
-Use a block's menu or detail dialog to archive something you don't want to see right now. Restore it from the bottom-right archive when you need it again.
+Use a block's menu or detail dialog to archive something you don't want to see right now, or drag the block onto the bottom-right archive. Restore it from there and it returns to its original spot.
+Hold Shift while dropping onto the archive to delete the block right away, skipping the archive (Cmd/Ctrl + Z undoes it).
+This guide and the shortcuts block can be archived too. Bring them back anytime with the ? button in the header.
 
 9) AI Assist / Reflect
 Toggle "AI Assist" in the header. With AI on, "Reflect" gives suggestions. Priority: same facet → content similarity → position. One suggestion at a time; only what you accept is applied.
@@ -152,6 +156,7 @@ Keep one important block pinned to the top of the canvas, like an announcement. 
     detailedNotes: {
       ko: `[캔버스 조작]
 • 스페이스바 + 드래그: 캔버스 이동 (피그마 방식)
+• 마우스 휠(가운데 버튼) + 드래그: 캔버스 이동 (한 손)
 • Alt/Option + 블럭 클릭: 블럭 복사
 • Shift + 블럭 드롭: 연결만 만들고 원위치로 (연결 토스)
 
@@ -169,6 +174,8 @@ Keep one important block pinned to the top of the canvas, like an announcement. 
 [마우스]
 • 블럭 드래그: 위치 이동
 • 블럭 메뉴/상세: 갈무리
+• 블럭을 갈무리함에 드롭: 갈무리
+• Shift + 블럭을 갈무리함에 드롭: 바로 삭제
 • Shift + 한 블럭을 다른 블럭에 드롭: 연결 + 원위치 복귀 (토스)
 • 연결선 클릭: 연결 끊기
 
@@ -177,6 +184,7 @@ Keep one important block pinned to the top of the canvas, like an announcement. 
 텍스트 입력 중에는 Cmd/Ctrl + Z 가 캔버스 되돌리기 대신 일반 텍스트 되돌리기로 동작합니다.`,
       en: `[Canvas]
 • Spacebar + drag: pan the canvas (Figma-style)
+• Middle mouse button (wheel click) + drag: pan the canvas (one-handed)
 • Alt/Option + click on a block: duplicate
 • Shift + drop one block onto another: connect only and bounce back to start ("connection toss")
 
@@ -194,6 +202,8 @@ Keep one important block pinned to the top of the canvas, like an announcement. 
 [Mouse]
 • Drag a block: move it
 • Block menu/details: archive
+• Drop a block onto the archive: archive
+• Shift + drop a block onto the archive: delete right away
 • Shift + drop one block onto another: connect + bounce back (toss)
 • Click a connection line: disconnect
 

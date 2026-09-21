@@ -1,7 +1,7 @@
 "use client"
 
 import { useLayoutEffect, useRef, useState } from "react"
-import { Cloud, CloudOff, Eye, Moon, Sun, Undo2, Wand2, RotateCcw, Info, BarChart3 } from "lucide-react"
+import { Cloud, CloudOff, Eye, Moon, Sun, Undo2, Wand2, RotateCcw, Info, BarChart3, CircleHelp } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import type { Zone } from "@/types"
@@ -42,6 +42,8 @@ interface HeaderProps {
   onOpenAbout: () => void
   /** 인사이트 다이얼로그 — 로그인 유저에게만 버튼 노출 (미전달 시 숨김) */
   onOpenInsights?: () => void
+  /** 사용 설명서·단축키 가이드 블럭을 캔버스에 다시 불러온다 (갈무리/삭제한 뒤 복귀용). */
+  onRestoreGuides?: () => void
   onReorderZones?: (orderedZoneIds: string[]) => void
   aiUsage?: { create: number; tidy: number; plan: string } | null
 }
@@ -72,6 +74,7 @@ export function Header({
   onReset,
   onOpenAbout,
   onOpenInsights,
+  onRestoreGuides,
   onReorderZones,
   aiUsage,
 }: HeaderProps) {
@@ -270,6 +273,20 @@ export function Header({
                 }`}
               >
                 <BarChart3 className="w-4 h-4" />
+              </button>
+            )}
+            {onRestoreGuides && (
+              <button
+                onClick={onRestoreGuides}
+                aria-label={t("header.guide")}
+                title={t("header.guide")}
+                className={`inline-flex shrink-0 p-1.5 rounded-lg transition-colors ${
+                  isDarkMode
+                    ? "text-[#98a0af] hover:text-[#dfe3ea] hover:bg-[#333944]"
+                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                }`}
+              >
+                <CircleHelp className="w-4 h-4" />
               </button>
             )}
             {/* About 은 모든 기기에서 접근 가능해야 한다 — PWA "앱으로 설치" 진입점이 여기 있다. */}

@@ -26,6 +26,8 @@ interface CanvasProps {
   onTogglePin?: (blockId: string) => void
   /** 대표 배너 클릭 시 해당 블럭 상세 열기. */
   onOpenDetail?: (blockId: string) => void
+  /** Shift 누른 채 갈무리함에 드롭 = 갈무리를 거치지 않고 바로 삭제(soft-delete). 없으면 Shift 여부와 무관하게 갈무리. */
+  onDeleteBlock?: (blockId: string) => void
   /** 정리하기 다이얼로그가 열려 있는지 — 열려 있으면 대표 배너를 백드롭 밑으로 내려 함께 블러 처리. */
   isReflecting?: boolean
 }
@@ -125,6 +127,7 @@ export function Canvas({
   focusRequest,
   onTogglePin,
   onOpenDetail,
+  onDeleteBlock,
   isReflecting = false,
 }: CanvasProps) {
   const { language, t } = useLanguage()
@@ -194,6 +197,8 @@ export function Canvas({
   onUpdateBlockRef.current = onUpdateBlock
   const onBatchUpdateBlocksRef = useRef(onBatchUpdateBlocks)
   onBatchUpdateBlocksRef.current = onBatchUpdateBlocks
+  const onDeleteBlockRef = useRef(onDeleteBlock)
+  onDeleteBlockRef.current = onDeleteBlock
   useEffect(() => {
     scaleRef.current = scale
   }, [scale])
@@ -584,9 +589,20 @@ export function Canvas({
   }, [selectedIds, onBatchUpdateBlocks])
 
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
-    if (e.button !== 0) return
     if (pinchRef.current) return // 핀치 진행 중 — 두 번째 손가락이 팬/마퀴를 새로 시작하지 않게
     if (activePointerIdRef.current !== null) return // 이미 다른 포인터가 인터랙션 중
+
+    // 휠 클릭(가운데 버튼) 드래그 = 팬. 스페이스 팬은 두 손이 필요하지만 이건 한 손으로 된다.
+    // 블럭 위에서 시작해도 팬 — 카드 핸들러는 button!==0 을 무시하고 여기까지 버블시킨다.
+    // preventDefault 로 윈도우 크롬의 중클릭 자동 스크롤을 막는다.
+    if (e.button === 1 && e.pointerType === "mouse") {
+      e.preventDefault()
+      panStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, panX: pan.x, panY: pan.y }
+      activePointerIdRef.current = e.pointerId
+      setIsPanning(true)
+      return
+    }
+    if (e.button !== 0) return
 
     // 연결 모드 중 빈 곳을 누르면 취소.
     if (connectingId && !(e.target as HTMLElement).closest?.("[data-block-card]")) {
@@ -678,7 +694,7 @@ export function Canvas({
       const group = selectedIds.has(blockId)
         ? new Map(
             blocks
-              .filter((b) => selectedIds.has(b.id) && !b.isCompleted && !b.isGuide)
+              .filter((b) => selectedIds.has(b.id) && !b.isCompleted)
               .map((b) => [b.id, { x: b.x, y: b.y }] as const),
           )
         : null
@@ -703,7 +719,7 @@ export function Canvas({
     if (selectedIds.size > 1 && selectedIds.has(blockId)) {
       const starts = new Map<string, { x: number; y: number }>()
       blocks.forEach((b) => {
-        if (selectedIds.has(b.id) && !b.isCompleted && !b.isGuide) starts.set(b.id, { x: b.x, y: b.y })
+        if (selectedIds.has(b.id) && !b.isCompleted) starts.set(b.id, { x: b.x, y: b.y })
       })
       groupDragRef.current = { starts }
     } else {
@@ -826,7 +842,7 @@ export function Canvas({
           return
         }
 
-        if (!block.isCompleted && !block.isGuide) {
+        if (!block.isCompleted) {
           const canvasRect = canvasRef.current?.getBoundingClientRect()
           const dockEl = typeof document !== "undefined" ? document.querySelector("[data-archive-dock]") : null
           const dockRect = dockEl?.getBoundingClientRect()
@@ -847,6 +863,8 @@ export function Canvas({
           )
 
           if (droppedOnArchiveDock) {
+            // Shift + 갈무리함 드롭 = 바로 삭제. (Shift 토스는 블럭 위 드롭에서만 — 갈무리함 판정이 먼저라 안 겹친다.)
+            const deleteNow = e.shiftKey && onDeleteBlockRef.current !== undefined
             const restoreX = dragStartPosRef.current?.x ?? block.x
             const restoreY = dragStartPosRef.current?.y ?? block.y
             const nextFlight: ArchiveFlight = {
@@ -872,11 +890,17 @@ export function Canvas({
             dragStartPosRef.current = null
 
             archiveFlightTimerRef.current = window.setTimeout(() => {
-              onUpdateBlockRef.current(nextFlight.id, {
-                isCompleted: true,
-                x: nextFlight.restoreX,
-                y: nextFlight.restoreY,
-              })
+              if (deleteNow) {
+                // 삭제 전에 원위치로 되돌려 두면(히스토리 없이) undo 로 살아날 때 갈무리함 근처가 아닌 제자리에 선다.
+                onUpdateBlockRef.current(nextFlight.id, { x: nextFlight.restoreX, y: nextFlight.restoreY }, true)
+                onDeleteBlockRef.current?.(nextFlight.id)
+              } else {
+                onUpdateBlockRef.current(nextFlight.id, {
+                  isCompleted: true,
+                  x: nextFlight.restoreX,
+                  y: nextFlight.restoreY,
+                })
+              }
               setArchiveFlight((current) => (current?.id === nextFlight.id ? null : current))
               archiveFlightTimerRef.current = null
             }, ARCHIVE_FLIGHT_MS)

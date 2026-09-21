@@ -274,7 +274,8 @@ export function WorkBlockCard({
               </DropdownMenu>
             )}
 
-            {!isCompleted && !isGuide && !isAIControl && (
+            {/* 가이드 블럭도 케밥을 갖는다 — 단 갈무리만. (고정/연결/복사는 내 작업 블럭 전용) */}
+            {!isCompleted && !isAIControl && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -288,42 +289,46 @@ export function WorkBlockCard({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onTogglePin?.()
-                    }}
-                    className="text-muted-foreground font-light"
-                  >
-                    <Pin className="w-4 h-4 mr-2" />
-                    {block.isPinned
-                      ? language === "en"
-                        ? "Unpin"
-                        : "고정 해제"
-                      : language === "en"
-                        ? "Pin to top"
-                        : "대표로 고정"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onStartConnect?.()
-                    }}
-                    className="text-muted-foreground font-light"
-                  >
-                    <Link2 className="w-4 h-4 mr-2" />
-                    {language === "en" ? "Connect…" : "연결"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onCopy?.()
-                    }}
-                    className="text-muted-foreground font-light"
-                  >
-                    <Copy className="w-4 h-4 mr-2" />
-                    {language === "en" ? "Duplicate" : "복사"}
-                  </DropdownMenuItem>
+                  {!isGuide && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onTogglePin?.()
+                        }}
+                        className="text-muted-foreground font-light"
+                      >
+                        <Pin className="w-4 h-4 mr-2" />
+                        {block.isPinned
+                          ? language === "en"
+                            ? "Unpin"
+                            : "고정 해제"
+                          : language === "en"
+                            ? "Pin to top"
+                            : "대표로 고정"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onStartConnect?.()
+                        }}
+                        className="text-muted-foreground font-light"
+                      >
+                        <Link2 className="w-4 h-4 mr-2" />
+                        {language === "en" ? "Connect…" : "연결"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onCopy?.()
+                        }}
+                        className="text-muted-foreground font-light"
+                      >
+                        <Copy className="w-4 h-4 mr-2" />
+                        {language === "en" ? "Duplicate" : "복사"}
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuItem onClick={handleCompleteBlock} className="text-muted-foreground font-light">
                     <Archive className="w-4 h-4 mr-2" />
                     {t("action.archive")}
