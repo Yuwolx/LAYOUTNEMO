@@ -26,6 +26,7 @@ export const DICT = {
     "header.hideCompleted": "갈무리 숨기기",
     "header.trash": "휴지통",
     "header.insights": "인사이트",
+    "header.guide": "사용 설명서·단축키 블럭 불러오기",
     "header.reset": "초기화",
     "header.undo": "되돌리기",
     "header.redo": "재실행",
@@ -140,6 +141,7 @@ export const DICT = {
 
     // Archive dock & dialog
     "archive.dock.label": "갈무리함",
+    "archive.dock.deleted": "블럭을 삭제했어요. Cmd/Ctrl + Z 로 되돌릴 수 있어요.",
     "archive.dock.hint": "갈무리함 열기",
     "archive.dialog.title": "갈무리함",
     "archive.dialog.description": "갈무리한 블럭들입니다. 필요한 블럭은 꺼내고, 더 이상 필요 없으면 삭제할 수 있어요.",
@@ -160,6 +162,7 @@ export const DICT = {
     "header.hideCompleted": "Hide archive",
     "header.trash": "Trash",
     "header.insights": "Insights",
+    "header.guide": "Bring back guide & shortcuts",
     "header.reset": "Reset",
     "header.undo": "Undo",
     "header.redo": "Redo",
@@ -274,6 +277,7 @@ export const DICT = {
 
     // Archive dock & dialog
     "archive.dock.label": "Archive",
+    "archive.dock.deleted": "Block deleted. Cmd/Ctrl + Z to undo.",
     "archive.dock.hint": "Open archive",
     "archive.dialog.title": "Archive",
     "archive.dialog.description": "Archived blocks. Restore what you need, or delete what you no longer need.",
